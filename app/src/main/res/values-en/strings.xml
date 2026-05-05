@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Paguito</string>
+
+    <string name="shose_idiom">Elige tu idioma</string>
+    <string name="continue_label">Continuar</string>
+    <string name="shose_idiom_desc">Configura la app en el idioma que prefieras para una mejor experiencia.</string>
+
+    <string name="product_registered_success">Product registered successfully!</string>
+    <string name="title_new_product">New Product</string>
+    <string name="content_desc_back">Back</string>
+    <string name="btn_save_product">Save Product</string>
+    <string name="content_desc_profile_photo">Product photo</string>
+    <string name="upload_product_image">Upload Product Image</string>
+    <string name="optional_label">(Optional)</string>
+    <string name="label_product_name">Product Name *</string>
+    <string name="placeholder_product_name">Ex. XL Sports Shoes</string>
+    <string name="label_cost_price">Real Cost Price ($) *</string>
+    <string name="placeholder_zero">0.00</string>
+    <string name="label_optionals">Optionals</string>
+    <string name="label_stock">Remaining Quantity / Stock</string>
+    <string name="placeholder_stock">Ex. 50</string>
+    <string name="label_additional_notes">Additional Notes</string>
+    <string name="placeholder_notes">Write details about suppliers, location, etc.</string>
+    <string name="label_define_profit">Define Profit and Final Price</string>
+    <string name="label_original_cost">ORIGINAL COST</string>
+    <string name="label_final_price">FINAL PRICE</string>
+    <string name="profit_badge_format">Profit: $%s</string>
+    <string name="adjust_multiplier">Adjust Multiplier</string>
+    <string name="adjust_percentage">Adjust Percentage</string>
+    <string name="tab_percentage">% Percentage</string>
+    <string name="tab_multiplier">Multiplier (x)</string>
+
+
+
+    <string name="profile_settings_title">Profile &amp; Settings</string>
+    <string name="section_app_preferences">App Preferences</string>
+    <string name="item_language">Language</string>
+    <string name="item_dark_mode">Dark Mode</string>
+    <string name="item_biometric">Fingerprint/FaceID Lock</string>
+    <string name="btn_logout">Log Out</string>
+    <string name="btn_edit_profile">Edit profile</string>
+
+    <string name="guest_mode_title">Guest Mode</string>
+    <string name="guest_mode_description">You currently have limited access. To save your movements, sync data to the cloud, and access advanced debtor settings, you need an active account.</string>
+    <string name="btn_login_now">Log in now</string>
+    <string name="btn_later">Maybe later</string>
+
+    <string name="cd_avatar">Profile picture</string>
+    <string name="cd_logout_icon">Logout icon</string>
+    <string name="cd_arrow">Navigation arrow</string>
+</resources>

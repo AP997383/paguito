@@ -1,5 +1,7 @@
 package com.nexusystem.paguito.ui.screens.deudores
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -7,10 +9,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Search
@@ -24,14 +30,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nexus.medi.data.local.entity.DeudoresEntity
+import com.nexusystem.paguito.BuildConfig
+import com.nexusystem.paguito.R
+import com.nexusystem.paguito.ui.screens.home.BorderLight
+import com.nexusystem.paguito.ui.screens.productos.NativeAdBanner
+import com.nexusystem.paguito.ui.screens.productos.ProductCardItem
+import com.nexusystem.paguito.utils.dialogs.PremiumLimitReachedDialog
+import com.nexusystem.paguito.utils.emptyStates.DynamicEmptyState
+import com.nexusystem.paguito.utils.formatAsCurrency
 
 // --- COLORES ---
-val BluePrimary = Color(0xFF3B82F6)
-val TextDark = Color(0xFF1F2937)
-val TextGray = Color(0xFF6B7280)
+val BluePrimary2 = Color(0xFF3B82F6)
+
+val TextDark2 = Color(0xFF1F2937)
+val TextGray1 = Color(0xFF6B7280)
 val BorderLight = Color(0xFFE5E7EB)
 val RedUrgent = Color(0xFFEF4444)
 val RedBackground = Color(0xFFFEE2E2)
@@ -49,91 +66,169 @@ data class Debtor(
 )
 
 // Datos de prueba basados en tu imagen
-val sampleDebtors = listOf(
-    Debtor("Juan Pérez", "+52 55 1234 5678", 1500.00, DebtorStatus.OVERDUE, "Venció: 12 Oct 2023"),
-    Debtor("María Gómez", "+52 55 9876 5432", 450.00, DebtorStatus.UPCOMING, "Vence: 25 Oct 2023"),
-    Debtor("Carlos López", "+52 55 4567 8901", 2100.00, DebtorStatus.UP_TO_DATE, "Vence: 05 Nov 2023"),
-    Debtor("Ana Martínez", "+52 55 3456 7890", 800.00, DebtorStatus.OVERDUE, "Venció: 01 Oct 2023"),
-    Debtor("Roberto Sánchez", "+52 55 2345 6789", 320.00, DebtorStatus.UPCOMING, "Vence: 28 Oct 2023")
-)
-
-// --- PANTALLA PRINCIPAL ---
-@OptIn(ExperimentalMaterial3Api::class)
+val sampleDebtors = arrayListOf<Debtor>()
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun DebtorsScreen() {
+fun DebtorsScreen(
+    verPerfilDeudor: (DeudoresEntity) -> Unit,
+    agregarDeudor: () -> Unit,
+    registrarPago: (DeudoresEntity) -> Unit,
+    registrarVenta: (DeudoresEntity) -> Unit,
+    viewmodel: DeudoresViewModel
+) {
+    var isSucriptionActive by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
-    var selectedFilter by remember { mutableStateOf("Todos") }
+    var showAlertFreeLimited by remember { mutableStateOf(false) }
+    val sampleDebtors by viewmodel.deudores.collectAsState()
+  if(showAlertFreeLimited)
+  {
+      PremiumLimitReachedDialog({
+          showAlertFreeLimited =false
+      },{
+          showAlertFreeLimited =false
+      })
+  }
+        LaunchedEffect(Unit) {
+            viewmodel.loadUserProfile()
+        }
+    val profile = viewmodel.profileState
+    LaunchedEffect(profile) {
+        if (profile != null) {
+            isSucriptionActive = profile.userSuscription.isActive
+        }
+    }
+    val filteredDebtors = remember(searchQuery, sampleDebtors) {
+        if (searchQuery.isEmpty()) {
+            sampleDebtors
+        } else {
+            sampleDebtors.filter { deudor ->
+                // Filtramos por nombre, ignorando mayúsculas/minúsculas y espacios extras
+                deudor?.nombre?.contains(searchQuery.trim(), ignoreCase = true) == true
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewmodel.loadUserProfile()
+        viewmodel.obtenerDeudores()
+    }
 
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(
-                modifier = Modifier.padding(end = 20.dp, bottom = 100.dp),
-                onClick = { /* Acción nuevo deudor */ },
-                containerColor = BluePrimary,
-                contentColor = Color.White,
-                shape = RoundedCornerShape(10.dp)
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Agregar Deudor")
+            // Usamos la lista original para saber si mostrar el FAB o el Empty State
+            if (sampleDebtors.isNotEmpty()) {
+                FloatingActionButton(
+                    modifier = Modifier.padding(end = 5.dp, bottom = 90.dp),
+                    onClick = {
+                        if(sampleDebtors.size>=5 && !isSucriptionActive){
+                            showAlertFreeLimited=true
+                        }else{
+                            agregarDeudor()
+                        } },
+                    containerColor = BluePrimary2,
+                    contentColor = Color.White,
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Agregar Deudor")
+                }
             }
         },
-        containerColor = Color.White
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(0.dp) // Aplicamos paddingValues aquí para evitar superposición
         ) {
-            // Título
             Text(
                 text = "Deudores",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextDark,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 12.dp)
             )
 
-            // Buscador
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("Buscar deudor por nombre...", color = TextGray) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextGray) },
+                placeholder = { Text("Buscar deudor por nombre...", color = TextGray1) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextGray1) },
+                // Añadimos un botón para limpiar la búsqueda si hay texto
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Default.Close, contentDescription = "Limpiar", tint = TextGray1)
+                        }
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .height(52.dp),
+                    .padding(horizontal = 16.dp),
                 shape = RoundedCornerShape(8.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = BluePrimary,
-                    unfocusedBorderColor = BorderLight,
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White
+                    focusedBorderColor = BluePrimary2,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.surface,
+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface
                 ),
                 singleLine = true
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Filtros (Chips)
-            LazyRow(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                item { FilterChipItem("Todos", 5, selectedFilter == "Todos") { selectedFilter = "Todos" } }
-                item { FilterChipItem("Vencidos", 2, selectedFilter == "Vencidos") { selectedFilter = "Vencidos" } }
-                item { FilterChipItem("Próximos", 2, selectedFilter == "Próximos") { selectedFilter = "Próximos" } }
-            }
-
             Spacer(modifier = Modifier.height(16.dp))
-            Divider(color = BorderLight, thickness = 1.dp)
 
-            // Lista de Deudores
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(sampleDebtors) { debtor ->
-                    DebtorListItem(debtor = debtor)
-                    Divider(color = BorderLight, thickness = 1.dp)
+            // --- LISTA DE DEUDORES FILTRADA ---
+            if (sampleDebtors.isNotEmpty()) {
+                if (filteredDebtors.isEmpty()) {
+                    // Estado cuando la búsqueda no coincide con nadie
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("No se encontraron resultados para \"$searchQuery\"", color = TextGray1)
+                    }
+                } else {
+
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        itemsIndexed(filteredDebtors) { index, debtor ->
+                            DebtorListItem(debtor = debtor!!, verPerfilDeudor, registrarPago, registrarVenta)
+                            Divider(color = MaterialTheme.colorScheme.background, thickness = 1.dp)
+                            if(isSucriptionActive==false){
+                            val isLast = index == filteredDebtors.lastIndex
+                            val isEveryFive = (index + 1) % 5 == 0
+
+                            if (isEveryFive || (isLast && (index + 1) % 5 != 0)) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(20.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                    elevation = CardDefaults.cardElevation(1.dp)
+                                ) {
+                                    NativeAdBanner(
+                                        adUnitId = if (BuildConfig.DEBUG)
+                                            "ca-app-pub-3940256099942544/2247696110"
+                                        else
+                                            "ca-app-pub-1155673544372892/8012390999"
+                                    )
+                                }
+                            }
+                                }
+                        }
+                        item{
+                            Spacer(modifier = Modifier.height(90.dp))
+                        }
+                    }
                 }
-                item { Spacer(modifier = Modifier.height(80.dp)) } // Espacio para que el FAB no tape el último item
+            } else {
+                DynamicEmptyState(
+                    imagePainter = painterResource(id = R.drawable.empty_state_products),
+                    title = "Aún no tienes deudores",
+                    description = "Comienza a agregar a tus deudores para gestionar tus ventas...",
+                    buttonText = "Agregar",
+                    buttonIcon = Icons.Default.Add,
+                    onButtonClick = { agregarDeudor() }
+                )
             }
         }
     }
@@ -143,9 +238,9 @@ fun DebtorsScreen() {
 
 @Composable
 fun FilterChipItem(text: String, count: Int, isSelected: Boolean, onClick: () -> Unit) {
-    val backgroundColor = if (isSelected) BluePrimary else Color.White
-    val contentColor = if (isSelected) Color.White else TextGray
-    val borderColor = if (isSelected) BluePrimary else BorderLight
+    val backgroundColor = if (isSelected) BluePrimary2 else  MaterialTheme.colorScheme.surface
+    val contentColor = if (isSelected) Color.White else TextGray1
+    val borderColor = if (isSelected) BluePrimary2 else MaterialTheme.colorScheme.surface
     val badgeBgColor = if (isSelected) Color.White.copy(alpha = 0.2f) else GrayBackground
 
     Surface(
@@ -174,97 +269,131 @@ fun FilterChipItem(text: String, count: Int, isSelected: Boolean, onClick: () ->
 }
 
 @Composable
-fun DebtorListItem(debtor: Debtor) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-    ) {
-        // --- Fila Superior: Info + Monto ---
-        Row(modifier = Modifier.fillMaxWidth()) {
-            // Avatar Placeholder (En una app real usa AsyncImage de Coil)
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(BorderLight),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Default.Person, contentDescription = null, tint = TextGray)
-            }
+fun DebtorListItem(debtor: DeudoresEntity,verPerfilDeudor:(DeudoresEntity)->Unit,registrarPago:(DeudoresEntity)->Unit,registrarVenta:(DeudoresEntity)->Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(10.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(10.dp),
+        elevation = CardDefaults.cardElevation(0.dp)
+    ){
+        Column(
+            modifier = Modifier
+                .fillMaxWidth().padding(16.dp)
 
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Datos del usuario
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = debtor.name, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextDark)
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Phone, contentDescription = null, tint = TextGray, modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = debtor.phone, fontSize = 13.sp, color = TextGray)
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Badges de Estado y Fecha
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    StatusBadge(debtor.status)
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Icon(Icons.Outlined.CalendarToday, contentDescription = null, tint = TextGray, modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = debtor.dateText, fontSize = 12.sp, color = TextGray)
-                }
-            }
-
-            // Monto Total
-            Column(horizontalAlignment = Alignment.End) {
-                val amountColor = if (debtor.status == DebtorStatus.OVERDUE) RedUrgent else TextDark
-                Text(
-                    text = "$${String.format("%.2f", debtor.amount)}",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = amountColor
-                )
-                Text(text = "Total adeudado", fontSize = 11.sp, color = TextGray)
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // --- Fila Inferior: Botones de Acción ---
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Ver detalles",
-                fontSize = 14.sp,
-                color = TextGray,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.clickable { /* Navegar a detalles */ }.padding(8.dp)
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Button(
-                onClick = { /* Registrar pago */ },
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = BluePrimary),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                modifier = Modifier.height(36.dp)
+            // --- Fila Superior: Info + Monto ---
+            Row(modifier = Modifier.fillMaxWidth()) {
+                // Avatar Placeholder (En una app real usa AsyncImage de Coil)
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(BorderLight),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Person, contentDescription = null, tint = TextGray1)
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                // Datos del usuario
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = debtor.nombre, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Phone, contentDescription = null, tint = TextGray1, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = debtor.telefono, fontSize = 13.sp, color =  MaterialTheme.colorScheme.onSurface)
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Badges de Estado y Fecha
+                   /* Row(verticalAlignment = Alignment.CenterVertically) {
+                        StatusBadge(DebtorStatus.OVERDUE)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Icon(Icons.Outlined.CalendarToday, contentDescription = null, tint =  MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = "hoy", fontSize = 12.sp, color =  MaterialTheme.colorScheme.onSurface)
+                    }*/
+                }
+
+                // Monto Total
+                Column(horizontalAlignment = Alignment.End) {
+                    val amountColor = if (DebtorStatus.OVERDUE == DebtorStatus.OVERDUE) RedUrgent else  MaterialTheme.colorScheme.onSurface
+                    Text(
+                        text = formatAsCurrency(debtor.montoActualAdeudado),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = amountColor
+                    )
+                    Text(text = "Total adeudado", fontSize = 11.sp, color =  MaterialTheme.colorScheme.onSurface)
+                }
+                Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(start = 8.dp)) {
+                    if(debtor.isInRemote){
+                    Icon(
+                        Icons.Default.CloudDone,
+                        contentDescription = null,
+                        tint = TextGray1,
+                        modifier = Modifier.size(14.dp)
+                    )}else{
+                        Icon(
+                            Icons.Default.CloudOff,
+                            contentDescription = null,
+                            tint = TextGray1,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // --- Fila Inferior: Botones de Acción ---
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Registrar pago", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    text = "Ver detalles",
+                    fontSize = 14.sp,
+                    color =  MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.clickable { verPerfilDeudor(debtor) }.padding(8.dp)
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Button(
+                    onClick = { registrarPago(debtor) },
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = BluePrimary2),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Text("Nuevo pago", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Button(
+                    onClick = { registrarVenta(debtor) },
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Text("Nueva venta", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                }
             }
         }
     }
+
 }
 
 @Composable
 fun StatusBadge(status: DebtorStatus) {
     val (bgColor, textColor, icon, text) = when (status) {
         DebtorStatus.OVERDUE -> listOf(RedBackground, RedUrgent, Icons.Outlined.ErrorOutline, "Vencido")
-        DebtorStatus.UPCOMING -> listOf(Color.Transparent, TextDark, Icons.Outlined.Schedule, "Próximo")
-        DebtorStatus.UP_TO_DATE -> listOf(Color.Transparent, TextGray, null, "Al día")
+        DebtorStatus.UPCOMING -> listOf(Color.Transparent, TextDark2, Icons.Outlined.Schedule, "Próximo")
+        DebtorStatus.UP_TO_DATE -> listOf(Color.Transparent, TextGray1, null, "Al día")
     }
 
     Surface(

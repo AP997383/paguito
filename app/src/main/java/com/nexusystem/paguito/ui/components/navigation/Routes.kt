@@ -9,7 +9,10 @@ sealed class Routes(val route: String) {
 
     object HomeGraph : Routes("home_graph")
     object ClientesGraph : Routes("clientes_graph")
+    object ProductosGraph : Routes("productos_graph")
     object ProfileGraph : Routes("profile_graph")
+
+    object LoginGraph : Routes("login_graph")
 
 
 
@@ -19,13 +22,31 @@ sealed class Routes(val route: String) {
      * ===================================================== */
 
     object ScreenHome : Routes("home")
+    object ScreenViewAllDeudores : Routes("viewAllDeudores")
+    object ScreenViewAllPayments : Routes("viewAllPayments")
+    object ScreenRegisterPayment : Routes("registerPayment")
+    object ScreenRegisterSell : Routes("registerSell")
+    object ScreenDetalledeVenta : Routes("detalleVenta")
     object ScreenDeudoresList : Routes("deudores")
-    object ScreenCalendar : Routes("calendar")
-    object ScreenRecordatorios : Routes("recordatorios")
-    object ScreenRecetas : Routes("recetas")
+    object ScreenPerfilDeudor : Routes("perfilDeudor")
+    object ScreenPerfilEditar : Routes("editarPerfil")
+    object ScreenAddNewDebtor: Routes("newDebtor")
     object ScreenProfile : Routes("profile")
+    object ScreenPreviewTicket : Routes("previewTicket")
 
+    object ScreenNuevoProducto : Routes("newProduct")
+    object ScreenListaProductos : Routes("listProducts")
     object ScreenSelectIdiomOnb : Routes("selectIdiomOnb")
+
+
+    object ScreenLogin : Routes("login")
+    object ScreenRegister : Routes("register")
+    object ScreenOtp : Routes("otp")
+    object ScreenOtpRecovery : Routes("otpRecovery")
+    object ScreenRecoveryPassword: Routes("recoveryPassword")
+    object ScreenChangePassword: Routes("changePassword")
+    object ScreenDownloadInfo : Routes("downloadInfo")
+
     /* =====================================================
      *  FLUJOS INTERNOS / AUXILIARES
      *  (✅ viven dentro del graph correspondiente)

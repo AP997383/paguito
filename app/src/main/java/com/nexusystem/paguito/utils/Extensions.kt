@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
+import android.graphics.Bitmap
 import android.hardware.camera2.CameraManager
 import android.os.Build
 import android.provider.Settings
@@ -44,8 +45,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
@@ -60,13 +64,18 @@ import androidx.compose.ui.window.Dialog
 import androidx.core.content.FileProvider
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.google.type.Date
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.MultiFormatWriter
 import com.nexusystem.paguito.R
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import okhttp3.MediaType.Companion.toMediaType
@@ -76,6 +85,8 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.text.NumberFormat
+import java.text.SimpleDateFormat
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -96,6 +107,7 @@ import kotlin.io.writeBytes
 import kotlin.jvm.java
 import kotlin.math.abs
 import kotlin.math.sin
+import kotlin.random.Random
 import kotlin.ranges.coerceAtLeast
 import kotlin.ranges.contains
 import kotlin.text.lowercase
@@ -664,7 +676,18 @@ suspend fun downloadMediPdf(
     return outFile
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
+fun getFormattedDate(): String {
+    // Definimos el formato: Mes abreviado (MMM), día (dd), año (yyyy)
+    val formatter = DateTimeFormatter.ofPattern("dd MMM, yyyy", Locale.US)
+    return LocalDate.now().format(formatter).uppercase()
+}
 
+fun formatTicketNumber(number: Int): String {
+    // Convierte el número a string y rellena con ceros hasta alcanzar 6 dígitos
+    // '0' es el carácter de relleno
+    return number.toString().padStart(6, '0')
+}
 
 // Función auxiliar para formatear el mes
 @RequiresApi(Build.VERSION_CODES.O)
@@ -693,4 +716,320 @@ fun formatDateToChartsHours(value: String): String{
         LocalDateTime.parse(value, inputFormatter).format(outputFormatter).replace(".", "")
     } catch (e: Exception) { "" }
     return fechaFormateada
+}
+
+
+
+object PaguitoStore {
+    private val KEY_SEEN = booleanPreferencesKey("onboarding_seen")
+    private val IS_LOGGED = booleanPreferencesKey("is_logged")
+    private val IS_INVITED= booleanPreferencesKey("is_invited")
+    private val TYPE_USER = intPreferencesKey("type_user")
+    private val MY_PROFILE = stringPreferencesKey("my_profile")
+
+    suspend fun setOnboardingSeen(context: Context) {
+        context.onboardingDataStore.edit { prefs ->
+            prefs[KEY_SEEN] = true
+        }
+    }
+
+    suspend fun hasSeenOnboarding(context: Context): Boolean {
+        return context.onboardingDataStore.data
+            .map { it[KEY_SEEN] ?: false }
+            .first()
+    }
+
+    suspend fun setInvited(context: Context) {
+        context.onboardingDataStore.edit { prefs ->
+            prefs[IS_INVITED] = true
+        }
+    }
+
+    suspend fun setInvitedNot(context: Context) {
+        context.onboardingDataStore.edit { prefs ->
+            prefs[IS_INVITED] = false
+        }
+    }
+
+    suspend fun isInvited(context: Context): Boolean {
+        return context.onboardingDataStore.data
+            .map { it[IS_INVITED] ?: false }
+            .first()
+    }
+
+    suspend fun setLoged(context: Context) {
+        context.onboardingDataStore.edit { prefs ->
+            prefs[IS_LOGGED] = true
+        }
+    }
+    suspend fun setLogout(context: Context) {
+        context.onboardingDataStore.edit { prefs ->
+            prefs[IS_LOGGED] = false
+        }
+    }
+
+    suspend fun isLoged(context: Context): Boolean {
+        return context.onboardingDataStore.data
+            .map { it[IS_LOGGED] ?: false }
+            .first()
+    }
+
+    suspend fun setMyProfile(context: Context,type: String) {
+        context.onboardingDataStore.edit { prefs ->
+            prefs[MY_PROFILE] = type
+        }
+    }
+
+    fun getMyProfile(context: Context): Flow<String> =
+        context.onboardingDataStore.data
+            .map { it[MY_PROFILE] ?: "" }
+
+    suspend fun setTypeUser(context: Context,type:Int) {
+        context.onboardingDataStore.edit { prefs ->
+            prefs[TYPE_USER] = type
+        }
+    }
+
+    fun getTypeUser(context: Context): Flow<Int> =
+        context.onboardingDataStore.data
+            .map { it[TYPE_USER] ?: 3 }
+
+
+}
+
+/**
+ * Convierte un Number (Int, Float, Double) a un String formateado como moneda.
+ * Ejemplo: 1500.5 -> $1,500.50
+ */
+fun getThumbnailUrl(originalUrl: String): String {
+    // Si la URL ya tiene el sufijo, devolvemos la original como fallback
+    if (originalUrl.contains("_200x200.jpg")) return originalUrl
+
+    // Insertamos el sufijo antes de la extensión (o al final si no tiene)
+    return originalUrl.replace(".jpg", "_200x200.jpg")
+}
+
+fun formatAsCurrency(amount: Any?): String {
+    return try {
+        // Convertimos a Double para que el formateador lo acepte sin importar si es Int o Float
+        val value = when (amount) {
+            is Number -> amount.toDouble()
+            is String -> amount.toDoubleOrNull() ?: 0.0
+            else -> 0.0
+        }
+
+        // Usamos el Locale de México para asegurar el formato $X,XXX.XX
+        val format = NumberFormat.getCurrencyInstance(Locale("es", "MX"))
+        format.format(value)
+    } catch (e: Exception) {
+        "$0.00" // Fallback por si llega algo raro
+    }
+}
+
+/**
+ * Convierte de "2026-04-03 20:00" a "Viernes 3 de abril del 2026 a las 8:00 pm"
+ */
+@RequiresApi(Build.VERSION_CODES.O)
+fun formatLongDateTime(inputDate: String?): String {
+    if (inputDate.isNullOrBlank()) return ""
+
+    return try {
+        // 1. Definimos el formato de entrada
+        val inputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+        val dateTime = LocalDateTime.parse(inputDate, inputFormatter)
+
+        // 2. Definimos el formato de salida deseado
+        // 'eeee' = Nombre del día completo, 'd' = día, 'MMMM' = mes completo, 'yyyy' = año
+        // 'hh:mm a' = hora 12h con am/pm
+        val outputFormatter = DateTimeFormatter.ofPattern(
+            "eeee d 'de' MMMM 'del' yyyy",
+            Locale("es", "MX")
+        )
+
+        // 3. Formateamos y ajustamos el am/pm a minúsculas para que se vea más natural
+        dateTime.format(outputFormatter).lowercase(Locale("es", "MX"))
+            .replaceFirstChar { it.uppercase() } // Capitalizar la primera letra (el día)
+
+    } catch (e: Exception) {
+        inputDate // Si falla, devolvemos el string original para no romper la UI
+    }
+}
+@RequiresApi(Build.VERSION_CODES.O)
+fun getTodayDateString(): String {
+    val today = LocalDate.now()
+    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+    return today.format(formatter)
+}
+// Modifier personalizado para dibujar bordes discontinuos (dashed)
+fun Modifier.dashedBorder(
+    width: Dp,
+    radius: Dp,
+    color: Color,
+    dashLength: Dp = 8.dp,
+    gapLength: Dp = 6.dp
+) = drawWithContent {
+    drawContent() // Dibuja el contenido normal primero
+
+    // Creamos el Path Effect discontinuo
+    val pathEffect = PathEffect.dashPathEffect(
+        intervals = floatArrayOf(dashLength.toPx(), gapLength.toPx()),
+        phase = 0f
+    )
+
+    // Dibujamos el rectángulo redondeado con el efecto
+    drawPath(
+        path = Path().apply {
+            addRoundRect(
+                RoundRect(
+                    rect = size.toRect(),
+                    cornerRadius = CornerRadius(radius.toPx())
+                )
+            )
+        },
+        color = color,
+        style = Stroke(
+            width = width.toPx(),
+            pathEffect = pathEffect
+        )
+    )
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+fun getDaysUntilNextPayment(startDateStr: String, periodicity: String): Long {
+    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+    val today = LocalDate.now()
+    var nextPaymentDate = LocalDate.parse(startDateStr, formatter)
+
+    // Si la fecha de inicio es hoy o en el pasado, calculamos la siguiente ocurrencia
+    // hacia el futuro basándonos en la periodicidad.
+    while (nextPaymentDate.isBefore(today) || nextPaymentDate.isEqual(today)) {
+        nextPaymentDate = when (periodicity) {
+            "S" -> nextPaymentDate.plusWeeks(1)
+            "Q" -> nextPaymentDate.plusDays(15)
+            "M" -> nextPaymentDate.plusMonths(1)
+            "A" -> return 0 // Fecha abierta: no hay "próxima fecha" automática
+            else -> nextPaymentDate // Evitar bucle infinito si la periodicidad es inválida
+        }
+
+        // Safety break por si la periodicidad no es válida
+        if (periodicity !in listOf("S", "Q", "M")) break
+    }
+
+    // Calculamos la diferencia en días
+    return ChronoUnit.DAYS.between(today, nextPaymentDate)
+}
+
+fun generarReferenciaUnica(prefijo: String = "PAG-"): String {
+    // Formato: AñoMesDiaHoraMinutoSegundo (ej: 2603281305)
+    val timestamp = SimpleDateFormat("yyMMddHHmm", Locale.getDefault()).format(java.util.Date())
+
+    // Generar 3 caracteres aleatorios (letras mayúsculas y números)
+    val caracteres = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    val randomPart = (1..3)
+        .map { caracteres[Random.nextInt(caracteres.length)] }
+        .joinToString("")
+
+    return "$prefijo$timestamp-$randomPart"
+}
+
+fun generarCodigoBarras(text: String, width: Int, height: Int): android.graphics.Bitmap? {
+    return try {
+        val bitMatrix = MultiFormatWriter().encode(text, BarcodeFormat.CODE_128, width, height)
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        for (x in 0 until width) {
+            for (y in 0 until height) {
+                bitmap.setPixel(x, y, if (bitMatrix[x, y]) android.graphics.Color.BLACK else android.graphics.Color.TRANSPARENT)
+            }
+        }
+        bitmap
+    } catch (e: Exception) {
+        null
+    }
+}
+
+val languajes  =  listOf(
+    // ===== PRIORIDAD =====
+    LanguageOption("English (United States)", "🇺🇸", "en", "US"),
+    LanguageOption("Español (México)", "🇲🇽", "es", "MX"),
+    LanguageOption("English (Canada)", "🇨🇦", "en", "CA"),
+
+    // ===== RESTO (ORDENADO) =====
+    LanguageOption("Español (España)", "🇪🇸", "es", "ES"),
+    LanguageOption("Español (Argentina)", "🇦🇷", "es", "AR"),
+    LanguageOption("Español (Chile)", "🇨🇱", "es", "CL"),
+    LanguageOption("Español (Colombia)", "🇨🇴", "es", "CO"),
+    LanguageOption("Español (Perú)", "🇵🇪", "es", "PE"),
+    LanguageOption("Español (Ecuador)", "🇪🇨", "es", "EC"),
+    LanguageOption("Español (Costa Rica)", "🇨🇷", "es", "CR"),
+    LanguageOption("Español (Guatemala)", "🇬🇹", "es", "GT"),
+    LanguageOption("Español (Honduras)", "🇭🇳", "es", "HN"),
+    LanguageOption("Español (El Salvador)", "🇸🇻", "es", "SV"),
+    LanguageOption("Español (Panamá)", "🇵🇦", "es", "PA"),
+    LanguageOption("Español (Paraguay)", "🇵🇾", "es", "PY"),
+    LanguageOption("Español (Uruguay)", "🇺🇾", "es", "UY"),
+    LanguageOption("Español (Bolivia)", "🇧🇴", "es", "BO"),
+    LanguageOption("Español (República Dominicana)", "🇩🇴", "es", "DO"),
+
+    // Portugués
+    LanguageOption("Português (Brasil)", "🇧🇷", "pt", "BR")
+)
+data class LanguageOption(
+    val name: String,
+    val flagEmoji: String,
+    val prefij: String,     // "es" / "en" / "pt"
+    val regionCode: String  // solo UI
+)
+
+
+
+@RequiresApi(Build.VERSION_CODES.O)
+fun calcularSiguienteVencimiento(
+    fechaInicio: LocalDate,       // 28-01-2026
+    periodicidad: String,        // "Semanal", "Quincenal", "Mensual"
+    historialPagos: List<LocalDate>
+): LocalDate {
+    val hoy = LocalDate.now()
+    var fechaVencimientoActual = fechaInicio
+
+    // Iteramos mientras la fecha de vencimiento sea anterior o igual a hoy
+    // para encontrar cuál es el pago que toca "ahora" o el que está pendiente.
+    while (fechaVencimientoActual.isBefore(hoy) || fechaVencimientoActual.isEqual(hoy)) {
+
+        // Definimos el rango de búsqueda: desde el vencimiento anterior hasta el actual
+        // Si es quincenal, buscamos si hubo un pago en los últimos 15 días antes de esta fecha.
+        val diasAtras = cuandoRestar(periodicidad)
+        val inicioPeriodo = fechaVencimientoActual.minusDays(diasAtras)
+
+        // ¿Existe un pago realizado para cubrir este vencimiento específico?
+        val pagoRealizado = historialPagos.any { it.isAfter(inicioPeriodo) && (it.isBefore(fechaVencimientoActual) || it.isEqual(fechaVencimientoActual)) }
+
+        if (pagoRealizado) {
+            // Si ya pagó, el siguiente vencimiento es el que sigue según la periodicidad
+            fechaVencimientoActual = cuandoEsLaSiguiente(fechaVencimientoActual, periodicidad)
+        } else {
+            // Si NO hay pago en ese rango, este es el vencimiento que debe mostrarse (está pendiente)
+            break
+        }
+    }
+
+    return fechaVencimientoActual
+}
+
+fun cuandoRestar(periodicidad: String): Long {
+    return when (periodicidad.lowercase()) {
+        "S" -> 7L
+        "Q" -> 15L
+        "M" -> 30L // Aproximado para la ventana de búsqueda
+        else -> 30L
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+fun cuandoEsLaSiguiente(fecha: LocalDate, periodicidad: String): LocalDate {
+    return when (periodicidad.uppercase()) { // Usamos uppercase por consistencia
+        "S" -> fecha.plusDays(7)
+        "Q" -> fecha.plusDays(15)
+        "M" -> fecha.plusMonths(1) // ¡Debe ser 1 para que avance al siguiente mes!
+        else -> fecha.plusDays(15)  // Un fallback seguro que SIEMPRE avance
+    }
 }

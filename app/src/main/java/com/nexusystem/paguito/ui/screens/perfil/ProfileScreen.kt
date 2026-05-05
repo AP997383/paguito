@@ -1,17 +1,27 @@
 package com.nexusystem.paguito.ui.screens.perfil
 
+import android.app.Activity
+import android.content.Context
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.Logout
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,211 +30,326 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import com.nexusystem.paguito.BuildConfig
+import com.nexusystem.paguito.R
+import com.nexusystem.paguito.data.local.entity.SuscriptionsItems
+import com.nexusystem.paguito.utils.PaguitoStore
+import com.nexusystem.paguito.utils.dialogs.DialogState
+import com.nexusystem.paguito.utils.dialogs.LogoutConfirmationDialog
+import com.nexusystem.paguito.utils.dialogs.SubscriptionStatusDialog
+import com.nexusystem.paguito.utils.findActivity
+import com.nexusystem.paguito.utils.formatAsCurrency
+import com.nexusystem.paguito.utils.languajes
+import com.nexusystem.paguito.utils.shimmerEffect
+import kotlinx.coroutines.launch
 
-// --- COLORES PRINCIPALES ---
-val BgColor = Color(0xFFF3F4F6)       // Gris clarito del fondo
-val CardBgColor = Color(0xFFFFFFFF)   // Blanco de las tarjetas
-val TextPrimary = Color(0xFF1F2937)   // Texto oscuro principal
-val TextSecondary = Color(0xFF9CA3AF) // Texto gris claro (subtítulos)
-val BorderColor = Color(0xFFE5E7EB)   // Bordes sutiles
-val BluePrimary = Color(0xFF3B82F6)   // Azul de los switches
-val RedLogout = Color(0xFFEF4444)     // Rojo salir
+// --- COLORES ---
+val RedLogout = Color(0xFFEF4444)
+val BluePrimary = Color(0xFF3B82F6)
+val TextSecondary = Color(0xFF9CA3AF)
+val BorderColor = Color(0xFFE5E7EB)
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun ProfileScreen() {
-    // Estados para los switches
-    var isDarkMode by remember { mutableStateOf(true) }
+fun ProfileScreen(
+    logout: () -> Unit,
+    editProfile: () -> Unit,
+    viewModel: PerfiViewModel,
+    openIdiomas: () -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    var businessName by remember { mutableStateOf("") }
+    var myName by remember { mutableStateOf("") }
+    var isSucriptionActive by remember { mutableStateOf(false) }
+    var phone by remember { mutableStateOf("") }
+    var fotoUrl by remember { mutableStateOf("") }
     var isBiometricEnabled by remember { mutableStateOf(true) }
+    var isInvited by remember { mutableStateOf(true) }
+    val listaSucripciones by viewModel.suscriptions.collectAsState()
+    val context = LocalContext.current
+    val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+    val activity = context.findActivity()
+    val isSuscribedSuccess by viewModel.isSubscribed.collectAsState()
+    val isSuscribedError by viewModel.isSubscribedError.collectAsState()
+    var isDarkMode by remember { mutableStateOf(prefs.getBoolean("dark_mode", false)) }
+    val profile = viewModel.profileState
+    var closeSessionDialog by remember { mutableStateOf(false) }
+
+    val currentLangCode = prefs.getString("app_language", "es") ?: "es"
+    val prefijo = languajes.filter { it.regionCode == currentLangCode }
+    val pref = if (prefijo.isNotEmpty()) prefijo[0].prefij else "es"
+
+    val currentLangLabel = remember(pref) {
+        when (pref) {
+            "en" -> "English"
+            "pt" -> "Português"
+            else -> "Español"
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.loadUserProfile()
+        isInvited = PaguitoStore.isInvited(context)
+        viewModel.getAllSuscriptions()
+    }
+
+    LaunchedEffect(profile) {
+        profile?.let {
+            businessName = it.bussinesName
+            myName = it.fullName
+            phone = it.phone
+            fotoUrl = it.fotoUrl
+            isSucriptionActive =it.userSuscription.isActive
+        }
+    }
+
+    if(isSuscribedSuccess){
+        SubscriptionStatusDialog(DialogState.SUCCESS,{
+            viewModel.resetAllStatusPurchase()
+        },{
+            viewModel.resetAllStatusPurchase()
+        })
+    }
+
+    if(isSuscribedError){
+        SubscriptionStatusDialog(DialogState.ERROR,{
+           viewModel.resetAllStatusPurchase()
+        },{
+            viewModel.resetAllStatusPurchase()
+        })
+    }
+    if (closeSessionDialog) {
+        LogoutConfirmationDialog({
+            closeSessionDialog = false
+            scope.launch {
+                PaguitoStore.setLogout(context)
+                logout()
+            }
+        }, {
+            closeSessionDialog = false
+        })
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(BgColor)
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp)
     ) {
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Título de la pantalla
         Text(
-            text = "Perfil y Ajustes",
+            text = stringResource(R.string.profile_settings_title),
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
-            color = TextPrimary
+            color = MaterialTheme.colorScheme.onSurface
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 1. TARJETA DE PERFIL (Header)
-        ProfileHeaderCard()
+        if (isInvited) {
+            GuestModeScreen(onLoginClick = { logout() })
+        } else {
+            ProfileHeaderCard(editProfile, myName, businessName, phone, fotoUrl,isSucriptionActive)
 
-        Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+            if(isSucriptionActive==false) {
+                if(listaSucripciones.isNullOrEmpty()){
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .shimmerEffect() // Usamos el modificador que definimos antes
+                    )
+                }else{
+                    SubscriptionCarousel(listaSucripciones,{
+                        val activity = context as? Activity
+                        viewModel.setCurrentProduct(it)
+                        activity?.let { viewModel.launchPurchaseFlow(it) }
+                    })
+                }
 
-        // 2. SECCIÓN: MI NEGOCIO
-        SectionTitle(title = "Mi Negocio")
-        SettingsCard {
-            SettingsItem(
-                icon = Icons.Outlined.LocalOffer,
-                title = "Catálogo de Productos",
-                onClick = { }
-            )
-            HorizontalDivider(color = BorderColor, modifier = Modifier.padding(start = 56.dp))
-            SettingsItem(
-                icon = Icons.Outlined.Download,
-                title = "Exportar mi Libreta (Excel/PDF)",
-                onClick = { }
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // 3. SECCIÓN: AUTOMATIZACIÓN Y COBRO
-        SectionTitle(title = "Automatización y Cobro")
-        SettingsCard {
-            SettingsItem(
-                icon = Icons.AutoMirrored.Outlined.Chat,
-                title = "Configuración de SMS Automáticos",
-                onClick = { }
-            )
-            HorizontalDivider(color = BorderColor, modifier = Modifier.padding(start = 56.dp))
-            SettingsItem(
-                icon = Icons.Outlined.AccountBalance,
-                title = "Cuentas Bancarias",
-                subtitle = "Donde me depositan",
-                onClick = { }
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // 4. SECCIÓN: PREFERENCIAS DE LA APP
-        SectionTitle(title = "Preferencias de la App")
-        SettingsCard {
-            // Idioma
-            SettingsItem(
-                icon = Icons.Outlined.Language,
-                title = "Idioma",
-                onClick = { },
-                trailingContent = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(text = "Español", color = TextSecondary, fontSize = 14.sp)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(20.dp))
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+            SectionTitle(title = stringResource(R.string.section_app_preferences))
+            SettingsCard {
+                SettingsItem(
+                    icon = Icons.Outlined.Language,
+                    title = stringResource(R.string.item_language),
+                    onClick = { openIdiomas() },
+                    trailingContent = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(text = currentLangLabel, color = TextSecondary, fontSize = 14.sp)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null, tint = TextSecondary, modifier = Modifier.size(20.dp))
+                        }
                     }
-                }
-            )
-            HorizontalDivider(color = BorderColor, modifier = Modifier.padding(start = 56.dp))
+                )
+                HorizontalDivider(color = BorderColor, modifier = Modifier.padding(start = 56.dp))
 
-            // Modo Oscuro (Switch)
-            SettingsItem(
-                icon = Icons.Outlined.DarkMode,
-                title = "Modo Oscuro",
-                onClick = { isDarkMode = !isDarkMode },
-                trailingContent = {
-                    Switch(
-                        checked = isDarkMode,
-                        onCheckedChange = { isDarkMode = it },
-                        colors = SwitchDefaults.colors(checkedTrackColor = BluePrimary)
-                    )
-                }
-            )
-            HorizontalDivider(color = BorderColor, modifier = Modifier.padding(start = 56.dp))
+                SettingsItem(
+                    icon = Icons.Outlined.DarkMode,
+                    title = stringResource(R.string.item_dark_mode),
+                    onClick = { isDarkMode = !isDarkMode },
+                    trailingContent = {
+                        Switch(
+                            checked = isDarkMode,
+                            onCheckedChange = {
+                                isDarkMode = it
+                                prefs.edit().putBoolean("dark_mode", it).apply()
+                                activity?.recreate()
+                            },
+                            colors = SwitchDefaults.colors(checkedTrackColor = BluePrimary)
+                        )
+                    }
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(start = 56.dp))
 
-            // Bloqueo con Huella (Switch)
-            SettingsItem(
-                icon = Icons.Outlined.Lock,
-                title = "Bloqueo con Huella/FaceID",
-                onClick = { isBiometricEnabled = !isBiometricEnabled },
-                trailingContent = {
-                    Switch(
-                        checked = isBiometricEnabled,
-                        onCheckedChange = { isBiometricEnabled = it },
-                        colors = SwitchDefaults.colors(checkedTrackColor = BluePrimary)
-                    )
-                }
+             /*   SettingsItem(
+                    icon = Icons.Outlined.Lock,
+                    title = stringResource(R.string.item_biometric),
+                    onClick = { isBiometricEnabled = !isBiometricEnabled },
+                    trailingContent = {
+                        Switch(
+                            checked = isBiometricEnabled,
+                            onCheckedChange = { isBiometricEnabled = it },
+                            colors = SwitchDefaults.colors(checkedTrackColor = BluePrimary)
+                        )
+                    }
+                )*/
+            }
+
+            Spacer(modifier = Modifier.height(40.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { closeSessionDialog = true }
+                    .padding(vertical = 12.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.AutoMirrored.Outlined.Logout, stringResource(R.string.cd_logout_icon), tint = RedLogout, modifier = Modifier.size(20.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = stringResource(R.string.btn_logout), color = RedLogout, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = BuildConfig.VERSION_NAME,
+                color = TextSecondary,
+                fontSize = 12.sp,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center
             )
+
+            Spacer(modifier = Modifier.height(150.dp))
         }
-
-        Spacer(modifier = Modifier.height(40.dp))
-
-        // 5. BOTÓN CERRAR SESIÓN Y VERSIÓN
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { /* Acción cerrar sesión */ }
-                .padding(vertical = 12.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(Icons.AutoMirrored.Outlined.Logout, contentDescription = "Salir", tint = RedLogout, modifier = Modifier.size(20.dp))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "Cerrar Sesión", color = RedLogout, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = "v1.0.2",
-            color = TextSecondary,
-            fontSize = 12.sp,
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 
-// --- COMPONENTES REUTILIZABLES ---
-
 @Composable
-fun ProfileHeaderCard() {
-    Surface(
-        color = CardBgColor,
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, BorderColor),
+fun SubscriptionCarousel(
+    subscriptions: List<SuscriptionsItems>, // Tu array de modelos de datos
+    onUpgradeClick: (SuscriptionsItems) -> Unit // Callback para manejar la acción
+) {
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Avatar (Placeholder con fondo de color)
-            Box(
-                modifier = Modifier
-                    .size(60.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFFFCE7F3)), // Rosa clarito de fondo
-                contentAlignment = Alignment.Center
+        items(subscriptions) { sub ->
+            SubscriptionCard(
+                subs = sub,
+                onUpgradeClick = {
+                    // Pasamos la suscripción seleccionada al callback
+                    onUpgradeClick(sub)
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun ProfileHeaderCard(
+    editProfile: () -> Unit,
+    name: String,
+    bussinesName: String,
+    email: String, // He cambiado 'phone' por 'email' para coincidir con tu requerimiento
+    fotoUrl: String,
+    isPremium: Boolean // Nuevo parámetro para mostrar el badge
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(24.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Fila superior: Foto, Información y Botón Editar
+            Row(
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Usa AsyncImage de Coil en producción para cargar la foto real
-                Icon(Icons.Outlined.Person, contentDescription = "Avatar", tint = Color(0xFFEC4899), modifier = Modifier.size(32.dp))
+                // Foto de perfil
+                Box(
+                    modifier = Modifier.size(70.dp).clip(CircleShape).background(Color(0xFFFCE7F3)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (fotoUrl.isEmpty()) {
+                        Icon(Icons.Filled.Person, null, tint = Color(0xFFEC4899), modifier = Modifier.size(40.dp))
+                    } else {
+                        AsyncImage(
+                            model = fotoUrl,
+                            contentDescription = null,
+                            modifier = Modifier.size(70.dp).clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                // Columna de textos
+                Column(modifier = Modifier.weight(1f)) {
+                    // Badge Premium
+                    if (isPremium) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color(0xFFFEF3C7) // Amarillo claro premium
+                        ) {
+                            Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Filled.Star, null, tint = Color(0xFFD97706), modifier = Modifier.size(12.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("PREMIUM", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD97706))
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
+
+                    Text(text = name, fontSize = 19.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                    Text(text = email, fontSize = 12.sp, color = TextSecondary)
+                    Text(text = bussinesName.ifEmpty { email }, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                }
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Textos
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = "Ana Sofía", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                Text(text = "Novedades Sofía", fontSize = 14.sp, color = TextSecondary)
-            }
-
-            // Botón Editar Perfil
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                border = BorderStroke(1.dp, BorderColor),
-                color = Color.Transparent,
-                modifier = Modifier.clickable { }
+            // Botón Editar Perfil (Ahora ocupa el ancho completo abajo)
+            OutlinedButton(
+                onClick = editProfile,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, BorderColor)
             ) {
-                Text(
-                    text = "Editar perfil",
-                    fontSize = 12.sp,
-                    color = TextPrimary,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                )
+                Text("Editar perfil", color = MaterialTheme.colorScheme.onSurface)
             }
         }
     }
@@ -244,14 +369,11 @@ fun SectionTitle(title: String) {
 @Composable
 fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
     Surface(
-        color = CardBgColor,
+        color = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, BorderColor),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column {
-            content()
-        }
+        Column { content() }
     }
 }
 
@@ -262,26 +384,124 @@ fun SettingsItem(
     subtitle: String? = null,
     onClick: () -> Unit,
     trailingContent: @Composable () -> Unit = {
-        Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(20.dp))
+        Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null, tint = TextSecondary, modifier = Modifier.size(20.dp))
     }
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+        modifier = Modifier.fillMaxWidth().clickable { onClick() }.padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = title, tint = TextSecondary, modifier = Modifier.size(24.dp))
+        Icon(icon, null, tint = TextSecondary, modifier = Modifier.size(24.dp))
         Spacer(modifier = Modifier.width(16.dp))
-
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, fontSize = 15.sp, color = TextPrimary)
+            Text(text = title, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
             if (subtitle != null) {
-                Text(text = subtitle, fontSize = 12.sp, color = TextSecondary)
+                Text(text = subtitle, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-
         trailingContent()
+    }
+}
+
+@Composable
+fun SubscriptionCard(subs:SuscriptionsItems,onUpgradeClick: () -> Unit) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, BluePrimary.copy(alpha = 0.1f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "Activar Suscripción",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF1F2937)
+                )
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        text = formatAsCurrency(subs.price),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Black,
+                        color = BluePrimary
+                    )
+                    Text(
+                        text = "/mes",
+                        fontSize = 12.sp,
+                        color = TextSecondary,
+                        modifier = Modifier.padding(bottom = 2.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+
+            subs.benefits.forEach { benefit ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = BluePrimary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(text = benefit, fontSize = 14.sp, color = Color(0xFF6B7280))
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Button(
+                onClick = onUpgradeClick,
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = BluePrimary)
+            ) {
+                Text(
+                    text = "Adquirir Beneficios",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
+        }
+    }
+}
+
+
+@Composable
+fun GuestModeScreen(onLoginClick: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(Icons.Default.AccountCircle, null, modifier = Modifier.size(120.dp), tint = Color.Gray.copy(alpha = 0.4f))
+        Spacer(modifier = Modifier.height(32.dp))
+        Text(stringResource(R.string.guest_mode_title), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(stringResource(R.string.guest_mode_description), textAlign = TextAlign.Center, lineHeight = 24.sp)
+        Spacer(modifier = Modifier.height(48.dp))
+        Button(
+            onClick = onLoginClick,
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1976D2))
+        ) {
+            Text(stringResource(R.string.btn_login_now), fontWeight = FontWeight.Bold, color = Color.White)
+        }
+        TextButton(onClick = { }, modifier = Modifier.padding(top = 8.dp)) {
+            Text(stringResource(R.string.btn_later), color = Color.Gray)
+        }
     }
 }
