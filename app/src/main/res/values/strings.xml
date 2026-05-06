@@ -1,0 +1,50 @@
+<resources>
+    <string name="app_name">Paguito</string>
+
+    <string name="shose_idiom">Elige tu idioma</string>
+    <string name="continue_label">Continuar</string>
+    <string name="shose_idiom_desc">Configura la app en el idioma que prefieras para una mejor experiencia.</string>
+
+    <string name="product_registered_success">¡Producto registrado correctamente!</string>
+    <string name="title_new_product">Nuevo Producto</string>
+    <string name="content_desc_back">Atrás</string>
+    <string name="btn_save_product">Guardar Producto</string>
+    <string name="content_desc_profile_photo">Foto del producto</string>
+    <string name="upload_product_image">Subir Imagen del Producto</string>
+    <string name="optional_label">(Opcional)</string>
+    <string name="label_product_name">Nombre del Producto *</string>
+    <string name="placeholder_product_name">Ej. Zapatillas Deportivas XL</string>
+    <string name="label_cost_price">Precio de Costo Real ($) *</string>
+    <string name="placeholder_zero">0.00</string>
+    <string name="label_optionals">Opcionales</string>
+    <string name="label_stock">Cantidad Restante / Stock</string>
+    <string name="placeholder_stock">Ej. 50</string>
+    <string name="label_additional_notes">Notas Adicionales</string>
+    <string name="placeholder_notes">Escribe detalles sobre proveedores, ubicación, etc.</string>
+    <string name="label_define_profit">Definir Ganancia y Precio Final</string>
+    <string name="label_original_cost">COSTO ORIGINAL</string>
+    <string name="label_final_price">PRECIO FINAL</string>
+    <string name="profit_badge_format">Ganancia: $%s</string>
+    <string name="adjust_multiplier">Ajustar Multiplicador</string>
+    <string name="adjust_percentage">Ajustar Porcentaje</string>
+    <string name="tab_percentage">%Porcentaje</string>
+    <string name="tab_multiplier">Multiplicador (x)</string>
+
+
+    <string name="profile_settings_title">Perfil y Ajustes</string>
+    <string name="section_app_preferences">Preferencias de la App</string>
+    <string name="item_language">Idioma</string>
+    <string name="item_dark_mode">Modo Oscuro</string>
+    <string name="item_biometric">Bloqueo con Huella/FaceID</string>
+    <string name="btn_logout">Cerrar Sesión</string>
+    <string name="btn_edit_profile">Editar perfil</string>
+
+    <string name="guest_mode_title">Modo Invitado</string>
+    <string name="guest_mode_description">Actualmente tienes acceso limitado. Para guardar tus movimientos, sincronizar datos en la nube y acceder a configuraciones avanzadas de deudores, necesitas una cuenta activa.</string>
+    <string name="btn_login_now">Iniciar sesión ahora</string>
+    <string name="btn_later">Luego lo haré</string>
+
+    <string name="cd_avatar">Foto de perfil</string>
+    <string name="cd_logout_icon">Icono de salir</string>
+    <string name="cd_arrow">Flecha de navegación</string>
+</resources>
