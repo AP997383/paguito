@@ -1,6 +1,7 @@
 package com.nexusystem.paguito.ui.screens.payments
 
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -109,17 +110,18 @@ fun RegisterPaymentScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit
         amount  ="0"
     }
     val contactText = listOfNotNull(profile?.email, profile?.phone).joinToString(" / ")
-    var paymentDatapreviewTiket by remember{ mutableStateOf(PagostoPreviewTiket(
+    val paymentDatapreviewTiket by remember {
+        derivedStateOf {PagostoPreviewTiket(
         contactText,
-
         nameInCard,"",amount.toInt(),
         saldoAntesDeAbono = currentDeudorSelected!!.montoActualAdeudado.toInt(),
         getTodayDateString(),
-        deudorPrecarga.montoActualAdeudado.toInt(),
+        currentDeudorSelected!!.montoActualAdeudado.toInt(),
         selectedMethodId,
-        ""
+        "",
+            isIngreso = true
 
-    ))}
+    )}}
     val startPickerState = rememberDatePickerState(
         initialSelectedDateMillis = startDate!!.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
     )
@@ -129,6 +131,7 @@ fun RegisterPaymentScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit
         },{
             nameInCard = it.nombre
             ammountInCard = it.montoActualAdeudado.toString()
+            deudorPrecarga.montoActualAdeudado = it.montoActualAdeudado
             currentDeudorSelected  = it
             showListDeudoresBottomSheeet=false
         },listaBusquedaDeudores)
@@ -163,6 +166,7 @@ fun RegisterPaymentScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit
             onBackClick()
         },{
             showSuccessPayment =false
+            Log.e("DATA_IN TIKET","->"+paymentDatapreviewTiket)
             openPreviewTicket(paymentDatapreviewTiket)
         },"Pago registrado","El abono se registro correctamente.\n ¿Deseas ver el  ticket?")
     }

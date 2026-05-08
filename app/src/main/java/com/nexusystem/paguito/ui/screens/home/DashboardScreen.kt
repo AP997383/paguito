@@ -67,7 +67,7 @@ val RedUrgent = Color(0xFFEF4444)
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun DashboardScreen(registerPayment:() ->Unit,
+fun DashboardScreen(seeDeudorProfile:(DeudoresEntity)->Unit, registerPayment:() ->Unit,
                     registerDebtor:() ->Unit,
                     registerProduct:() ->Unit,
                     registerCampaing:() ->Unit,
@@ -137,7 +137,7 @@ fun DashboardScreen(registerPayment:() ->Unit,
             }
             // 4. Carrusel de Próximos Vencimientos
             if(deudoresHisotiral.size>0)
-               UpcomingDeadlinesSection(deudoresHisotiral,seeAllDeudores)
+               UpcomingDeadlinesSection(deudoresHisotiral,seeAllDeudores,seeDeudorProfile)
             else{
                     PaymentHistoryEmptyState("Cuando registres tu primer, deudor, podras ver los proximos a vencer en esta seccion")
             }
@@ -410,7 +410,7 @@ fun ActionButton(icon: ImageVector, text: String, iconTint: Color = TextDark, mo
 // --- 4. CARRUSEL PRÓXIMOS VENCIMIENTOS ---
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun UpcomingDeadlinesSection(deudores:List<DeudoresEntity?>, seeAllDeudores:()->Unit) {
+fun UpcomingDeadlinesSection(deudores:List<DeudoresEntity?>, seeAllDeudores:()->Unit,openDetailDeudor:(DeudoresEntity)->Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -424,16 +424,20 @@ fun UpcomingDeadlinesSection(deudores:List<DeudoresEntity?>, seeAllDeudores:()->
 
     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         deudores.forEach {
-            item { UpcomingCard(name = it!!.nombre, amount = it.montoActualAdeudado.toString(), date = it.fechaInicialDeuda, isUrgent = true,it.periodicidad) }
+            item { UpcomingCard({
+                openDetailDeudor(it)
+            },name = it!!.nombre, amount = it.montoActualAdeudado.toString(), date = it.fechaInicialDeuda, isUrgent = true,it.periodicidad) }
         }
     }
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun UpcomingCard(name: String, amount: String, date: String, isUrgent: Boolean,periodisity: String) {
+fun UpcomingCard(openDetailDeudor:()->Unit,name: String, amount: String, date: String, isUrgent: Boolean,periodisity: String) {
     Card(
-        modifier = Modifier.width(150.dp),
+        modifier = Modifier.width(150.dp).clickable{
+            openDetailDeudor()
+        },
         colors = CardDefaults.cardColors(containerColor =MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(16.dp),

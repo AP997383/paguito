@@ -52,6 +52,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -149,9 +150,10 @@ fun TicketReceiptScreen(
                 )
             }
             Spacer(Modifier.height(20.dp))
-            // Contenedor blanco del ticket (Card o Surface)
             Surface(
-                modifier = Modifier.fillMaxWidth().wrapContentHeight()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight()
                     .drawWithContent {
                         graphicsLayer.record {
                             this@drawWithContent.drawContent()
@@ -162,33 +164,53 @@ fun TicketReceiptScreen(
                 color = TicketBg,
                 shadowElevation = 4.dp
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp).fillMaxWidth()
-                ) {
-                    // --- SECCIÓN 1: HEADER (RECEIPT / ORDER ID / LOGO) ---
-                    TicketHeaderSection(isIngreso,nextNumberTiket.toString(),nombrenegocio)
+                // Usamos un Box para poder encimar el sello
+                Box(contentAlignment = Alignment.Center) {
 
-                    HorizontalDivider(color = BorderColor, modifier = Modifier.padding(vertical = 24.dp))
+                    Column(
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth()
+                    ) {
+                        // --- SECCIÓN 1: HEADER ---
+                        TicketHeaderSection(isIngreso, nextNumberTiket.toString(), nombrenegocio)
 
-                    // --- SECCIÓN 2: BILL TO / DATE / STATUS ---
-                    TicketBillToDateSection(isIngreso,correonegocio, fecha,nombreCliente)
+                        HorizontalDivider(color = BorderColor, modifier = Modifier.padding(vertical = 24.dp))
 
-                    Spacer(modifier = Modifier.height(3.dp))
+                        // --- SECCIÓN 2: BILL TO / DATE ---
+                        TicketBillToDateSection(isIngreso, correonegocio, fecha, nombreCliente)
 
-                    // --- SECCIÓN 3: TABLA DE MOVIMIENTOS ---
-                    TicketTableSection(items)
+                        Spacer(modifier = Modifier.height(3.dp))
 
-                    Spacer(modifier = Modifier.height(32.dp))
+                        // --- SECCIÓN 3: TABLA DE MOVIMIENTOS ---
+                        TicketTableSection(items)
+
+                        Spacer(modifier = Modifier.height(32.dp))
+
+                        HorizontalDivider(color = BorderColor, modifier = Modifier.padding(vertical = 24.dp))
+
+                        // --- SECCIÓN 5: TOTALES ---
+                        TicketTotalsSection(isIngreso, subtotal, abonado, tax, total)
+
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
 
 
-                    HorizontalDivider(color = BorderColor, modifier = Modifier.padding(vertical = 24.dp))
-
-                    // --- SECCIÓN 5: TOTALES ---
-                    TicketTotalsSection(isIngreso,subtotal, abonado, tax, total)
-
-                    Spacer(modifier = Modifier.height(24.dp))
+                    if (total.toInt() <= 0) {
+                        Image(
+                            painter = painterResource(id = R.drawable.liquidado), // Tu recurso aquí
+                            contentDescription = "Sello de cuenta liquidada",
+                            modifier = Modifier
+                                .size(280.dp) // Un poco más grande para que destaque como sello
+                                .rotate(-22f) // Rotación clásica de sello de oficina
+                                .align(Alignment.Center), // Asegura que esté centrado en el Box
+                            alpha = 0.35f, // Control de transparencia (0.0 a 1.0)
+                            contentScale = ContentScale.Fit
+                        )
+                    }
                 }
             }
+
 
             // --- SECCIÓN 6: FOOTER EXTERNO (COPYRIGHT / LINKS) ---
             TicketFooterExternalSection()

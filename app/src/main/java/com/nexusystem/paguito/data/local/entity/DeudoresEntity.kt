@@ -14,7 +14,7 @@ data class DeudoresEntity (
     val telefono: String="=",
     val correo: String="",
     val domicilio: String="",
-    val montoActualAdeudado: Float=0.0f,
+    var montoActualAdeudado: Float=0.0f,
     val montoAcomulado: Float=0.0f,
     val fechaInicialDeuda: String="",
     val periodicidad: String="",

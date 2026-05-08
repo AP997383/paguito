@@ -355,13 +355,7 @@ fun DebtorListItem(debtor: DeudoresEntity,verPerfilDeudor:(DeudoresEntity)->Unit
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Ver detalles",
-                    fontSize = 14.sp,
-                    color =  MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.clickable { verPerfilDeudor(debtor) }.padding(8.dp)
-                )
+
                 Spacer(modifier = Modifier.width(10.dp))
                 Button(
                     onClick = { registrarPago(debtor) },
@@ -382,6 +376,15 @@ fun DebtorListItem(debtor: DeudoresEntity,verPerfilDeudor:(DeudoresEntity)->Unit
                 ) {
                     Text("Nueva venta", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 }
+            }
+            Row() {
+                Text(
+                    text = "Ver detalles",
+                    fontSize = 14.sp,
+                    color =  MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.clickable { verPerfilDeudor(debtor) }.padding(8.dp)
+                )
             }
         }
     }

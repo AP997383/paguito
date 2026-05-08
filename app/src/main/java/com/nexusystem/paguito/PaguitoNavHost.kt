@@ -115,7 +115,10 @@ fun MediNavHost(
             route = Routes.HomeGraph.route
         ) {
             composable(Routes.ScreenHome.route) {
-                DashboardScreen({
+                DashboardScreen({data->
+                    val json = Uri.encode(Gson().toJson(data))
+                    navController.navigate(Routes.ScreenPerfilDeudor.route+ "/$json")
+                },{
                     navController.navigate(Routes.ScreenRegisterPayment.route+ "/")
                 },{
                     navController.navigate(Routes.ScreenAddNewDebtor.route)
@@ -189,10 +192,10 @@ fun MediNavHost(
                 } else {
                     PagostoPreviewTiket()
                 }
-                TicketReceiptScreen(correonegocio = data.correoAndPhone,nombreCliente = data.nameClient, nombrenegocio = data.nameBussines, items = arrayListOf(data), isIngreso = data.isIngreso, onBack = {
-                    navController.popBackStack()
-                }, pagosViewModel = pagosViewModel
-                    )
+                TicketReceiptScreen(nombrenegocio = data.nameBussines, nombreCliente = data.nameClient, correonegocio = data.correoAndPhone, total =if(data.isIngreso) ( data.saldoAntesDeAbono - data.montoAbonado).toString() else  ( data.saldoAntesDeAbono + data.montoAbonado).toString() ,
+                    abonado = data.montoAbonado.toString(), subtotal = data.saldoAntesDeAbono.toString(), items = arrayListOf(data), isIngreso = data.isIngreso, onBack = {
+                        navController.popBackStack()
+                    }, pagosViewModel = pagosViewModel)
               /*  TicketShareScreen({
                     navController.popBackStack()
                 },data )*/
@@ -536,8 +539,8 @@ fun MediNavHost(
                 }
                 TicketReceiptScreen(nombrenegocio = data.nameBussines, nombreCliente = data.nameClient, correonegocio = data.correoAndPhone, total =if(data.isIngreso) ( data.saldoAntesDeAbono - data.montoAbonado).toString() else  ( data.saldoAntesDeAbono + data.montoAbonado).toString() ,
                     abonado = data.montoAbonado.toString(), subtotal = data.saldoAntesDeAbono.toString(), items = arrayListOf(data), isIngreso = data.isIngreso, onBack = {
-                    navController.popBackStack()
-                }, pagosViewModel = pagosViewModel)
+                        navController.popBackStack()
+                    }, pagosViewModel = pagosViewModel)
                /* TicketShareScreen({
                     navController.popBackStack()
                 },data )*/
