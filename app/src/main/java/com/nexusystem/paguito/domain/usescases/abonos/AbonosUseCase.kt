@@ -1,7 +1,7 @@
 package com.nexusystem.paguito.domain.usescases.abonos
 
 import com.nexus.medi.data.local.entity.PagosEntinty
-import com.nexus.medi.data.repository.local.room.bloodAndPresure.AbonosRepository
+import com.nexusystem.paguito.data.repository.local.room.abonos.AbonosRepository
 import com.nexusystem.paguito.data.local.entity.PagoConNombre
 
 import kotlinx.coroutines.flow.Flow

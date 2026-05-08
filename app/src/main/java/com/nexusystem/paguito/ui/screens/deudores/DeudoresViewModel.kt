@@ -136,7 +136,7 @@ class DeudoresViewModel @Inject constructor(
                         val generatedId = newDocRef.id
                         product.idRemoteDatabase = generatedId
                         deudoresUseCase.agregarDeudor(product)
-                        product.isInRemote =true
+                        product.inRemote =true
                         newDocRef.set(product, SetOptions.merge())
                             .addOnSuccessListener {
                                 viewModelScope.launch {

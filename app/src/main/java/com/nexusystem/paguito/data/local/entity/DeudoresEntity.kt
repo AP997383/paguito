@@ -9,7 +9,7 @@ data class DeudoresEntity (
     @PrimaryKey(autoGenerate = true)
     val id: Int?,
     var idRemoteDatabase: String="",
-    var isInRemote: Boolean=false,
+    var inRemote: Boolean=false,
     val nombre: String="",
     val telefono: String="=",
     val correo: String="",

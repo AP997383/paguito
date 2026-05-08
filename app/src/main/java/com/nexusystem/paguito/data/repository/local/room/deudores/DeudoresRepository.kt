@@ -33,7 +33,12 @@ class DeudoresRepository @Inject constructor(
 
     suspend fun addDeudores(recipe: ArrayList<DeudoresEntity>) {
         Log.e("ADDDD","--<" + recipe)
-        recipesDao.agregarDeudores(recipe)
+        val existingIds = recipesDao.getAllRemoteIds()
+        val nuevosDeudores = recipe?.filter { it.idRemoteDatabase !in existingIds }
+        if (!nuevosDeudores.isNullOrEmpty()) {
+            recipesDao.agregarDeudores(nuevosDeudores)
+        }
+
     }
 
     suspend fun updateSync(recipe: DeudoresEntity) {

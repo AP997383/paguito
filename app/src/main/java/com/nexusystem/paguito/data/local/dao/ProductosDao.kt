@@ -20,7 +20,8 @@ interface  ProductosDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun agregarProductos(productos: List<PorductosEntity>)
 
-
+    @Query("SELECT idRemoteDatabase FROM ProductosTble")
+    suspend fun getAllRemoteIds(): List<String>
     @Query("SELECT * FROM ProductosTble  WHERE nombre=:nombre ")
     fun obtenerProductoPorNombre(nombre: String):  Flow<List<PorductosEntity>>
 

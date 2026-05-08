@@ -98,29 +98,31 @@ class MainActivity : ComponentActivity() {
                             .route
                     }
 
+
+                    FirebaseMessaging.getInstance().token
+                        .addOnCompleteListener { task ->
+                            if (!task.isSuccessful) {
+                                Log.e("FCM_TOKEN", "Error obteniendo token", task.exception)
+                                return@addOnCompleteListener
+                            }
+
+                            val token = task.result
+                            val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+                            val lang = prefs.getString("app_language", "es") ?: "es"
+                            if (!prefs.getString("MyToken", "").equals(token)) {
+                                // reminderViewModel.saveMyToken(token, lang)
+                                prefs.edit().putString("MyToken", token).apply()
+                            }
+
+                            Log.d("FCM_TOKEN", "Token: $token")
+
+                            // 👇 opcional: guardarlo o enviarlo a tu backend
+                            // saveTokenToServer(token)
+                        }
+
+
+
                 }
-
-                FirebaseMessaging.getInstance().token
-                    .addOnCompleteListener { task ->
-                        if (!task.isSuccessful) {
-                            Log.e("FCM_TOKEN", "Error obteniendo token", task.exception)
-                            return@addOnCompleteListener
-                        }
-
-                        val token = task.result
-                        val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
-                        val lang = prefs.getString("app_language", "es") ?: "es"
-                        if (!prefs.getString("MyToken", "").equals(token)) {
-                           // reminderViewModel.saveMyToken(token, lang)
-                            prefs.edit().putString("MyToken", token).apply()
-                        }
-
-                        Log.d("FCM_TOKEN", "Token: $token")
-
-                        // 👇 opcional: guardarlo o enviarlo a tu backend
-                        // saveTokenToServer(token)
-                    }
-
 
 
                 if (startDestination == null) {

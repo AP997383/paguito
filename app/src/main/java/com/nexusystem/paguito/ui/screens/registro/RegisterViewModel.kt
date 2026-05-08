@@ -74,13 +74,13 @@ class RegisterViewModel @Inject constructor(
     }
 
 
-    fun loginUser(email: String,password: String) {
+    fun loginUser(email: String,password: String,token: String) {
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
 
             try {
-                val result = authRepository.loginUser(email,password)
+                val result = authRepository.loginUser(email,password,token)
                 _loginSuccessFull.value = result
             } catch (e: Exception) {
                 _errorMessage.value = e.message

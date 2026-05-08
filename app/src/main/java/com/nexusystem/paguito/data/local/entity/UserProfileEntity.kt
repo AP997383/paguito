@@ -11,9 +11,9 @@ data class UserProfileEntity(
 )
 
 data class UserSuscriptionData(
-  val nameSuscription:String="",
- val  nextExpiration:String="",
- val idSucription:String="",
- val price:String="",
- val isActive: Boolean =false
+  var nameSuscription:String="",
+ var  nextExpiration:String="",
+ var idSuscription:String="",
+ var price:String="",
+ var isActive: Boolean =false
 )

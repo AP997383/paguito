@@ -23,8 +23,12 @@ class PorductosRepository @Inject constructor(
     }
 
     suspend fun addProductos(recipe: ArrayList<PorductosEntity>) {
-        Log.e("ADDDD","--<" + recipe)
-        recipesDao.agregarProductos(recipe)
+        val existingIds = recipesDao.getAllRemoteIds()
+        val nuevosProductos = recipe?.filter { it.idRemoteDatabase !in existingIds }
+        if (!nuevosProductos.isNullOrEmpty()) {
+            recipesDao.agregarProductos(nuevosProductos)
+        }
+
     }
 
     suspend fun update(recipe: PorductosEntity) {

@@ -1,5 +1,6 @@
 package com.nexusystem.paguito.ui.screens.login
 
+import android.content.Context
 import android.util.Log
 import android.util.Patterns
 import androidx.compose.foundation.Image
@@ -64,6 +65,7 @@ fun LoginScreen(
     // Estados de errores
     var identifierError by remember { mutableStateOf<String?>(null) }
     var passwordError by remember { mutableStateOf<String?>(null) }
+    val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
     if (successLogin != null) {
         val profileToSave = UserProfileEntity(
             email =successLogin!!.email?:"" ,
@@ -71,7 +73,7 @@ fun LoginScreen(
             fullName = successLogin!!.fullName?:"",
             bussinesName = successLogin!!.bussinesName?:"",
             phone = successLogin!!.phone?:"",
-            token = "",
+            token =prefs.getString("MyToken","").toString(),
             userSuscription = successLogin!!.userSuscription?: UserSuscriptionData()
         )
         Log.e("RESPONSE_LOGIN","-->"+profileToSave)
@@ -195,7 +197,7 @@ fun LoginScreen(
         Button(
             onClick = {
                 if (validateForm()) {
-                    viewModel.loginUser(identifier, password)
+                    viewModel.loginUser(identifier, password,  token =prefs.getString("MyToken","").toString())
                 }
             },
             modifier = Modifier

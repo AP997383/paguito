@@ -330,7 +330,7 @@ fun DebtorListItem(debtor: DeudoresEntity,verPerfilDeudor:(DeudoresEntity)->Unit
                     Text(text = "Total adeudado", fontSize = 11.sp, color =  MaterialTheme.colorScheme.onSurface)
                 }
                 Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(start = 8.dp)) {
-                    if(debtor.isInRemote){
+                    if(debtor.inRemote){
                     Icon(
                         Icons.Default.CloudDone,
                         contentDescription = null,

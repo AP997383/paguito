@@ -776,7 +776,7 @@ fun SubscriptionStatusDialog(
                 Spacer(modifier = Modifier.height(32.dp))
 
                 // 4. Botón de Acción Principal (Ver beneficios / Reintentar)
-                Button(
+              /*  Button(
                     onClick = onPrimaryAction,
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = RoundedCornerShape(16.dp),
@@ -788,7 +788,7 @@ fun SubscriptionStatusDialog(
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
-                }
+                }*/
 
                 Spacer(modifier = Modifier.height(12.dp))
 

@@ -60,8 +60,8 @@ class AuthRepository @Inject constructor(
         }
     }
 
-    suspend fun loginUser(email:String,password: String): LoginResponse {
-        val response = authApi.loginUser(LoginRequest(email, password))
+    suspend fun loginUser(email:String,password: String,token:String): LoginResponse {
+        val response = authApi.loginUser(LoginRequest(email, password,token))
         if (response.isSuccessful) {
             return response.body()!!
         } else {

@@ -109,16 +109,25 @@ if(updateSucess) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
                     onClick = {
-                        val profileToSave = UserProfileEntity(
-                            email = email,
-                            fotoUrl = newUrlFromServer,
-                            fullName = myName,
-                            bussinesName = businessName,
-                            phone = phone,
-                            token = "" // Mantener el token de sesión
-                        )
-                        secureStorage.saveUserProfile(profileToSave)
-                        viewModel.updateAllInfo(email,profileToSave)
+                        val currentProfile = secureStorage.getUserProfile()
+
+                        if (currentProfile != null) {
+                            // 2. Usamos .copy() para cambiar solo los datos del perfil
+                            // Esto mantiene intacto 'userSuscription' y cualquier otro campo no mencionado
+                            val profileToSave = currentProfile.copy(
+                                email = email,
+                                fotoUrl = newUrlFromServer,
+                                fullName = myName,
+                                bussinesName = businessName,
+                                phone = phone
+                                // No mencionamos 'token' ni 'userSuscription', así que conservan sus valores previos
+                            )
+
+                            // 3. Guardamos el objeto actualizado
+                            secureStorage.saveUserProfile(profileToSave)
+                            viewModel.updateAllInfo(email,profileToSave)
+                        }
+
                     },
                     modifier = Modifier
                         .fillMaxWidth()

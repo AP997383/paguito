@@ -1,4 +1,4 @@
-package com.nexus.medi.data.repository.local.room.bloodAndPresure
+package com.nexusystem.paguito.data.repository.local.room.abonos
 
 import android.util.Log
 import com.nexusystem.paguito.data.local.dao.AbonosDao
@@ -39,8 +39,11 @@ class AbonosRepository @Inject constructor(
     }
     suspend fun addPagosOrVentas(recipe: ArrayList<PagosEntinty>) {
         Log.e("ADDDD","--<" + recipe)
-        recipesDao.agregarAbonos(recipe)
-        //  recipesDao.agregarAbono(recipe.toEntity())
+        val existingIds = recipesDao.getAllRemoteIds()
+        val nuevosAbonos = recipe?.filter { it.idRemoteDatabase !in existingIds }
+        if (!nuevosAbonos.isNullOrEmpty()) {
+            recipesDao.agregarAbonos(nuevosAbonos)
+        }
     }
 
     suspend fun addVenta(recipe: PagosEntinty) {

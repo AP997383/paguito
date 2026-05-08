@@ -57,6 +57,7 @@ import com.nexusystem.paguito.BuildConfig
 import com.nexusystem.paguito.utils.emptyStates.DynamicEmptyState
 import com.nexusystem.paguito.R
 import com.nexusystem.paguito.utils.dialogs.PremiumLimitReachedDialog
+import com.nexusystem.paguito.utils.formatAsCurrency
 import com.nexusystem.paguito.utils.getThumbnailUrl
 import com.nexusystem.paguito.utils.shimmerEffect
 
@@ -376,11 +377,11 @@ fun ProductCardItem(product: PorductosEntity,  onSelect: (PorductosEntity) -> Un
                 Row(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("COSTO", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                        Text("$${product.precioOriginal}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                        Text(formatAsCurrency( product.precioOriginal), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                     }
                     Column(modifier = Modifier.weight(1f)) {
                         Text("VENTA", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = TextLightGray)
-                        Text("$${product.precioConGanancia}", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
+                        Text(formatAsCurrency( product.precioConGanancia), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
                     }
                 }
 

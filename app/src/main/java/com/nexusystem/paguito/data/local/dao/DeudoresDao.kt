@@ -53,7 +53,10 @@ interface  DeudoresDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun agregarDeudores(productos: List<DeudoresEntity>)
 
-    @Query("UPDATE DeudoresTable SET isInRemote=true WHERE idRemoteDatabase=:id")
+    @Query("SELECT idRemoteDatabase FROM DeudoresTable")
+    suspend fun getAllRemoteIds(): List<String>
+
+    @Query("UPDATE DeudoresTable SET inRemote=true WHERE idRemoteDatabase=:id")
     suspend fun updateSync(id: String)
 
     @Delete

@@ -207,7 +207,6 @@ class PerfiViewModel @Inject constructor(
         Log.e("PROCESS_PURCHASE", "-->comfirmarSuscripcion: Iniciando corrutina")
         viewModelScope.launch { // Esto ya es Main por defecto
             _isLoading.value = true
-
             // Cambiamos a IO para la operación de red
             val result = withContext(Dispatchers.IO) {
                 try {
@@ -219,9 +218,30 @@ class PerfiViewModel @Inject constructor(
                     null // Retornamos null para manejar el error después
                 }
             }
-
             if (result?.success == true) {
                 _isSubscribed.value = true
+                Log.e("PACO____","-->"+profileState)
+                // 1. Obtenemos el perfil actual (asegurándonos de que no sea nulo)
+                val currentProfile = profileState ?: secureStorage.getUserProfile()
+
+                if (currentProfile != null) {
+                    // 2. Creamos la nueva suscripción copiando la anterior y solo cambiando lo necesario
+                    val updatedSubscription = currentProfile.userSuscription.copy(
+                        isActive = true,
+                        nameSuscription = currentProductSelected.value?.name.toString(),
+                        price = currentProductSelected.value?.price.toString(),
+                    )
+
+                    // 3. Creamos el nuevo perfil copiando el anterior y reemplazando solo la suscripción
+                    val profileToSave = currentProfile.copy(
+                        userSuscription = updatedSubscription
+                    )
+
+                    // 4. Guardamos y recargamos
+                    secureStorage.saveUserProfile(profileToSave)
+                    profileState = profileToSave // Actualizamos el estado local inmediatamente
+                    loadUserProfile()
+                }
                 // ... resto de tu lógica de éxito (esto corre en Main nuevamente gracias a withContext)
                 Log.e("PROCESS_PURCHASE", "-->SUCESS")
                 // ... guardar datos

@@ -33,10 +33,6 @@ class AuthViewModel @Inject constructor(
 
     private val _allDataSucessfull= MutableStateFlow<Boolean>(false)
     val allDataSucessfull = _allDataSucessfull.asStateFlow()
-
-
-
-
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
@@ -49,8 +45,6 @@ class AuthViewModel @Inject constructor(
 
     private val _isUserRegistered = MutableStateFlow(false)
     val isUserRegistered: StateFlow<Boolean> = _isUserRegistered
-
-
 
     private val _userAlreadyExist = MutableStateFlow("")
     val userAlreadyExist: StateFlow<String> = _userAlreadyExist
@@ -128,13 +122,13 @@ class AuthViewModel @Inject constructor(
     }
 
 
-    fun loginUser(email: String,password: String) {
+    fun loginUser(email: String,password: String,token: String) {
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value =""
 
             try {
-                val result = authRepository.loginUser(email,password)
+                val result = authRepository.loginUser(email,password,token)
                 _loginSuccessFull.value = result
             } catch (e: Exception) {
                 _errorMessage.value = e.message?:""

@@ -140,7 +140,7 @@ fun AddDebtorScreen(deudoresViewModel:DeudoresViewModel,onBackClick: () -> Unit 
                                 null,
 
                                 "",
-                                isInRemote = false,
+                                inRemote = false,
                                 name,
                                 phone,
                                 "",
@@ -207,7 +207,8 @@ fun AddDebtorScreen(deudoresViewModel:DeudoresViewModel,onBackClick: () -> Unit 
                 onValueChange = { phone = it },
                 placeholder = "Ej. 55 1234 5678",
                 icon = Icons.Outlined.Phone,
-                keyboardType = KeyboardType.Phone
+                keyboardType = KeyboardType.Phone,
+                maxChars = 10
             )
 
             // Campo: Domicilio
@@ -327,20 +328,25 @@ fun LabelledTextField(
     onValueChange: (String) -> Unit,
     placeholder: String,
     icon: ImageVector,
-    keyboardType: KeyboardType = KeyboardType.Text
+    keyboardType: KeyboardType = KeyboardType.Text,
+    maxChars: Int? = null // Nuevo parámetro opcional
 ) {
     Column(modifier = Modifier.padding(bottom = 20.dp)) {
         FieldLabel(title = label, isOptional = isOptional)
         CustomOutlinedTextField(
             value = value,
-            onValueChange = onValueChange,
+            // Aquí filtramos el cambio
+            onValueChange = { newValue ->
+                if (maxChars == null || newValue.length <= maxChars) {
+                    onValueChange(newValue)
+                }
+            },
             placeholder = placeholder,
             icon = icon,
             keyboardType = keyboardType
         )
     }
 }
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomOutlinedTextField(

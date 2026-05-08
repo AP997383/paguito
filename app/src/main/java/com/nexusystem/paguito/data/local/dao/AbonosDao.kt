@@ -85,6 +85,9 @@ interface  AbonosDao {
     suspend fun actualizarAbono(pagos: PagosEntinty)
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun agregarAbonos(pagos: List<PagosEntinty>)
+
+    @Query("SELECT idRemoteDatabase FROM PagosTable")
+    suspend fun getAllRemoteIds(): List<String>
     @Query("UPDATE PagosTable SET montoAbonado=:recipe WHERE id = :id ")
     suspend fun actualizarAbono(recipe: Int,id: String)
 
