@@ -17,6 +17,8 @@ class AbonosUseCase @Inject constructor(
    suspend fun guardarAbono(data: PagosEntinty) = localRepository.add(data)
     suspend fun guardarAbonos(data: ArrayList<PagosEntinty>) = localRepository.addPagosOrVentas(data)
     suspend fun guardarVenta(data: PagosEntinty) = localRepository.addVenta(data)
+    suspend fun guardarprimeraVenta(data: PagosEntinty) = localRepository.addprimeraVenta(data)
+
     suspend fun updateVenta(data: PagosEntinty) = localRepository.updateVenta(data)
    // suspend fun borrarPago(data:PagosEntinty) = localRepository.b(data)
 }

@@ -54,6 +54,7 @@ import com.nexusystem.paguito.ui.screens.payments.RegisterSellScreen
 import com.nexusystem.paguito.ui.screens.payments.TicketPreview
 import com.nexusystem.paguito.ui.screens.payments.TicketReceiptScreen
 import com.nexusystem.paguito.ui.screens.payments.TicketShareScreen
+import com.nexusystem.paguito.ui.screens.perfil.ChangePasswordProfileScreen
 import com.nexusystem.paguito.ui.screens.perfil.EditProfileScreen
 import com.nexusystem.paguito.ui.screens.perfil.PerfiViewModel
 import com.nexusystem.paguito.ui.screens.perfil.ProfileScreen
@@ -254,8 +255,34 @@ fun MediNavHost(
                     navController.navigate(Routes.ScreenPerfilEditar.route)
                 }, openIdiomas = {
                     navController.navigate(Routes.ScreenIdioms.route)
-                } ,viewModel = perfilViewModel)
+                } , openChangePassword = {
+                        data ->
+                    val json = Uri.encode(Gson().toJson(data))
+                    navController.navigate(Routes.ScreenChangePasswordProfile.route+ "/$json")
+                },viewModel = perfilViewModel)
             }
+
+            composable(Routes.ScreenChangePasswordProfile.route+ "/{params}",
+                arguments = listOf(
+                    navArgument("params") {
+                        type = NavType.StringType
+                        defaultValue = ""
+                    }
+                )) {
+                    params ->
+                val json = params.arguments?.getString("params") ?: ""
+                ChangePasswordProfileScreen(json,authViewModel,{
+                    navController.navigate(Routes.ScreenLogin.route) {
+                        popUpTo(navController.graph.startDestinationId) {
+                            inclusive = true
+                        }
+                        launchSingleTop = true
+                    }
+                },{
+                    navController.popBackStack()
+                })
+            }
+
             composable(Routes.ScreenPerfilEditar.route) {
                 EditProfileScreen( {
                      navController.popBackStack()

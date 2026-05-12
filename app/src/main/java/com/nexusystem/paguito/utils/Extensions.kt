@@ -6,6 +6,7 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.graphics.Bitmap
 import android.hardware.camera2.CameraManager
+import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.util.Log
@@ -597,6 +598,14 @@ fun List<LocalDateTime>.onlyRemainingToday(): List<LocalDateTime> {
     return this.filter { dateTime ->
         dateTime.isAfter(now) && dateTime.isBefore(endOfDay)
     }
+}
+
+fun openAppSettings(context: Context) {
+    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+        data = Uri.fromParts("package", context.packageName, null)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    context.startActivity(intent)
 }
 
 @Composable

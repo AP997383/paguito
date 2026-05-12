@@ -48,7 +48,7 @@ interface  DeudoresDao {
     fun obtenerBuenosPagadores(): Flow<List<DeudoresEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun agregarNuevoDeudor(mascota: DeudoresEntity)
+    suspend fun agregarNuevoDeudor(mascota: DeudoresEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun agregarDeudores(productos: List<DeudoresEntity>)

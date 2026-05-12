@@ -159,6 +159,7 @@ class MainActivity : ComponentActivity() {
                             route != Routes.ScreenRegisterSell.route + "/{params}"&&
                             route != Routes.ScreenOtpRecovery.route + "/{params}"&&
                             route != Routes.ScreenChangePassword.route + "/{params}"&&
+                            route != Routes.ScreenChangePasswordProfile.route + "/{params}"&&
                             route != Routes.ScreenRegisterSell.route + "/"&&
                             route != Routes.ScreenRegisterSell.route&&
                             route != Routes.ScreenViewAllDeudores.route&&

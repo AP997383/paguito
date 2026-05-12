@@ -65,7 +65,7 @@ fun DetalleVentaScreen(ventaPago : PagosEntinty, productosViewModel: ProductosVi
     LaunchedEffect(ventaPago.jsonAbonoPorProducto) {
         if (!ventaPago.jsonAbonoPorProducto.isNullOrEmpty()) {
             val listType = object : TypeToken<ArrayList<PorductosEntity>>() {}.type
-            val listaRecuperada: ArrayList<PorductosEntity> = Gson().fromJson(ventaPago.jsonAbonoPorProducto, listType)
+            val listaRecuperada: ArrayList<PorductosEntity> =try{ Gson().fromJson(ventaPago.jsonAbonoPorProducto, listType)}catch (e: Exception){arrayListOf<PorductosEntity>()}
             listaRecuperada.forEach {
                 montoRelacionado.value +=it.precioConGanancia.toInt()
             }

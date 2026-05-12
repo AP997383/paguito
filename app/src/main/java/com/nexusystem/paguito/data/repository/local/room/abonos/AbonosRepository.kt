@@ -51,6 +51,11 @@ class AbonosRepository @Inject constructor(
         recipesDao.registrarVentaYActualizarDeudor(recipe.toEntity(),deudoresDao)
         //  recipesDao.agregarAbono(recipe.toEntity())
     }
+    suspend fun addprimeraVenta(recipe: PagosEntinty) {
+        Log.e("ADDDD","--<" + recipe)
+        recipesDao.registrarPrimeraVentaYActualizarDeudor(recipe.toEntity(),deudoresDao)
+        //  recipesDao.agregarAbono(recipe.toEntity())
+    }
 
     suspend fun updateVenta(recipe: PagosEntinty) {
         Log.e("ADDDD","--<" + recipe)

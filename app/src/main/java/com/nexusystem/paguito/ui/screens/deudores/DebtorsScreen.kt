@@ -120,7 +120,7 @@ fun DebtorsScreen(
                 FloatingActionButton(
                     modifier = Modifier.padding(end = 5.dp, bottom = 90.dp),
                     onClick = {
-                        if(sampleDebtors.size>=5 && !isSucriptionActive){
+                        if(sampleDebtors.size>=10 && !isSucriptionActive){
                             showAlertFreeLimited=true
                         }else{
                             agregarDeudor()

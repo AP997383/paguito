@@ -249,7 +249,7 @@ fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntit
                 // 3. TARJETA DE SALDO PENDIENTE
                 BalanceCard(
                     deudorData.montoAcomulado,
-                    pagado,
+                    deudorData.montoAcomulado- saldoPendiente,
                     saldoPendiente,
                     deudorData.periodicidad,
                     proximaFecha.toString()
@@ -578,8 +578,7 @@ fun TransactionItem(
             Spacer(modifier = Modifier.height(8.dp))
         if(!transaction.jsonAbonoPorProducto.isNullOrEmpty()) {
             val listType = object : TypeToken<ArrayList<PorductosEntity>>() {}.type
-            val listaRecuperada: ArrayList<PorductosEntity> =
-                Gson().fromJson(transaction.jsonAbonoPorProducto, listType)
+            val listaRecuperada: ArrayList<PorductosEntity> = try{Gson().fromJson(transaction.jsonAbonoPorProducto, listType)}catch (e: Exception){arrayListOf<PorductosEntity>()}
             listaRecuperada.forEachIndexed { index, producto ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),

@@ -76,6 +76,9 @@ class PerfiViewModel @Inject constructor(
     val deudores = _deudores.asStateFlow()
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
+
+    private val _accountDelete = MutableStateFlow(0)
+    val accountDelete: StateFlow<Int> = _accountDelete
     private val _suscriptions= MutableStateFlow<List<SuscriptionsItems>>(listOf<SuscriptionsItems>())
     val suscriptions = _suscriptions.asStateFlow()
     private val _sumary1 = MutableStateFlow<DeudoresSummary?>(null)
@@ -138,6 +141,11 @@ class PerfiViewModel @Inject constructor(
         _isSubscribed.value=false
     }
 
+    fun resetDelete(){
+        _accountDelete.value =0
+    }
+
+
 
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -198,6 +206,26 @@ class PerfiViewModel @Inject constructor(
                 _suscriptions.value =result.suscripciones
             } catch (e: Exception) {
                 _errorMessage.value = e.message?:""
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun deleteMyAccount() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _errorMessage.value =""
+            try {
+                val result = authRepository.deleteMyAccount(profileState!!.email)
+                if(result){
+                    _accountDelete.value =1
+                }else{
+                    _accountDelete.value =2
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = e.message?:""
+                _accountDelete.value =2
             } finally {
                 _isLoading.value = false
             }

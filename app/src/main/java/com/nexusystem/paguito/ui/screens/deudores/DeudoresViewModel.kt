@@ -11,12 +11,16 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.firestoreSettings
+import com.google.gson.Gson
 import com.nexus.medi.data.local.entity.DeudoresEntity
+import com.nexus.medi.data.local.entity.PagosEntinty
 import com.nexus.medi.data.local.entity.PorductosEntity
 import com.nexusystem.paguito.data.local.entity.UserProfileEntity
 import com.nexusystem.paguito.domain.data.DeudoresSummary
+import com.nexusystem.paguito.domain.usescases.abonos.AbonosUseCase
 import com.nexusystem.paguito.domain.usescases.deudores.DeudoresUseCase
 import com.nexusystem.paguito.utils.SecureStorageManager
+import com.nexusystem.paguito.utils.getTodayDateString
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,6 +35,7 @@ import javax.inject.Inject
 @HiltViewModel
 class DeudoresViewModel @Inject constructor(
     private val deudoresUseCase: DeudoresUseCase,
+    private val abonosUseCase: AbonosUseCase,
     private val firestore: FirebaseFirestore,
     private val secureStorage: SecureStorageManager
 ) : ViewModel() {
@@ -109,6 +114,7 @@ class DeudoresViewModel @Inject constructor(
         return ChronoUnit.DAYS.between(today, lastDayOfMonth).toInt()
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     fun guardarDeudor(recipe: DeudoresEntity) {
         viewModelScope.launch {
             saveDeudorInFirebase(mail!!,recipe)
@@ -121,6 +127,7 @@ class DeudoresViewModel @Inject constructor(
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     fun saveDeudorInFirebase(userId: String, producto: DeudoresEntity?) {
         viewModelScope.launch {
             producto?.let { product ->
@@ -135,12 +142,28 @@ class DeudoresViewModel @Inject constructor(
                             .document()
                         val generatedId = newDocRef.id
                         product.idRemoteDatabase = generatedId
-                        deudoresUseCase.agregarDeudor(product)
+                        val idLocal = deudoresUseCase.agregarDeudor(product)
                         product.inRemote =true
                         newDocRef.set(product, SetOptions.merge())
                             .addOnSuccessListener {
                                 viewModelScope.launch {
                                     deudoresUseCase.updateSync(product)
+                                    val jsonCompleto: String = Gson().toJson(producto.idsPorductos)
+                                    val paymentData = PagosEntinty(
+                                        null,
+                                        "",
+                                        generatedId,
+                                        idLocal.toString(),
+                                        producto.montoAcomulado.toInt(),
+                                        saldoAntesDeAbono = 0,
+                                        getTodayDateString(),
+                                        true,
+                                        0,
+                                        false,
+                                        "",
+                                        jsonCompleto
+                                    )
+                                    registrarVentaRemoteFirebase(userId,paymentData)
                                     Log.d("SAVEDEUDOE", "Sincronizado con la nube exitosamente")
                                 }
                             }
@@ -158,6 +181,40 @@ class DeudoresViewModel @Inject constructor(
             }
         }
     }
+
+    fun registrarVentaRemoteFirebase(userId: String, pago: PagosEntinty?) {
+        viewModelScope.launch {
+            pago?.let { pago ->
+                try {
+                    if(userId.isNullOrEmpty()){
+                        abonosUseCase.guardarVenta(pago)
+                    }else{
+                        // 1. Creamos una referencia a un nuevo documento (genera el ID localmente)
+                        val newDocRef = firestore.collection("deudores")
+                            .document(userId)
+                            .collection("deudores")
+                            .document(pago.idDeudorRemoteDatabase)
+                            .collection("ventas")
+                            .document()
+                        // 2. Obtenemos ese ID generado y lo asignamos a tu entidad
+                        val generatedId = newDocRef.id
+                        pago.idRemoteDatabase = generatedId
+                        // 3. Subimos el objeto que ya incluye su propio ID
+                        newDocRef.set(pago, SetOptions.merge()).await()
+                        // 4. Guardamos en la base de datos local (Room) con el ID actualizado
+                        abonosUseCase.guardarprimeraVenta(pago)
+                        // Opcional: Log o aviso de éxito
+                    }
+
+                } catch (e: Exception) {
+                    abonosUseCase.guardarprimeraVenta(pago)
+                    // Importante: No dejes el catch vacío para poder debuguear
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
+
 
     fun reset() {
         _medicineNotFound.value = false

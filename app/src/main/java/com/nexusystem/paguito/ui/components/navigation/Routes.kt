@@ -45,6 +45,7 @@ sealed class Routes(val route: String) {
     object ScreenOtpRecovery : Routes("otpRecovery")
     object ScreenRecoveryPassword: Routes("recoveryPassword")
     object ScreenChangePassword: Routes("changePassword")
+    object ScreenChangePasswordProfile: Routes("changePasswordProfile")
     object ScreenDownloadInfo : Routes("downloadInfo")
 
     /* =====================================================

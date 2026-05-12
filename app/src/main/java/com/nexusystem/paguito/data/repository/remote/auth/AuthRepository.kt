@@ -1,6 +1,7 @@
 package com.nexusystem.paguito.data.repository.remote.auth
 
 import com.nexusystem.paguito.data.models.request.ChangePasswordRequest
+import com.nexusystem.paguito.data.models.request.DeleteAccountRequest
 import com.nexusystem.paguito.data.models.request.GetAllMyDataRequest
 import com.nexusystem.paguito.data.models.request.LoginRequest
 import com.nexusystem.paguito.data.models.request.SuscripcionPurchaseRequest
@@ -86,6 +87,17 @@ class AuthRepository @Inject constructor(
         val response = authApi.getActualSuscriptions()
         if (response.isSuccessful) {
             return response.body()!!
+        } else {
+            throw kotlin.Exception(
+                response.errorBody()?.string() ?: "OTP inválido"
+            )
+        }
+    }
+
+    suspend fun deleteMyAccount(email: String): Boolean {
+        val response = authApi.deleteMyAccount(DeleteAccountRequest(email))
+        if (response.isSuccessful) {
+            return response.body()!!.success
         } else {
             throw kotlin.Exception(
                 response.errorBody()?.string() ?: "OTP inválido"

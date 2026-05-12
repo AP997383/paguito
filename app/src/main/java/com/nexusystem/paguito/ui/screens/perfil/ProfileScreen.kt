@@ -3,6 +3,7 @@ package com.nexusystem.paguito.ui.screens.perfil
 import android.app.Activity
 import android.content.Context
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -41,7 +42,9 @@ import coil.compose.AsyncImage
 import com.nexusystem.paguito.BuildConfig
 import com.nexusystem.paguito.R
 import com.nexusystem.paguito.data.local.entity.SuscriptionsItems
+import com.nexusystem.paguito.utils.LoadingOverlay
 import com.nexusystem.paguito.utils.PaguitoStore
+import com.nexusystem.paguito.utils.dialogs.CuentaEliminacionScreen
 import com.nexusystem.paguito.utils.dialogs.DialogState
 import com.nexusystem.paguito.utils.dialogs.LogoutConfirmationDialog
 import com.nexusystem.paguito.utils.dialogs.SubscriptionStatusDialog
@@ -62,6 +65,7 @@ val BorderColor = Color(0xFFE5E7EB)
 fun ProfileScreen(
     logout: () -> Unit,
     editProfile: () -> Unit,
+    openChangePassword:(String)->Unit,
     viewModel: PerfiViewModel,
     openIdiomas: () -> Unit
 ) {
@@ -79,14 +83,17 @@ fun ProfileScreen(
     val activity = context.findActivity()
     val isSuscribedSuccess by viewModel.isSubscribed.collectAsState()
     val isSuscribedError by viewModel.isSubscribedError.collectAsState()
+    val accountDelete by viewModel.accountDelete.collectAsState()
+
     var isDarkMode by remember { mutableStateOf(prefs.getBoolean("dark_mode", false)) }
     val profile = viewModel.profileState
     var closeSessionDialog by remember { mutableStateOf(false) }
+    var showDeleteAccount by remember { mutableStateOf(false) }
 
     val currentLangCode = prefs.getString("app_language", "es") ?: "es"
     val prefijo = languajes.filter { it.regionCode == currentLangCode }
     val pref = if (prefijo.isNotEmpty()) prefijo[0].prefij else "es"
-
+    val isLoading by viewModel.isLoading.collectAsState()
     val currentLangLabel = remember(pref) {
         when (pref) {
             "en" -> "English"
@@ -94,6 +101,24 @@ fun ProfileScreen(
             else -> "Español"
         }
     }
+    if(showDeleteAccount){
+        CuentaEliminacionScreen({
+            showDeleteAccount =false
+        },{
+            viewModel.deleteMyAccount()
+            showDeleteAccount =false
+        })
+    }
+    LaunchedEffect(accountDelete) {
+        if (accountDelete == 1) {
+            scope.launch {
+                PaguitoStore.setLogout(context)
+                logout()
+                viewModel.resetDelete()
+            }
+        }
+    }
+
 
     LaunchedEffect(Unit) {
         viewModel.loadUserProfile()
@@ -137,124 +162,183 @@ fun ProfileScreen(
             closeSessionDialog = false
         })
     }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp)
-    ) {
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = stringResource(R.string.profile_settings_title),
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        if (isInvited) {
-            GuestModeScreen(onLoginClick = { logout() })
-        } else {
-            ProfileHeaderCard(editProfile, myName, businessName, phone, fotoUrl,isSucriptionActive)
-
+    Box{
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp)
+        ) {
             Spacer(modifier = Modifier.height(24.dp))
-            if(isSucriptionActive==false) {
-                if(listaSucripciones.isNullOrEmpty()){
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .shimmerEffect() // Usamos el modificador que definimos antes
-                    )
-                }else{
-                    SubscriptionCarousel(listaSucripciones,{
-                        val activity = context as? Activity
-                        viewModel.setCurrentProduct(it)
-                        activity?.let { viewModel.launchPurchaseFlow(it) }
-                    })
-                }
-
-            }
-            Spacer(modifier = Modifier.height(24.dp))
-            SectionTitle(title = stringResource(R.string.section_app_preferences))
-            SettingsCard {
-                SettingsItem(
-                    icon = Icons.Outlined.Language,
-                    title = stringResource(R.string.item_language),
-                    onClick = { openIdiomas() },
-                    trailingContent = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(text = currentLangLabel, color = TextSecondary, fontSize = 14.sp)
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null, tint = TextSecondary, modifier = Modifier.size(20.dp))
-                        }
-                    }
-                )
-                HorizontalDivider(color = BorderColor, modifier = Modifier.padding(start = 56.dp))
-
-                SettingsItem(
-                    icon = Icons.Outlined.DarkMode,
-                    title = stringResource(R.string.item_dark_mode),
-                    onClick = { isDarkMode = !isDarkMode },
-                    trailingContent = {
-                        Switch(
-                            checked = isDarkMode,
-                            onCheckedChange = {
-                                isDarkMode = it
-                                prefs.edit().putBoolean("dark_mode", it).apply()
-                                activity?.recreate()
-                            },
-                            colors = SwitchDefaults.colors(checkedTrackColor = BluePrimary)
-                        )
-                    }
-                )
-                HorizontalDivider(color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(start = 56.dp))
-
-             /*   SettingsItem(
-                    icon = Icons.Outlined.Lock,
-                    title = stringResource(R.string.item_biometric),
-                    onClick = { isBiometricEnabled = !isBiometricEnabled },
-                    trailingContent = {
-                        Switch(
-                            checked = isBiometricEnabled,
-                            onCheckedChange = { isBiometricEnabled = it },
-                            colors = SwitchDefaults.colors(checkedTrackColor = BluePrimary)
-                        )
-                    }
-                )*/
-            }
-
-            Spacer(modifier = Modifier.height(40.dp))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { closeSessionDialog = true }
-                    .padding(vertical = 12.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.AutoMirrored.Outlined.Logout, stringResource(R.string.cd_logout_icon), tint = RedLogout, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = stringResource(R.string.btn_logout), color = RedLogout, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = BuildConfig.VERSION_NAME,
-                color = TextSecondary,
-                fontSize = 12.sp,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center
+                text = stringResource(R.string.profile_settings_title),
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
             )
 
-            Spacer(modifier = Modifier.height(150.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (isInvited) {
+                GuestModeScreen(onLoginClick = { logout() })
+            } else {
+                ProfileHeaderCard(editProfile, myName, businessName, phone, fotoUrl,isSucriptionActive)
+
+                Spacer(modifier = Modifier.height(24.dp))
+                if(isSucriptionActive==false) {
+                    // Usamos un Key para que el Shimmer no se reinicie innecesariamente
+                    val showShimmer = remember(listaSucripciones) { listaSucripciones.isNullOrEmpty() }
+
+                    if (showShimmer) {
+                        // Evita usar Logs directamente en el cuerpo si no es con un Side Effect
+                        LaunchedEffect(Unit) {
+                            Log.e("SHIMMMER", "SI - Iniciando carga")
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(200.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color.LightGray.copy(alpha = 0.3f))
+                                .shimmerEffect()
+                        )
+                    } else {
+                        SubscriptionCarousel(listaSucripciones, {
+                            val activity = context as? Activity
+                            viewModel.setCurrentProduct(it)
+                            activity?.let { viewModel.launchPurchaseFlow(it) }
+                        })
+                    }
+
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+                SectionTitle(title = stringResource(R.string.section_app_preferences))
+                SettingsCard {
+                    SettingsItem(
+                        icon = Icons.Outlined.Language,
+                        title = stringResource(R.string.item_language),
+                        onClick = { openIdiomas() },
+                        trailingContent = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(text = currentLangLabel, color = TextSecondary, fontSize = 14.sp)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null, tint = TextSecondary, modifier = Modifier.size(20.dp))
+                            }
+                        }
+                    )
+                    HorizontalDivider(color = BorderColor, modifier = Modifier.padding(start = 56.dp))
+
+                    SettingsItem(
+                        icon = Icons.Outlined.DarkMode,
+                        title = stringResource(R.string.item_dark_mode),
+                        onClick = { isDarkMode = !isDarkMode },
+                        trailingContent = {
+                            Switch(
+                                checked = isDarkMode,
+                                onCheckedChange = {
+                                    isDarkMode = it
+                                    prefs.edit().putBoolean("dark_mode", it).apply()
+                                    activity?.recreate()
+                                },
+                                colors = SwitchDefaults.colors(checkedTrackColor = BluePrimary)
+                            )
+                        }
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(start = 56.dp))
+
+                    /*   SettingsItem(
+                           icon = Icons.Outlined.Lock,
+                           title = stringResource(R.string.item_biometric),
+                           onClick = { isBiometricEnabled = !isBiometricEnabled },
+                           trailingContent = {
+                               Switch(
+                                   checked = isBiometricEnabled,
+                                   onCheckedChange = { isBiometricEnabled = it },
+                                   colors = SwitchDefaults.colors(checkedTrackColor = BluePrimary)
+                               )
+                           }
+                       )*/
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                SectionTitle(title = "Cuenta")
+                SettingsCard {
+                    SettingsItem(
+                        icon = Icons.Outlined.Password,
+                        title = "Cambiar contraseña",
+                        onClick = { openChangePassword(profile!!.email) },
+                        trailingContent = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null, tint = TextSecondary, modifier = Modifier.size(20.dp))
+                            }
+                        }
+                    )
+                    HorizontalDivider(color = BorderColor, modifier = Modifier.padding(start = 56.dp))
+
+                    SettingsItem(
+                        icon = Icons.Outlined.Delete,
+                        title = "Eliminar cuenta",
+                        onClick = { showDeleteAccount =true },
+                        trailingContent = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null, tint = TextSecondary, modifier = Modifier.size(20.dp))
+                            }
+                        }
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(start = 56.dp))
+
+                    /*   SettingsItem(
+                           icon = Icons.Outlined.Lock,
+                           title = stringResource(R.string.item_biometric),
+                           onClick = { isBiometricEnabled = !isBiometricEnabled },
+                           trailingContent = {
+                               Switch(
+                                   checked = isBiometricEnabled,
+                                   onCheckedChange = { isBiometricEnabled = it },
+                                   colors = SwitchDefaults.colors(checkedTrackColor = BluePrimary)
+                               )
+                           }
+                       )*/
+                }
+
+                Spacer(modifier = Modifier.height(40.dp))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { closeSessionDialog = true }
+                        .padding(vertical = 12.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.AutoMirrored.Outlined.Logout, stringResource(R.string.cd_logout_icon), tint = RedLogout, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = stringResource(R.string.btn_logout), color = RedLogout, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = BuildConfig.VERSION_NAME,
+                    color = TextSecondary,
+                    fontSize = 12.sp,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(150.dp))
+            }
         }
+        LoadingOverlay(
+            isLoading = isLoading,
+            lottieRes = R.raw.loadings
+        )
     }
+
+
 }
 
 @Composable

@@ -26,9 +26,9 @@ class DeudoresRepository @Inject constructor(
 
 
 
-    suspend fun add(recipe: DeudoresEntity) {
+    suspend fun add(recipe: DeudoresEntity) :Long{
         Log.e("ADDDD","--<" + recipe)
-        recipesDao.agregarNuevoDeudor(recipe.toEntity())
+        return recipesDao.agregarNuevoDeudor(recipe.toEntity())
     }
 
     suspend fun addDeudores(recipe: ArrayList<DeudoresEntity>) {

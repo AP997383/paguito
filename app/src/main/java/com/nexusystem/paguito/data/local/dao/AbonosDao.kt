@@ -81,6 +81,12 @@ interface  AbonosDao {
         val idInt = pago.idDeudor.toIntOrNull() ?: 0
         deudoresDao.sumarSaldo(idInt, pago.montoAbonado.toFloat())
     }
+
+    @Transaction
+    suspend fun registrarPrimeraVentaYActualizarDeudor(pago: PagosEntinty, deudoresDao: DeudoresDao) {
+        agregarAbono(pago)
+
+    }
     @Update(onConflict = OnConflictStrategy.REPLACE)
     suspend fun actualizarAbono(pagos: PagosEntinty)
     @Insert(onConflict = OnConflictStrategy.REPLACE)

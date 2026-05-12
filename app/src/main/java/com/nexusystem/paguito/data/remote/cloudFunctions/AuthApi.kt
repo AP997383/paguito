@@ -1,12 +1,14 @@
 package com.nexusystem.paguito.data.remote.cloudFunctions
 
 import com.nexusystem.paguito.data.models.request.ChangePasswordRequest
+import com.nexusystem.paguito.data.models.request.DeleteAccountRequest
 import com.nexusystem.paguito.data.models.request.GetAllMyDataRequest
 import com.nexusystem.paguito.data.models.request.LoginRequest
 import com.nexusystem.paguito.data.models.request.SendOtpRequest
 import com.nexusystem.paguito.data.models.request.SuscripcionPurchaseRequest
 import com.nexusystem.paguito.data.models.request.VerifyOtpRequest
 import com.nexusystem.paguito.data.models.responses.ChangePasswordResponse
+import com.nexusystem.paguito.data.models.responses.DeleteAccountResponse
 import com.nexusystem.paguito.data.models.responses.GetAllMyDataResponse
 import com.nexusystem.paguito.data.models.responses.LoginResponse
 import com.nexusystem.paguito.data.models.responses.RegisterUserResponse
@@ -34,6 +36,9 @@ interface AuthApi {
 
     @POST("https://getsuscriptions-2a2qk4zvlq-uc.a.run.app")
     suspend fun getActualSuscriptions(): Response<SuscriptionsResponse>
+
+    @POST("https://borrarusuarioporemail-2a2qk4zvlq-uc.a.run.app")
+    suspend fun deleteMyAccount(  @Body request: DeleteAccountRequest): Response<DeleteAccountResponse>
 
     @POST("https://verifyandsyncpurchase-2a2qk4zvlq-uc.a.run.app")
     suspend fun confirmarSuscripcion(   @Body request: SuscripcionPurchaseRequest): Response<SuscripcionPurchaseResponse>

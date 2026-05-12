@@ -132,7 +132,7 @@ fun ProductListScreen(onBackClick: () -> Unit = {},openProduct:(PorductosEntity)
             if(filteredDebtors.size>0) {
                     FloatingActionButton(
                         onClick = {
-                            if(listaProductos.size>=5 && !isSucriptionActive){
+                            if(listaProductos.size>=10 && !isSucriptionActive){
                                 showAlertFreeLimited =true
                             }else{
                                 addNewProduct()

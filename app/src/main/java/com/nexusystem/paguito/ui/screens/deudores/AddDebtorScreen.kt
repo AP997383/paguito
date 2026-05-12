@@ -1,6 +1,8 @@
 package com.nexusystem.paguito.ui.screens.deudores
 
 import android.Manifest
+import android.app.Activity
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.ContactsContract
@@ -41,9 +43,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.gson.Gson
 import com.nexus.medi.data.local.entity.DeudoresEntity
+import com.nexus.medi.data.local.entity.PagosEntinty
 import com.nexus.medi.data.local.entity.PorductosEntity
 import com.nexusystem.paguito.R
 import com.nexusystem.paguito.ui.screens.payments.DateSelectorCard
@@ -52,6 +56,8 @@ import com.nexusystem.paguito.ui.screens.payments.SectionLabel
 import com.nexusystem.paguito.ui.screens.payments.SelectedProductItem
 import com.nexusystem.paguito.ui.screens.productos.ChoseProductBottomSheet
 import com.nexusystem.paguito.ui.screens.productos.ProductosViewModel
+import com.nexusystem.paguito.utils.getTodayDateString
+import com.nexusystem.paguito.utils.openAppSettings
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -71,7 +77,7 @@ fun AddDebtorScreen(
     productosViewModel: ProductosViewModel
 ) {
     val context = LocalContext.current
-
+    var showSettingsDialog by remember { mutableStateOf(false) }
     // --- ESTADOS ---
     val listaBusquedaProductos by productosViewModel.produtosList.collectAsState()
     var name by remember { mutableStateOf("") }
@@ -88,13 +94,18 @@ fun AddDebtorScreen(
     var startDate: LocalDate? by remember { mutableStateOf(today) }
     val selectedProducts = remember { mutableStateListOf<PorductosEntity>() }
 
+    val sharedPrefs = remember { context.getSharedPreferences("paguito_settings", Context.MODE_PRIVATE) }
+    var showWizard by remember {
+        mutableStateOf(sharedPrefs.getBoolean("has_seen_contacts_tip", false).not())
+    }
     val isFormValid by remember {
         derivedStateOf { name.isNotBlank() && phone.isNotBlank() && amount.isNotBlank() }
     }
-
+    var paymentData by remember{ mutableStateOf(PagosEntinty())}
     val startPickerState = rememberDatePickerState(
         initialSelectedDateMillis = startDate!!.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
     )
+
 
     // --- LÓGICA DE CONTACTOS ---
     val contactPickerLauncher = rememberLauncherForActivityResult(
@@ -134,7 +145,44 @@ fun AddDebtorScreen(
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
-        if (isGranted) contactPickerLauncher.launch(null)
+        if (isGranted) {
+            contactPickerLauncher.launch(null)
+        } else {
+            // Verificar si se denegó permanentemente
+            val activity = context as? Activity
+            val showRationale = activity?.let {
+                ActivityCompat.shouldShowRequestPermissionRationale(it, Manifest.permission.READ_CONTACTS)
+            } ?: false
+
+            if (!showRationale) {
+                showSettingsDialog = true
+            }
+        }
+    }
+
+    // --- DIÁLOGO DE ADVERTENCIA PARA SETTINGS ---
+    if (showSettingsDialog) {
+        AlertDialog(
+            onDismissRequest = { showSettingsDialog = false },
+            title = { Text("Permiso necesario") },
+            text = { Text("Has desactivado el acceso a contactos. Para usar esta función, por favor actívalo en los ajustes de la aplicación.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showSettingsDialog = false
+                        openAppSettings(context)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary)
+                ) {
+                    Text("Ir a Ajustes")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSettingsDialog = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 
     // --- EFECTOS ---
@@ -201,7 +249,7 @@ fun AddDebtorScreen(
             Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 24.dp)) {
                 Button(
                     onClick = {
-                        val jsonProducts = Gson().toJson(selectedProducts)
+                        val jsonProducts = Gson().toJson(if(selectedProducts.size>0) selectedProducts else "")
                         deudoresViewModel.guardarDeudor(
                             DeudoresEntity(
                                 null,
@@ -224,6 +272,7 @@ fun AddDebtorScreen(
 
                             )
                         )
+
                         onBackClick()
                     },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
@@ -236,6 +285,9 @@ fun AddDebtorScreen(
             }
         }
     ) { paddingValues ->
+
+
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -335,6 +387,68 @@ fun AddDebtorScreen(
                 modifier = Modifier.height(100.dp)
             )
             Spacer(modifier = Modifier.height(40.dp))
+        }
+    }
+    if (showWizard) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.7f)) // Fondo oscurecido para enfocar el mensaje
+                .clickable(enabled = false) { } // Bloquea clics hacia los campos de abajo
+        ) {
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(24.dp)
+                    .fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 8.dp
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Lightbulb,
+                        contentDescription = null,
+                        tint = Color(0xFFFBC02D),
+                        modifier = Modifier.size(48.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        "Consejo rápido",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        "Puedes evitar escribir manualmente: usa el icono de contactos en la esquina superior para importar nombres y teléfonos al instante. 📁⚡",
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.bodyMedium,
+                        lineHeight = 22.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Button(
+                        onClick = {
+                            // Guardamos que ya lo vio y cerramos
+                            sharedPrefs.edit().putBoolean("has_seen_contacts_tip", true).apply()
+                            showWizard = false
+                        },
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary)
+                    ) {
+                        Text("¡Entendido!", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
         }
     }
 }
