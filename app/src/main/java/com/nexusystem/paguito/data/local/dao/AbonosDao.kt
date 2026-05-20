@@ -74,6 +74,14 @@ interface  AbonosDao {
     }
 
     @Transaction
+    suspend fun eliminaAbonoyActualizaMonto(pago: PagosEntinty, deudoresDao: DeudoresDao) {
+        // 1. Guardamos el abono
+        borrarAbono(pago)
+        val idInt = pago.idDeudor.toIntOrNull() ?: 0
+        deudoresDao.sumarSaldo(idInt, pago.montoAbonado.toFloat())
+    }
+
+    @Transaction
     suspend fun registrarVentaYActualizarDeudor(pago: PagosEntinty, deudoresDao: DeudoresDao) {
         // 1. Guardamos el abono
         agregarAbono(pago)
@@ -91,6 +99,7 @@ interface  AbonosDao {
     suspend fun actualizarAbono(pagos: PagosEntinty)
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun agregarAbonos(pagos: List<PagosEntinty>)
+
 
     @Query("SELECT idRemoteDatabase FROM PagosTable")
     suspend fun getAllRemoteIds(): List<String>

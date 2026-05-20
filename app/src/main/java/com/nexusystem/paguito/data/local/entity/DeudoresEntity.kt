@@ -23,9 +23,12 @@ data class DeudoresEntity (
     val idsPorductos: String="",
     val notasSobreDeudor: String="",
 
+
 ){
     @Ignore
     val pagos: ArrayList<PagosEntinty> = arrayListOf()
     @Ignore
     val ventas: ArrayList<PagosEntinty>  =arrayListOf()
+    @Ignore
+    val diasRemaining:Int=0
 }

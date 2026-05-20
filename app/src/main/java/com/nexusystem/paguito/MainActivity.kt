@@ -16,23 +16,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.google.firebase.messaging.FirebaseMessaging
-import com.nexus.medi.MediNavHost
 import com.nexusystem.paguito.ui.components.navigation.RoundedBottomBar
 import com.nexusystem.paguito.ui.components.navigation.Routes
 import com.nexusystem.paguito.ui.screens.deudores.DeudoresViewModel
@@ -45,16 +40,16 @@ import com.nexusystem.paguito.ui.theme.PaguitoTheme
 import com.nexusystem.paguito.utils.OnboardingStore
 import com.nexusystem.paguito.utils.PaguitoStore
 import dagger.hilt.android.AndroidEntryPoint
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import kotlin.getValue
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
+        setTheme(R.style.Theme_Paguito)
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
         val prefs = getSharedPreferences("settings", Context.MODE_PRIVATE)
         val isDark = prefs.getBoolean("dark_mode", false)
         //MobileAds.initialize(this)

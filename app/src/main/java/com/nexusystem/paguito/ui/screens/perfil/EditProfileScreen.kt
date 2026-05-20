@@ -66,7 +66,7 @@ fun EditProfileScreen(onBackClick: () -> Unit = {},viewModel:PerfiViewModel) {
 
 
 if(updateSucess) {
-    SuccessDialog({
+    SuccessDialog("!Datos Actualizados!",{
         viewModel.resetSuccess()
         onBackClick()
     }, {
@@ -304,6 +304,7 @@ fun CustomInputField(
         Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
+            maxLines = 1,
             value = value,
             onValueChange = onValueChange,
             modifier = Modifier.fillMaxWidth(),

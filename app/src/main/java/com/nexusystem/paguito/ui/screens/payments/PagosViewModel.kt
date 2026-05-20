@@ -1,6 +1,7 @@
 package com.nexusystem.paguito.ui.screens.payments
 
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,8 +50,8 @@ class PagosViewModel @Inject constructor(
     private val _pagosConNombre5 = MutableStateFlow<List<PagoConNombre?>>(emptyList())
     val pagosConNombre5  = _pagosConNombre5 .asStateFlow()
 
-    private val _medicineNotFound = MutableStateFlow(false)
-    val medicineNotFound = _medicineNotFound.asStateFlow()
+    private val _deleteSuccess = MutableStateFlow(false)
+    val deleteSuccess = _deleteSuccess.asStateFlow()
     var mail by mutableStateOf<String?>("")
         private set
 
@@ -121,6 +122,12 @@ class PagosViewModel @Inject constructor(
         }
     }
 
+    fun deletePayment(recipe: PagosEntinty) {
+        viewModelScope.launch {
+            registrarPagoRemoteFirebase(mail!!,recipe)
+        }
+    }
+
     fun guardarNuevaVenta(recipe: PagosEntinty) {
         viewModelScope.launch {
             registrarVentaRemoteFirebase(mail!!,recipe)
@@ -133,8 +140,8 @@ class PagosViewModel @Inject constructor(
         }
     }
 
-    fun reset() {
-        _medicineNotFound.value = false
+    fun resetdeleteSuccess() {
+        _deleteSuccess.value = false
     }
     fun registrarVentaRemoteFirebase(userId: String, pago: PagosEntinty?) {
         viewModelScope.launch {
@@ -169,11 +176,46 @@ class PagosViewModel @Inject constructor(
         }
     }
 
+    fun deletePagoRemoteFirebase( pago: PagosEntinty?) {
+        Log.e("PAGOOOS","-->")
+        viewModelScope.launch {
+            pago?.let { pago ->
+                try {
+                    if(profileState?.email.isNullOrEmpty()){
+                        Log.e("PAGOOOS","-->1")
+                        abonosUseCase.eliminarAbono(pago)
+                        _deleteSuccess.value =true
+                    }else{
+                         firestore.collection("deudores")
+                            .document(profileState?.email.toString())
+                            .collection("deudores")
+                            .document(pago.idDeudorRemoteDatabase)
+                            .collection("pagos")
+                            .document(pago.idRemoteDatabase)
+                             .delete()
+                        abonosUseCase.eliminarAbono(pago)
+                        _deleteSuccess.value =true
+                        Log.e("PAGOOOS","-->2")
+                    }
+
+                } catch (e: Exception) {
+                    Log.e("PAGOOOS","-->3"+e.toString())
+                    abonosUseCase.eliminarAbono(pago)
+                    _deleteSuccess.value =true
+                    // Importante: No dejes el catch vacío para poder debuguear
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
+
     fun registrarPagoRemoteFirebase(userId: String, pago: PagosEntinty?) {
+        Log.e("PAGOOOS","-->")
         viewModelScope.launch {
             pago?.let { pago ->
                 try {
                     if(userId.isNullOrEmpty()){
+                        Log.e("PAGOOOS","-->1")
                         abonosUseCase.guardarAbono(pago)
                     }else{
                         // 1. Creamos una referencia a un nuevo documento (genera el ID localmente)
@@ -183,6 +225,7 @@ class PagosViewModel @Inject constructor(
                             .document(pago.idDeudorRemoteDatabase)
                             .collection("pagos")
                             .document()
+
                         // 2. Obtenemos ese ID generado y lo asignamos a tu entidad
                         val generatedId = newDocRef.id
                         pago.idRemoteDatabase = generatedId
@@ -190,11 +233,11 @@ class PagosViewModel @Inject constructor(
                         newDocRef.set(pago, SetOptions.merge()).await()
                         // 4. Guardamos en la base de datos local (Room) con el ID actualizado
                         abonosUseCase.guardarAbono(pago)
-
-                        // Opcional: Log o aviso de éxito
+                        Log.e("PAGOOOS","-->2")
                     }
 
                 } catch (e: Exception) {
+                    Log.e("PAGOOOS","-->3"+e.toString())
                     abonosUseCase.guardarAbono(pago)
                     // Importante: No dejes el catch vacío para poder debuguear
                     e.printStackTrace()

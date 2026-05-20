@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 1. Color de fondo sólido (ajusta a tu color) -->
+    <item android:drawable="@color/white" />
+
+    <!-- 2. El logo centrado y con tamaño fijo -->
+    <item
+        android:drawable="@drawable/nexus"
+        android:gravity="center"
+        android:width="200dp"
+        android:height="200dp" />
+</layer-list>

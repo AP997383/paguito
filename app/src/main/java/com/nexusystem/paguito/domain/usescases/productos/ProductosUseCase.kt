@@ -12,7 +12,11 @@ class ProductosUseCase @Inject constructor(
     private val storageRepository: StorageRepository
 ) {
     suspend fun obtenerProductos(): Flow<List<PorductosEntity>> = localRepository.obtenerTodos()
-     suspend fun guardarProducto(data:PorductosEntity) = localRepository.add(data)
+    suspend fun obtenerNumeroProductos(): Flow<Int> = localRepository.obtenerNumeroProductos()
+
+
+     suspend fun guardarProducto(data:PorductosEntity):Long = localRepository.add(data)
+    suspend fun deleteProduct(data:PorductosEntity) = localRepository.deleteProduct(data)
     suspend fun guardarProductos(data: ArrayList<PorductosEntity>) = localRepository.addProductos(data)
  //   suspend fun deleteMyRegister(data:MyBloodPresureAndGlucosaEntity) = localRepository.delete(data)
 

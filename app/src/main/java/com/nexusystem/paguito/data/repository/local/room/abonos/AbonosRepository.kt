@@ -37,6 +37,12 @@ class AbonosRepository @Inject constructor(
         recipesDao.registrarAbonoYActualizarDeudor(recipe.toEntity(),deudoresDao)
       //  recipesDao.agregarAbono(recipe.toEntity())
     }
+
+    suspend fun eliminar(recipe: PagosEntinty) {
+        Log.e("ADDDD","--<" + recipe)
+        recipesDao.eliminaAbonoyActualizaMonto(recipe.toEntity(),deudoresDao)
+        //  recipesDao.agregarAbono(recipe.toEntity())
+    }
     suspend fun addPagosOrVentas(recipe: ArrayList<PagosEntinty>) {
         Log.e("ADDDD","--<" + recipe)
         val existingIds = recipesDao.getAllRemoteIds()

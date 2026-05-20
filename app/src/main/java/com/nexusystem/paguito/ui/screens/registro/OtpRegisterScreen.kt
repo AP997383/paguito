@@ -70,9 +70,23 @@ fun OtpVerificationScreen(
         }
     }
 
-    if (isVerified) {
+    if (isVerified==1) {
         authViewModel.completeRegisterUser(dataUser)
         authViewModel.resetVerified()
+    }else{
+        if(isVerified==2){
+            ErrorAlertDialog(
+                "Otp incorrecto, intenta de nuevo",
+                onDismissRequest = {
+                    authViewModel.clearError()
+                    authViewModel.resetVerified()
+                    }, // Función para resetear el Flow a ""
+                onConfirmClick = {
+                    authViewModel.clearError()
+                    authViewModel.resetVerified()
+                    }
+            )
+        }
     }
     if(successRegister){
         SuccessRegistrationDialog({

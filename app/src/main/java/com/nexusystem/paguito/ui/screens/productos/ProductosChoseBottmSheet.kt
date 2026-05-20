@@ -106,7 +106,7 @@ fun AbonoBottomSheetContent(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(listaProductos) { product ->
-                    ProductCardItem(product = product!!,onConfirm)
+                    ProductCardItem(product = product!!,onConfirm,{})
                 }
             }
         }else{

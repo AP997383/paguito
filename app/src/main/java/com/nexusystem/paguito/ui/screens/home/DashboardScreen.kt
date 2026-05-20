@@ -53,7 +53,9 @@ import com.nexusystem.paguito.ui.screens.deudores.TextDark2
 import com.nexusystem.paguito.ui.screens.payments.PagosViewModel
 import com.nexusystem.paguito.ui.screens.perfil.BorderColor
 import com.nexusystem.paguito.ui.screens.productos.NativeAdBanner
+import com.nexusystem.paguito.ui.screens.productos.ProductosViewModel
 import com.nexusystem.paguito.utils.dashedBorder
+import com.nexusystem.paguito.utils.dialogs.PremiumLimitReachedDialog
 import com.nexusystem.paguito.utils.formatAsCurrency
 import com.nexusystem.paguito.utils.formatLongDateTime
 import com.nexusystem.paguito.utils.getDaysUntilNextPayment
@@ -75,19 +77,41 @@ fun DashboardScreen(seeDeudorProfile:(DeudoresEntity)->Unit, registerPayment:() 
                     seeAllDeudores:()->Unit,
                     seeAllPayments:()->Unit,
                     deudoresViewModel: DeudoresViewModel,
-                    pagosViewModel: PagosViewModel) {
-
+                    pagosViewModel: PagosViewModel,productosViewmodel: ProductosViewModel) {
     val deudoresHisotiral by deudoresViewModel.deudores.collectAsState()
     val sumary1 by deudoresViewModel.sumaryFive.collectAsState()
+    val numeroProductos by productosViewmodel.numProducts.collectAsState()
     var isBalanceVisible by remember { mutableStateOf(false) }
     val pagosHistorial by pagosViewModel.pagosConNombre5.collectAsState()
     val profile = deudoresViewModel.profileState
     var isSucriptionActive by remember { mutableStateOf(false) }
+    var showAlertFreeLimited by remember { mutableStateOf(false) }
+    val deudoresOrdenados = remember(deudoresHisotiral) {
+        deudoresHisotiral
+            .filterNotNull()
+            .map { deudor ->
+                val daysRemaining = getDaysUntilNextPayment(deudor.fechaInicialDeuda, deudor.periodicidad)
+                deudor to daysRemaining
+            }
+            .sortedBy { it.second }
+            .map { it.first } // <--- AGREGA ESTO: Extrae solo el deudor, manteniendo el orden físico
+    }
+
     LaunchedEffect(Unit) {
+        productosViewmodel.obtenerNumeroProductos()
         deudoresViewModel.loadUserProfile()
         deudoresViewModel.obtenerDeudores()
         deudoresViewModel.obtener5DatosCards()
         pagosViewModel.obtenerUltimos5Abonos()
+    }
+
+    if(showAlertFreeLimited)
+    {
+        PremiumLimitReachedDialog({
+            showAlertFreeLimited =false
+        },{
+            showAlertFreeLimited =false
+        })
     }
     LaunchedEffect(profile) {
         if (profile != null) {
@@ -114,7 +138,9 @@ fun DashboardScreen(seeDeudorProfile:(DeudoresEntity)->Unit, registerPayment:() 
             Spacer(modifier = Modifier.height(20.dp))
 
             // 3. Tarjetas de Acción (3 botones)
-            ActionButtonsRow(registerPayment,registerProduct,registerDebtor, registerCampaing,registerNewSell)
+            ActionButtonsRow(registerPayment,registerProduct,registerDebtor, registerCampaing,registerNewSell,sumary1,isSucriptionActive,{
+                showAlertFreeLimited =true
+            },numeroProductos)
             Spacer(modifier = Modifier.height(24.dp))
             if(isSucriptionActive==false) {
                 Card(
@@ -136,8 +162,8 @@ fun DashboardScreen(seeDeudorProfile:(DeudoresEntity)->Unit, registerPayment:() 
                 Spacer(modifier = Modifier.height(24.dp))
             }
             // 4. Carrusel de Próximos Vencimientos
-            if(deudoresHisotiral.size>0)
-               UpcomingDeadlinesSection(deudoresHisotiral,seeAllDeudores,seeDeudorProfile)
+            if(deudoresOrdenados.size>0)
+               UpcomingDeadlinesSection(deudoresOrdenados,seeAllDeudores,seeDeudorProfile)
             else{
                     PaymentHistoryEmptyState("Cuando registres tu primer, deudor, podras ver los proximos a vencer en esta seccion")
             }
@@ -370,17 +396,35 @@ fun InfoItem(icon: ImageVector, count: String, label: String) {
 
 // --- 3. BOTONES DE ACCIÓN ---
 @Composable
-fun ActionButtonsRow(registerPayment:() ->Unit,registerProduct:() ->Unit,registerDebtor:() ->Unit,registerCampaing:() ->Unit,registerNewSell:()->Unit) {
+fun ActionButtonsRow(registerPayment:() ->Unit,registerProduct:() ->Unit,registerDebtor:() ->Unit,registerCampaing:() ->Unit,registerNewSell:()->Unit,sumary1: DeudoresSummary?,isSucriptionActive: Boolean,showDialogLimitFree:()->Unit,numeroProductos: Int) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         ActionButton(icon = Icons.Outlined.AccountBalanceWallet, text = "Registrar\nPago", iconTint=MaterialTheme.colorScheme.onSurface,modifier = Modifier.weight(1f), onclick = registerPayment)
-        ActionButton(icon = Icons.Outlined.PersonAdd, text = "Nuevo\nDeudor", iconTint = BluePrimary, modifier = Modifier.weight(1f),{registerDebtor()})
+        ActionButton(icon = Icons.Outlined.PersonAdd, text = "Nuevo\nDeudor", iconTint = BluePrimary, modifier = Modifier.weight(1f),
+            {
+                if (sumary1 != null) {
+                    if (sumary1?.totalDeudores!! >= 10 && !isSucriptionActive) {
+                        showDialogLimitFree()
+                    } else {
+                        registerDebtor()
+                    }
+                } else {
+                    registerDebtor()
+                }
+            }
+        )
         ActionButton(icon = Icons.Outlined.AttachMoney, text = "Agregar\nventa", iconTint = Color(0xFF10B981), modifier = Modifier.weight(1f),{registerNewSell()})
         ActionButton(icon = Icons.Outlined.LocalGroceryStore, text = "Nuevo\nProducto", iconTint = Color(
             0xFF40C4FF
-        ), modifier = Modifier.weight(1f),{registerProduct()})
+        ), modifier = Modifier.weight(1f),{
+            if (numeroProductos!! >= 10 && !isSucriptionActive) {
+                showDialogLimitFree()
+            } else {
+                registerProduct()
+            }
+            })
     }
 }
 

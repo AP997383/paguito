@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.Image
@@ -56,6 +57,7 @@ import com.nexus.medi.data.local.entity.PorductosEntity
 import com.nexusystem.paguito.BuildConfig
 import com.nexusystem.paguito.utils.emptyStates.DynamicEmptyState
 import com.nexusystem.paguito.R
+import com.nexusystem.paguito.utils.dialogs.DeleteConfirmationDialog
 import com.nexusystem.paguito.utils.dialogs.PremiumLimitReachedDialog
 import com.nexusystem.paguito.utils.formatAsCurrency
 import com.nexusystem.paguito.utils.getThumbnailUrl
@@ -87,6 +89,9 @@ fun ProductListScreen(onBackClick: () -> Unit = {},openProduct:(PorductosEntity)
     val listaProductos by viewmodel.produtosList.collectAsState()
     var isSucriptionActive by remember { mutableStateOf(false) }
     var showAlertFreeLimited by remember { mutableStateOf(false) }
+    var showAlertDeleteProduct by remember { mutableStateOf(false) }
+    var currentProductSelected by remember { mutableStateOf(PorductosEntity()) }
+
     val filteredDebtors = remember(searchQuery, listaProductos) {
         if (searchQuery.isEmpty()) {
             listaProductos
@@ -96,6 +101,15 @@ fun ProductListScreen(onBackClick: () -> Unit = {},openProduct:(PorductosEntity)
                 deudor?.nombre?.contains(searchQuery.trim(), ignoreCase = true) == true
             }
         }
+    }
+
+    if(showAlertDeleteProduct){
+        DeleteConfirmationDialog("",{
+            viewmodel.deleteProduct(currentProductSelected)
+            showAlertDeleteProduct =false
+        },{
+            showAlertDeleteProduct =false
+        })
     }
     val profile = viewmodel.profileState
     if(showAlertFreeLimited)
@@ -202,7 +216,10 @@ fun ProductListScreen(onBackClick: () -> Unit = {},openProduct:(PorductosEntity)
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     itemsIndexed(filteredDebtors) { index, product ->
-                        ProductCardItem(product = product!!, openProduct)
+                        ProductCardItem(product = product!!, openProduct,{
+                            currentProductSelected = product!!
+                            showAlertDeleteProduct =true
+                        })
                         if(isSucriptionActive==false) {
                             val isLast = index == filteredDebtors.lastIndex
                             val isEveryFive = (index + 1) % 5 == 0
@@ -268,157 +285,151 @@ fun FilterChipItem(text: String, isSelected: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-fun ProductCardItem(product: PorductosEntity,  onSelect: (PorductosEntity) -> Unit) {
+fun ProductCardItem(
+    product: PorductosEntity,
+    onSelect: (PorductosEntity) -> Unit,
+    onDelete: (PorductosEntity) -> Unit // Nueva función para borrar
+) {
     val isSoldOut = product.inventario == 0
-    // Si está agotado, atenuamos un poco el texto
     val cardAlpha = if (isSoldOut) 0.6f else 1f
     val context = LocalContext.current
-
-    // Estado para saber si debemos intentar cargar la original porque el thumb falló
     var useOriginalUrl by remember { mutableStateOf(false) }
 
-    // Elegimos la URL basándonos en el estado
-    val currentUrl = if (useOriginalUrl) {
-        product.urlFoto
-    } else {
-        getThumbnailUrl(product.urlFoto)
+    // Estado para el diálogo de confirmación
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    val currentUrl = if (useOriginalUrl) product.urlFoto else getThumbnailUrl(product.urlFoto)
+
+    // Diálogo de confirmación
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Confirmar eliminación", fontWeight = FontWeight.Bold) },
+            text = { Text("¿Estás seguro de que deseas eliminar ${product.nombre}? Esta acción no se puede deshacer.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDelete(product)
+                        showDeleteDialog = false
+                    }
+                ) {
+                    Text("ELIMINAR", color = RedAlert, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("CANCELAR")
+                }
+            }
+        )
     }
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.surface),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp).clickable{
-                    onSelect(product)
-                },
-            verticalAlignment = Alignment.CenterVertically
+
+    // Usamos Box para poder encimar el icono de eliminar
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant),
+            modifier = Modifier.fillMaxWidth()
         ) {
-            // Imagen del producto (Placeholder)
-            Box(
+            Row(
                 modifier = Modifier
-                    .size(80.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFFE5E7EB)),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .padding(12.dp)
+                    .clickable { onSelect(product) },
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                if(product.urlFoto.isNullOrEmpty())
-                    Icon(Icons.Outlined.Image, contentDescription = null, tint = TextLightGray, modifier = Modifier.size(32.dp))
-                 else {
-                    AsyncImage(
-                        model = ImageRequest.Builder(context)
-                            .data(currentUrl)
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = "Imagen de producto",
-                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp)),
-                        contentScale = ContentScale.Crop,
-                        // Si la carga falla, actualizamos el estado para que se recargue con la original
-                        onError = {
-                            if (!useOriginalUrl) {
-                                useOriginalUrl = true
-                            }
+                // --- BLOQUE DE IMAGEN ---
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFE5E7EB)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (product.urlFoto.isNullOrEmpty()) {
+                        Icon(Icons.Outlined.Image, contentDescription = null, tint = TextLightGray, modifier = Modifier.size(32.dp))
+                    } else {
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(currentUrl)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "Imagen de producto",
+                            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp)),
+                            contentScale = ContentScale.Crop,
+                            onError = { if (!useOriginalUrl) useOriginalUrl = true }
+                        )
+                    }
+
+                    if (isSoldOut) {
+                        Box(
+                            modifier = Modifier
+                                .background(RedAlert, RoundedCornerShape(4.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                .graphicsLayer { rotationZ = -10f }
+                        ) {
+                            Text("AGOTADO", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
                         }
-                    )
-                }
-
-
-                // Etiqueta "DESTACADO"
-                if (false) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .align(Alignment.TopCenter)
-                            .background(Color.Black.copy(alpha = 0.5f))
-                            .padding(vertical = 2.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("★ DESTACADO", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold)
                     }
                 }
 
-                // Etiqueta "AGOTADO" (Inclinada y roja)
-                if (isSoldOut) {
-                    Box(
-                        modifier = Modifier
-                            .background(RedAlert, RoundedCornerShape(4.dp))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                            .graphicsLayer { rotationZ = -10f } // Rotación para darle ese efecto de sello
-                    ) {
-                        Text("AGOTADO", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
-                    }
-                }
-            }
+                Spacer(modifier = Modifier.width(12.dp))
 
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Información del Producto
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .alpha(cardAlpha) // Difumina si está agotado
-            ) {
-                // Nombre
-                Text(
-                    text = product.nombre,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Fila de Precios (Costo / Venta)
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("COSTO", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                        Text(formatAsCurrency( product.precioOriginal), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("VENTA", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = TextLightGray)
-                        Text(formatAsCurrency( product.precioConGanancia), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Stock
-                Text(
-                    text = if (isSoldOut) "Stock: 0 unidades" else "Stock: ${product.inventario} unidades",
-                    fontSize = 11.sp,
-                    color = if (isSoldOut) RedAlert else MaterialTheme.colorScheme.onSurface,
-                    fontWeight = if (isSoldOut) FontWeight.Bold else FontWeight.Normal
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Fila de Compras
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Outlined.PeopleAlt,
-                        contentDescription = null,
-                        tint = PurpleIcon.copy(alpha = 0.7f),
-                        modifier = Modifier.size(12.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
+                // --- BLOQUE DE INFORMACIÓN ---
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .alpha(cardAlpha)
+                ) {
                     Text(
-                        text = buildAnnotatedString {
-                            append("Comprado por ")
-                            withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)) {
-                                append(""+product.ventas)
-                            }
-                            append(" clientes")
-                        },
-                        fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.onSurface
+                        text = product.nombre,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1, // Reducido a 1 para que no choque con el icono de basura
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(end = 24.dp) // Espacio para que el texto no pase debajo del icono
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("COSTO", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                            Text(formatAsCurrency(product.precioOriginal), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("VENTA", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = TextLightGray)
+                            Text(formatAsCurrency(product.precioConGanancia), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = if (isSoldOut) "Stock: 0 unidades" else "Stock: ${product.inventario} unidades",
+                        fontSize = 11.sp,
+                        color = if (isSoldOut) RedAlert else MaterialTheme.colorScheme.onSurface,
+                        fontWeight = if (isSoldOut) FontWeight.Bold else FontWeight.Normal
                     )
                 }
             }
+        }
+
+        // --- ICONO DE ELIMINAR (Trash) ---
+        IconButton(
+            onClick = { showDeleteDialog = true },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(4.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = "Eliminar producto",
+                tint = RedAlert.copy(alpha = 0.8f),
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }

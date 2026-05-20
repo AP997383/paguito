@@ -8,7 +8,7 @@ data class PorductosEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Int? = 0,
     var nombre: String = "",
-    val idRemoteDatabase: String="",
+    var idRemoteDatabase: String="",
     var urlFoto: String = "",
     var precioOriginal: Float = 0.0F,
     var precioConGanancia: Float = 0.0F,

@@ -6,6 +6,7 @@ import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -33,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -123,7 +125,7 @@ fun ProfileScreen(
     LaunchedEffect(Unit) {
         viewModel.loadUserProfile()
         isInvited = PaguitoStore.isInvited(context)
-        viewModel.getAllSuscriptions()
+
     }
 
     LaunchedEffect(profile) {
@@ -133,6 +135,9 @@ fun ProfileScreen(
             phone = it.phone
             fotoUrl = it.fotoUrl
             isSucriptionActive =it.userSuscription.isActive
+            if(!isSucriptionActive){
+                viewModel.getAllSuscriptions()
+            }
         }
     }
 
@@ -328,7 +333,8 @@ fun ProfileScreen(
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center
                 )
-
+                Spacer(modifier = Modifier.height(10.dp))
+                PoweredByNexus()
                 Spacer(modifier = Modifier.height(150.dp))
             }
         }
@@ -339,6 +345,51 @@ fun ProfileScreen(
     }
 
 
+}
+
+@Composable
+fun PoweredByNexus(
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center // Lo centra en la pantalla
+    ) {
+
+        Image(
+            painter = painterResource(id = R.drawable.nexus),
+            contentDescription = "Nexus Logo",
+            modifier = Modifier
+                .size(24.dp) // Tamaño discreto para un pie de página
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "By",
+            style = MaterialTheme.typography.bodySmall.copy(
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Light
+            )
+        )
+
+        Spacer(modifier = Modifier.width(6.dp))
+
+        Text(
+            text = "Nexus Ecosystem",
+            style = MaterialTheme.typography.bodyMedium.copy(
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.sp
+            )
+        )
+
+
+
+    }
 }
 
 @Composable
@@ -420,7 +471,7 @@ fun ProfileHeaderCard(
 
                     Text(text = name, fontSize = 19.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                     Text(text = email, fontSize = 12.sp, color = TextSecondary)
-                    Text(text = bussinesName.ifEmpty { email }, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                    Text(text = bussinesName.ifEmpty { "Sin nombre comercial" }, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -506,7 +557,7 @@ fun SubscriptionCard(subs:SuscriptionsItems,onUpgradeClick: () -> Unit) {
                     text = "Activar Suscripción",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1F2937)
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(

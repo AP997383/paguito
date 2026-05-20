@@ -1,10 +1,9 @@
 // Path: com/beastspinning/medi/MediNavHost.kt
-package com.nexus.medi
+package com.nexusystem.paguito
 
 import HistorialPagosScreen
 import android.app.Activity
 import android.content.Context
-import android.hardware.camera2.CameraManager
 import android.net.Uri
 import android.os.Build
 import android.util.Log
@@ -51,9 +50,7 @@ import com.nexusystem.paguito.ui.screens.payments.DetalleVentaScreen
 import com.nexusystem.paguito.ui.screens.payments.PagosViewModel
 import com.nexusystem.paguito.ui.screens.payments.RegisterPaymentScreen
 import com.nexusystem.paguito.ui.screens.payments.RegisterSellScreen
-import com.nexusystem.paguito.ui.screens.payments.TicketPreview
 import com.nexusystem.paguito.ui.screens.payments.TicketReceiptScreen
-import com.nexusystem.paguito.ui.screens.payments.TicketShareScreen
 import com.nexusystem.paguito.ui.screens.perfil.ChangePasswordProfileScreen
 import com.nexusystem.paguito.ui.screens.perfil.EditProfileScreen
 import com.nexusystem.paguito.ui.screens.perfil.PerfiViewModel
@@ -66,7 +63,6 @@ import com.nexusystem.paguito.ui.screens.registro.RegisterScreen
 import com.nexusystem.paguito.ui.screens.registro.RegisterViewModel
 import com.nexusystem.paguito.utils.OnboardingStore
 import com.nexusystem.paguito.utils.PaguitoStore
-import com.nexusystem.paguito.utils.openNotificationSettings
 
 
 import kotlinx.coroutines.launch
@@ -131,7 +127,7 @@ fun MediNavHost(
                     navController.navigate(Routes.ScreenViewAllDeudores.route)
                 },{
                     navController.navigate(Routes.ScreenViewAllPayments.route)
-                },deudoresViewModel,pagosViewModel)
+                },deudoresViewModel,pagosViewModel,productosViewModel)
             }
             composable(Routes.ScreenRegisterPayment.route+ "/{params}",
                 arguments = listOf(

@@ -34,6 +34,7 @@ import com.nexusystem.paguito.ui.screens.registro.TextDark
 import com.nexusystem.paguito.ui.screens.registro.TextGray
 import com.nexusystem.paguito.ui.screens.registro.TextLightGray
 import com.nexusystem.paguito.utils.LoadingOverlay
+import com.nexusystem.paguito.utils.dialogs.ErrorAlertDialog
 import kotlinx.coroutines.delay
 
 // --- COLORES ---
@@ -68,9 +69,23 @@ fun OtpRecoveryScreen(
         }
     }
 
-    if (isVerified) {
+    if (isVerified==1) {
         goToHome(email)
         authViewModel.resetVerified()
+    }else{
+        if(isVerified==2){
+            ErrorAlertDialog(
+                "Otp incorrecto, intenta de nuevo",
+                onDismissRequest = {
+                    authViewModel.clearError()
+                    authViewModel.resetVerified()
+                }, // Función para resetear el Flow a ""
+                onConfirmClick = {
+                    authViewModel.clearError()
+                    authViewModel.resetVerified()
+                }
+            )
+        }
     }
 
 

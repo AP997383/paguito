@@ -462,21 +462,27 @@ fun ProfitCalculatorCard(
                 Slider(
                     value = sliderMultiplier,
                     onValueChange = onSliderMultiplierChange,
-                    valueRange = 0.25f..3.0f,
+                    valueRange = 1.5f..3.0f,
+                    steps = 2, // Permite 4 paradas exactas
                     colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = GreenPrimary)
                 )
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    listOf("0.25x", "1.0x", "2.0x", "3.0x").forEach { Text(it, fontSize = 10.sp, color = TextLightGray) }
+                    listOf("1.5x", "2.0x", "2.5x", "3.0x").forEach {
+                        Text(it, fontSize = 10.sp, color = TextLightGray)
+                    }
                 }
             } else {
                 Slider(
                     value = sliderPercentage,
                     onValueChange = onSliderPercentageChange,
-                    valueRange = 10f..200f,
+                    valueRange = 50f..250f,
+                    steps = 3, // Permite 5 paradas exactas
                     colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = GreenPrimary)
                 )
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    listOf("10%", "100%", "200%").forEach { Text(it, fontSize = 10.sp, color = TextLightGray) }
+                    listOf("50%", "100%", "150%", "200%", "250%").forEach {
+                        Text(it, fontSize = 10.sp, color = TextLightGray)
+                    }
                 }
             }
         }

@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -48,9 +49,11 @@ import com.nexus.medi.data.local.entity.PagostoPreviewTiket
 import com.nexus.medi.data.local.entity.PorductosEntity
 import com.nexusystem.paguito.ui.screens.payments.PagosViewModel
 import com.nexusystem.paguito.ui.screens.payments.PeriodItem
+import com.nexusystem.paguito.ui.screens.productos.RedAlert
 import com.nexusystem.paguito.utils.bottomsSheets.AbonoBottomSheet
 import com.nexusystem.paguito.utils.calcularSiguienteVencimiento
 import com.nexusystem.paguito.utils.dialogs.SuccessAbonoDialog
+import com.nexusystem.paguito.utils.dialogs.SuccessDialog
 import com.nexusystem.paguito.utils.emptyStates.PaymentHistoryEmptyState
 import com.nexusystem.paguito.utils.formatAsCurrency
 import com.nexusystem.paguito.utils.getTodayDateString
@@ -86,11 +89,36 @@ fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntit
                           openPreviewTicket:(PagostoPreviewTiket)->Unit,openDetailVenta:(PagosEntinty)->Unit) {
     var showFastPayment by remember { mutableStateOf(false) }
     val pagosPorCliente by pagosViewModel.pagos.collectAsState()
+    val deleteSuccess by pagosViewModel.deleteSuccess.collectAsState()
     var showSuccessPayment by remember { mutableStateOf(false) }
     var paymentData by remember{ mutableStateOf(PagosEntinty())}
     var paymentDatapreviewTiket by remember{ mutableStateOf(PagostoPreviewTiket())}
+    var currentpaymentSelected by remember{ mutableStateOf(PagosEntinty())}
     var pagado = 0.0f
     var saldoPendiente = 0.0f
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Confirmar eliminación", fontWeight = FontWeight.Bold) },
+            text = { Text("Al borrar el pago se reajustaran los montos anteriores") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pagosViewModel.deletePagoRemoteFirebase(currentpaymentSelected)
+                        showDeleteDialog = false
+                    }
+                ) {
+                    Text("ELIMINAR", color = RedAlert, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("CANCELAR")
+                }
+            }
+        )
+    }
 
     LaunchedEffect(pagosPorCliente) {
         pagosPorCliente.forEach {
@@ -99,6 +127,8 @@ fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntit
             }
         }
     }
+
+
     val profile = pagosViewModel.profileState
     val fechasPagosRealizados = remember(pagosPorCliente) {
         pagosPorCliente.mapNotNull {
@@ -140,10 +170,10 @@ fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntit
             paymentDatapreviewTiket =PagostoPreviewTiket(
                 contactText,
                 deudorData.nombre,"",
-                monto.toInt(),
+                monto.toFloat().toInt(),
                 saldoAntesDeAbono =      (deudorData.montoActualAdeudado -pagado  ).toInt(),
                 getTodayDateString(),
-                deudorData.montoActualAdeudado.toInt() - monto.toInt() ,
+                deudorData.montoActualAdeudado.toFloat().toInt() - monto.toFloat().toInt() ,
                 1,
                 "",
                 isIngreso = true
@@ -154,7 +184,7 @@ fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntit
                 "",
                 deudorData!!.idRemoteDatabase,
                 deudorData!!.id.toString(),
-                monto.toInt(),
+                monto.toFloat().toInt(),
                 saldoAntesDeAbono =  ( deudorData.montoActualAdeudado - pagado ).toInt(),
                 getTodayDateString(),
                 true,
@@ -175,6 +205,16 @@ fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntit
     LaunchedEffect(Unit) {
         pagosViewModel.obtenerAbonos(deudorData.id.toString())
     }
+        if(deleteSuccess) {
+            SuccessDialog("¡Se elimino el pago correctamente!",{
+                pagosViewModel.resetdeleteSuccess()
+                onBackClick()
+            }, {
+                pagosViewModel.resetdeleteSuccess()
+                onBackClick()
+            })
+
+        }
 
     Scaffold(
         topBar = {
@@ -288,6 +328,9 @@ fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntit
 
                                 )
                                 openPreviewTicket(paymentDatapreviewTiket)
+                            },{
+                                currentpaymentSelected = tx
+                                showDeleteDialog =true
                             })
                         }
                     }
@@ -525,14 +568,15 @@ fun TransactionItem(
     transaction: PagosEntinty,
     isLast: Boolean,
     openPaymentDetail: () -> Unit,
-    openPreviewTiket: () -> Unit
+    openPreviewTiket: () -> Unit,
+    onDelete: () -> Unit // Nuevo parámetro para la acción de eliminar
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min)
             .padding(horizontal = 16.dp)
-            .clickable { if (transaction.isIngreso) openPreviewTiket() else  openPaymentDetail() }
+            .clickable { if (transaction.isIngreso) openPreviewTiket() else openPaymentDetail() }
     ) {
         // --- COLUMNA IZQUIERDA: Ícono y Línea conectora ---
         Column(
@@ -560,66 +604,96 @@ fun TransactionItem(
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        // --- COLUMNA DERECHA: Timeline de Productos ---
+        // --- COLUMNA DERECHA: Timeline de Contenido ---
         Column(
             modifier = Modifier
                 .weight(1f)
                 .padding(bottom = if (isLast) 0.dp else 24.dp)
         ) {
-            // Header del item (Título y fecha)
-            Text(
-                text = if (transaction.isIngreso) "Abono" else "Venta",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (transaction.isIngreso) Color(0xFF2E7D32) else Color(0xFF1976D2)
-            )
-            Text(text = transaction.fechaAbono, fontSize = 11.sp, color = TextLightGray)
+            // Header: Título, Fecha y Botón de Eliminar
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = if (transaction.isIngreso) "Abono" else "Venta",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (transaction.isIngreso) Color(0xFF2E7D32) else Color(0xFF1976D2)
+                    )
+                    Text(text = transaction.fechaAbono, fontSize = 11.sp, color = TextLightGray)
+                }
 
-            Spacer(modifier = Modifier.height(8.dp))
-        if(!transaction.jsonAbonoPorProducto.isNullOrEmpty()) {
-            val listType = object : TypeToken<ArrayList<PorductosEntity>>() {}.type
-            val listaRecuperada: ArrayList<PorductosEntity> = try{Gson().fromJson(transaction.jsonAbonoPorProducto, listType)}catch (e: Exception){arrayListOf<PorductosEntity>()}
-            listaRecuperada.forEachIndexed { index, producto ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(26.dp)
-                            .border(1.dp, BorderColor, CircleShape)
-                            .background(IconBgGray, CircleShape),
-                        contentAlignment = Alignment.Center
+                if (transaction.isIngreso) {
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier.size(32.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.Sell,
-                            contentDescription = null,
-                            tint = TextDark2,
-                            modifier = Modifier.size(12.dp)
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Eliminar",
+                            tint = Color.Red.copy(alpha = 0.6f),
+                            modifier = Modifier.size(18.dp)
                         )
                     }
-                    Text(text = producto.nombre, fontSize = 12.sp, color = Color.DarkGray)
-                    Text(text = "---", fontSize = 12.sp, color = Color.DarkGray)
-                    Text(
-                        text = formatAsCurrency(producto.precioConGanancia),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-
-                // Línea separadora entre productos (si no es el último producto)
-                if (index < listaRecuperada.size - 1) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 4.dp),
-                        thickness = 0.5.dp,
-                        color = BorderColor.copy(alpha = 0.5f)
-                    )
                 }
             }
-        }
+
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Total al final
+            // Lista de productos
+            if (!transaction.jsonAbonoPorProducto.isNullOrEmpty()) {
+                val listType = object : TypeToken<ArrayList<PorductosEntity>>() {}.type
+                val listaRecuperada: ArrayList<PorductosEntity> = try {
+                    Gson().fromJson(transaction.jsonAbonoPorProducto, listType)
+                } catch (e: Exception) {
+                    arrayListOf()
+                }
+
+                listaRecuperada.forEachIndexed { index, producto ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(26.dp)
+                                .border(1.dp, BorderColor, CircleShape)
+                                .background(IconBgGray, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Sell,
+                                contentDescription = null,
+                                tint = TextDark2,
+                                modifier = Modifier.size(12.dp)
+                            )
+                        }
+                        Text(text = producto.nombre, fontSize = 12.sp, color = Color.DarkGray)
+                        Text(text = "---", fontSize = 12.sp, color = Color.DarkGray)
+                        Text(
+                            text = formatAsCurrency(producto.precioConGanancia),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    if (index < listaRecuperada.size - 1) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 4.dp),
+                            thickness = 0.5.dp,
+                            color = BorderColor.copy(alpha = 0.5f)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Total
             Text(
                 text = "Total: ${formatAsCurrency(transaction.montoAbonado)}",
                 fontSize = 13.sp,

@@ -16,8 +16,8 @@ android {
         applicationId = "com.nexusystem.paguito"
         minSdk = 24
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.0.0"
+        versionCode = 7
+        versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -127,7 +127,8 @@ dependencies {
 
     val billing_version = "7.0.0" // Usa la versión más reciente
     implementation("com.android.billingclient:billing-ktx:$billing_version")
-
+    implementation("androidx.core:core-splashscreen:1.0.1")
+    implementation("com.google.android.material:material:1.11.0")
     // AdMob
     implementation("com.google.android.gms:play-services-ads:23.4.0")
 }

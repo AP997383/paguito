@@ -59,7 +59,7 @@ fun DeudorItem(deudor: DeudoresEntity, onSelect: (DeudoresEntity) -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FAFB)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
         shape = RoundedCornerShape(12.dp)
     ) {
         Row(
@@ -93,7 +93,7 @@ fun DeudorItem(deudor: DeudoresEntity, onSelect: (DeudoresEntity) -> Unit) {
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     // Etiqueta Vencido
-                    SuggestionChip(
+                  /*  SuggestionChip(
                         onClick = { },
                         label = { Text("Vencido", fontSize = 12.sp) },
                         icon = { Icon(Icons.Default.Warning, null, modifier = Modifier.size(14.dp)) },
@@ -102,7 +102,7 @@ fun DeudorItem(deudor: DeudoresEntity, onSelect: (DeudoresEntity) -> Unit) {
                             labelColor = Color.Red
                         ),
                         border = null
-                    )
+                    )*/
                     // Fecha
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.DateRange, null, modifier = Modifier.size(14.dp), tint = Color.Gray)
@@ -131,14 +131,16 @@ fun DeudoresBottomSheet(
     onDeudorSelected: (DeudoresEntity) -> Unit,
     deudores: List<DeudoresEntity?>
 ) {
-    val sheetState = rememberModalBottomSheetState()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var searchQuery by remember { mutableStateOf("") }
-
+    val filteredList = remember(searchQuery, deudores) {
+        deudores.filter { it?.nombre?.contains(searchQuery, ignoreCase = true) == true }
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.surface,
         dragHandle = { BottomSheetDefaults.DragHandle() }
     ) {
         Column(
@@ -164,9 +166,9 @@ fun DeudoresBottomSheet(
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = BluePrimary2,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.surface,
-                    focusedContainerColor =  MaterialTheme.colorScheme.surface,
-                    unfocusedContainerColor =  MaterialTheme.colorScheme.surface
+                    unfocusedBorderColor = MaterialTheme.colorScheme.background,
+                    focusedContainerColor =  MaterialTheme.colorScheme.background,
+                    unfocusedContainerColor =  MaterialTheme.colorScheme.background
                 )
             )
 
@@ -176,7 +178,6 @@ fun DeudoresBottomSheet(
             LazyColumn(
                 modifier = Modifier.fillMaxWidth()
             ) {
-                val filteredList = deudores.filter { it!!.nombre.contains(searchQuery, ignoreCase = true) }
                 if(filteredList.size>0) {
                     items(filteredList) { deudor ->
                         DeudorItem(deudor = deudor!!, onSelect = onDeudorSelected)

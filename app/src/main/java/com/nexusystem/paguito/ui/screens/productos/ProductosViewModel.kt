@@ -11,10 +11,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import com.google.gson.Gson
+import com.nexus.medi.data.local.entity.PagosEntinty
 import com.nexus.medi.data.local.entity.PorductosEntity
 import com.nexusystem.paguito.data.local.entity.UserProfileEntity
 import com.nexusystem.paguito.domain.usescases.productos.ProductosUseCase
 import com.nexusystem.paguito.utils.SecureStorageManager
+import com.nexusystem.paguito.utils.getTodayDateString
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -35,6 +38,9 @@ class ProductosViewModel @Inject constructor(
 ) : ViewModel() {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
+
+    private val _numProducts = MutableStateFlow(0)
+    val numProducts: StateFlow<Int> = _numProducts
 
     private val _newUrlServer = MutableStateFlow<String>("")
     val newUrlServer = _newUrlServer.asStateFlow()
@@ -75,6 +81,14 @@ class ProductosViewModel @Inject constructor(
             }
         }
     }
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun obtenerNumeroProductos() {
+        viewModelScope.launch {
+            productosUserCase.obtenerNumeroProductos().collect { list ->
+                _numProducts.value = list
+            }
+        }
+    }
 
     @RequiresApi(Build.VERSION_CODES.O)
     fun daysUntilExpiration(dateStr: String): Int {
@@ -87,12 +101,23 @@ class ProductosViewModel @Inject constructor(
     }
 
     fun addNewCartilla(producto: PorductosEntity) {
-        viewModelScope.launch {
-            productosUserCase.guardarProducto(producto)
-        }
+
         if(!mail.isNullOrEmpty()) {
             viewModelScope.launch {
                 saveProductInFirebase(mail!!, producto)
+                _newUrlServer.value =""
+            }
+        }
+    }
+
+    fun deleteProduct(producto: PorductosEntity) {
+        viewModelScope.launch {
+            productosUserCase.deleteProduct(producto)
+        }
+        if(!mail.isNullOrEmpty()) {
+            Log.e("DELETE_PRODUCT","SI")
+            viewModelScope.launch {
+                deleteProduct(mail!!, producto)
                 _newUrlServer.value =""
             }
         }
@@ -142,13 +167,37 @@ class ProductosViewModel @Inject constructor(
 
     fun saveProductInFirebase(userId: String, producto: PorductosEntity?) {
         viewModelScope.launch {
+
+            // 1. Preparamos los datos
+            val newDocRef =  firestore.collection("productos").document(userId)
+                .collection("productos")
+                .document()
+            val generatedId = newDocRef.id
+            producto!!.idRemoteDatabase = generatedId
+            val idLocal =  productosUserCase.guardarProducto(producto!!)
+            newDocRef.set(producto, SetOptions.merge())
+                .addOnSuccessListener {}
+                .addOnFailureListener { e ->
+                    Log.e("SAVEDEUDOE", "Error en cola de sincronización: ${e.message}")
+                }
+        }
+    }
+
+    fun deleteProduct(userId: String, producto: PorductosEntity?) {
+        Log.e("DELETE_PRODUCT","SI"+userId+"/"+producto!!.idRemoteDatabase)
+        viewModelScope.launch {
             producto?.let { product ->
                 try {
                     firestore.collection("productos").document(userId)
                         .collection("productos")
-                        .document()
-                        .set(product, SetOptions.merge())
-                        .addOnCompleteListener {}
+                        .document(producto.idRemoteDatabase)
+                        .delete()
+                        .addOnCompleteListener {
+                            Log.e("DELETE_PRODUCT","addOnCompleteListener")
+                        }
+                        .addOnFailureListener {
+                            Log.e("DELETE_PRODUCT","addOnFailureListener"+it.toString())
+                        }
                         .await()
                 } catch (e: Exception) {}
             }

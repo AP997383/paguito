@@ -15,13 +15,20 @@ interface  ProductosDao {
     fun obtenerTodosProductos(): Flow<List<PorductosEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun agregarProducto(mascota: PorductosEntity)
+    suspend fun agregarProducto(mascota: PorductosEntity):Long
+
+    @Delete()
+    suspend fun deleteProduct(mascota: PorductosEntity)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun agregarProductos(productos: List<PorductosEntity>)
 
     @Query("SELECT idRemoteDatabase FROM ProductosTble")
     suspend fun getAllRemoteIds(): List<String>
+
+    @Query("SELECT COUNT(*) FROM ProductosTble")
+    fun obtenerNumeroDeProductos(): Flow<Int>
+
     @Query("SELECT * FROM ProductosTble  WHERE nombre=:nombre ")
     fun obtenerProductoPorNombre(nombre: String):  Flow<List<PorductosEntity>>
 

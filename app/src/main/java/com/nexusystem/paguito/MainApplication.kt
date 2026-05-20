@@ -1,7 +1,11 @@
 package com.nexusystem.paguito
 
 import android.app.Application
+import android.content.Context
+import android.util.Log
 import com.google.firebase.FirebaseApp
+import com.nexusystem.paguito.ui.screens.setAppLanguage
+import com.nexusystem.paguito.utils.languajes
 import dagger.hilt.android.HiltAndroidApp
 
 @HiltAndroidApp
@@ -12,7 +16,7 @@ class MainApplication: Application() {
         FirebaseApp.initializeApp(this)
     }
 
-   /* override fun attachBaseContext(base: Context) {
+    override fun attachBaseContext(base: Context) {
         Log.e("APP_LOCALE", "MainApplication attachBaseContext")
         val prefs = base.getSharedPreferences("settings", Context.MODE_PRIVATE)
         val lang = prefs.getString("app_language", "es") ?: "es"
@@ -27,5 +31,5 @@ class MainApplication: Application() {
         setAppLanguage(localeTag)
         super.attachBaseContext(base)
     }
-*/
+
 }

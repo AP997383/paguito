@@ -33,6 +33,7 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.*
 import androidx.compose.runtime.LaunchedEffect
@@ -45,15 +46,20 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.google.common.io.Files.append
 import com.nexusystem.paguito.ui.screens.deudores.GreenPrimary
 import com.nexusystem.paguito.ui.screens.deudores.TextDark
 import com.nexusystem.paguito.ui.screens.payments.GreenLightBg
 import com.nexusystem.paguito.ui.screens.perfil.TextSecondary
 import com.nexusystem.paguito.R
 import com.nexusystem.paguito.ui.screens.deudores.GrayBackground
+import com.nexusystem.paguito.ui.screens.deudores.RedAlert
 import com.nexusystem.paguito.ui.screens.deudores.TextGray
 import kotlinx.coroutines.delay
 
@@ -373,6 +379,7 @@ private fun ErrorDialogConfirmButton(onConfirmClick: () -> Unit) {
 
 @Composable
 fun SuccessDialog(
+    title:String,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -386,7 +393,7 @@ fun SuccessDialog(
             )
         },
         title = {
-            Text(text = "!Datos Actualizados!")
+            Text(text = title)
         },
         confirmButton = {
             Button(
@@ -395,7 +402,7 @@ fun SuccessDialog(
                     containerColor = Color(0xFF69F0AE) // Color de alerta
                 )
             ) {
-                Text("Cerrar")
+                Text("Entendido")
             }
         },
 
@@ -908,4 +915,65 @@ fun SuccessRegistrationDialog(
             }
         }
     }
+}
+@Composable
+fun DeleteConfirmationDialog(
+    productName: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                imageVector = Icons.Default.Warning,
+                contentDescription = null,
+                tint = RedAlert // Tu color rojo de alerta
+            )
+        },
+        title = {
+            Text(
+                text = "Confirmar eliminación",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Text(
+                text = buildAnnotatedString {
+                    append("¿Estás seguro de que deseas eliminar ")
+                    withStyle(
+                        SpanStyle(
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    ) {
+                        append(productName)
+                    }
+                    append("? Esta acción quitará el producto del inventario de forma permanente.")
+                },
+                textAlign = TextAlign.Center
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = RedAlert),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text("ELIMINAR", color = Color.White, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(
+                    "CANCELAR",
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        },
+        shape = RoundedCornerShape(16.dp),
+        containerColor = MaterialTheme.colorScheme.surface
+    )
 }

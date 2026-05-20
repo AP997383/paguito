@@ -318,7 +318,9 @@ fun DebtorCard(onnclcikCard:()-> Unit,nameInCard: String,ammountInCard: String) 
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.surface),
         color = MaterialTheme.colorScheme.surface,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().clickable{
+            onnclcikCard()
+        }
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -338,9 +340,7 @@ fun DebtorCard(onnclcikCard:()-> Unit,nameInCard: String,ammountInCard: String) 
             Spacer(modifier = Modifier.width(12.dp))
 
             // Textos
-            Column(modifier = Modifier.weight(1f).clickable{
-                onnclcikCard()
-            }) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(text = if (nameInCard.isNullOrBlank()) "Seleccionar un deudor" else nameInCard, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                 Spacer(modifier = Modifier.height(2.dp))
                 Text("Deuda: $$ammountInCard", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = RedDebt)

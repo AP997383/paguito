@@ -17,9 +17,14 @@ class PorductosRepository @Inject constructor(
     }
 
 
-    suspend fun add(recipe: PorductosEntity) {
+    suspend fun add(recipe: PorductosEntity) :Long{
         Log.e("ADDDD","--<" + recipe)
-        recipesDao.agregarProducto(recipe.toEntity())
+       return  recipesDao.agregarProducto(recipe.toEntity())
+    }
+
+    suspend fun deleteProduct(recipe: PorductosEntity) {
+        Log.e("ADDDD","--<" + recipe)
+        recipesDao.deleteProduct(recipe.toEntity())
     }
 
     suspend fun addProductos(recipe: ArrayList<PorductosEntity>) {
@@ -31,6 +36,9 @@ class PorductosRepository @Inject constructor(
 
     }
 
+    suspend fun obtenerNumeroProductos(): Flow<Int> {
+       return recipesDao.obtenerNumeroDeProductos()
+    }
     suspend fun update(recipe: PorductosEntity) {
         val entity = recipe.toEntity()
        // recipesDao.updateBotiquin(entity.quiantity,entity.codigo )

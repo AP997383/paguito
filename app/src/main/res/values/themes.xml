@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
-    <style name="Theme.Paguito" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- 2. Tema real de la App (AQUÍ ESTÁ EL TRUCO) -->
+    <style name="Theme.Paguito" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash_icon_wrapper</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
 </resources>

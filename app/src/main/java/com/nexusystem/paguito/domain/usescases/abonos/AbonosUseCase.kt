@@ -15,6 +15,7 @@ class AbonosUseCase @Inject constructor(
     suspend fun obtenerUltimosAbonos(): Flow<List<PagoConNombre>> = localRepository.obtenerUltimosAbono()
     suspend fun obtenerUltimosAbonos5(): Flow<List<PagoConNombre>> = localRepository.obtenerUltimosAbono5()
    suspend fun guardarAbono(data: PagosEntinty) = localRepository.add(data)
+    suspend fun eliminarAbono(data: PagosEntinty) = localRepository.eliminar(data)
     suspend fun guardarAbonos(data: ArrayList<PagosEntinty>) = localRepository.addPagosOrVentas(data)
     suspend fun guardarVenta(data: PagosEntinty) = localRepository.addVenta(data)
     suspend fun guardarprimeraVenta(data: PagosEntinty) = localRepository.addprimeraVenta(data)

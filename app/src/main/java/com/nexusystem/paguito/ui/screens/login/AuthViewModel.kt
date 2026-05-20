@@ -36,8 +36,8 @@ class AuthViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    private val _isVerified = MutableStateFlow(false)
-    val isVerified: StateFlow<Boolean> = _isVerified
+    private val _isVerified = MutableStateFlow(0)
+    val isVerified: StateFlow<Int> = _isVerified
 
     private val _changePasswordSucess = MutableStateFlow(false)
     val changePasswordSucess: StateFlow<Boolean> = _changePasswordSucess
@@ -80,7 +80,7 @@ class AuthViewModel @Inject constructor(
     }
 
     fun resetVerified(){
-        _isVerified.value  =false
+        _isVerified.value  =0
     }
     fun resetChangePassword(){
         _changePasswordSucess.value  =false
@@ -93,12 +93,16 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = ""
-
             try {
                 val result = authRepository.verifyOtp(email, otp)
-                _isVerified.value = result
+                if(result){
+                    _isVerified.value = 1
+                }else{
+                    _isVerified.value = 2
+                }
+
             } catch (e: Exception) {
-                _userAlreadyExist.value ="Usuario ya existe"
+                _isVerified.value = 2
                 _errorMessage.value = e.message?:""
             } finally {
                 _isLoading.value = false
