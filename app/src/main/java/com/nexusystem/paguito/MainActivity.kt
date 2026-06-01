@@ -30,6 +30,7 @@ import androidx.navigation.compose.rememberNavController
 import com.google.firebase.messaging.FirebaseMessaging
 import com.nexusystem.paguito.ui.components.navigation.RoundedBottomBar
 import com.nexusystem.paguito.ui.components.navigation.Routes
+import com.nexusystem.paguito.ui.screens.analisis.AnalisisViewModel
 import com.nexusystem.paguito.ui.screens.deudores.DeudoresViewModel
 import com.nexusystem.paguito.ui.screens.login.AuthViewModel
 import com.nexusystem.paguito.ui.screens.payments.PagosViewModel
@@ -76,6 +77,7 @@ class MainActivity : ComponentActivity() {
                 val registerwModel: RegisterViewModel by viewModels()
                 val pagosViewModel: PagosViewModel by viewModels()
                 val perfilViewModel: PerfiViewModel by viewModels()
+                val analisisViewModel: AnalisisViewModel by viewModels()
                 val currentDestination =
                     navController.currentBackStackEntryAsState().value?.destination?.route
                         ?: Routes.ScreenHome.route
@@ -139,6 +141,7 @@ class MainActivity : ComponentActivity() {
                             route != Routes.ScreenOtp.route+ "/{params}" &&
                             route != Routes.ScreenDetalledeVenta.route+ "/{params}" &&
                             route != Routes.ScreenPreviewTicket.route+ "/{params}"&&
+                            route != Routes.ScreenPreviewTicketAccountState.route+ "/{params}"&&
                             route != Routes.ScreenRecoveryPassword.route &&
                             route != Routes.ScreenNuevoProducto.route+ "/{params}" &&
                             route != Routes.ScreenNuevoProducto.route &&
@@ -177,6 +180,7 @@ class MainActivity : ComponentActivity() {
                         deudoresViewModel=deudoresViewModel,
                         pagosViewModel,
                         productosViewModel,
+                        analisisViewModel,
                         perfilViewModel,
                         authViewModel =authViewModel,
                         registerwModel=registerwModel,

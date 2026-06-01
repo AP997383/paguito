@@ -29,6 +29,8 @@ import com.nexusystem.paguito.ui.screens.deudores.IconBgGray
 import com.nexusystem.paguito.ui.screens.deudores.TextDark2
 import com.nexusystem.paguito.ui.screens.payments.PagosViewModel
 import com.nexusystem.paguito.utils.formatAsCurrency
+import com.nexusystem.paguito.utils.formatFecha
+import com.nexusystem.paguito.utils.formatLongDateTime
 import java.util.Locale
 
 
@@ -111,6 +113,7 @@ fun HistorialPagosScreen(onBackClick: () -> Unit,pagosViewModel: PagosViewModel)
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun PagoItem(pago: PagoConNombre) {
     Row(
@@ -155,7 +158,7 @@ fun PagoItem(pago: PagoConNombre) {
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = "${pago.fechaAbono} • ${stringTyePayment}",
+                text = "${formatFecha(pago.fechaAbono)} • ${stringTyePayment}",
                 fontSize = 13.sp,
                 color = Color(0xFF8E8E93) // Color gris de la imagen
             )

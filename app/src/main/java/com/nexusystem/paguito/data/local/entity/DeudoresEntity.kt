@@ -7,7 +7,7 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "DeudoresTable")
 data class DeudoresEntity (
     @PrimaryKey(autoGenerate = true)
-    val id: Int?,
+    val id: Int?=0,
     var idRemoteDatabase: String="",
     var inRemote: Boolean=false,
     val nombre: String="",

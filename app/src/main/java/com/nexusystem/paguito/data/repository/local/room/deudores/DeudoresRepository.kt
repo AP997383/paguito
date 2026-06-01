@@ -26,9 +26,14 @@ class DeudoresRepository @Inject constructor(
 
 
 
+
     suspend fun add(recipe: DeudoresEntity) :Long{
         Log.e("ADDDD","--<" + recipe)
         return recipesDao.agregarNuevoDeudor(recipe.toEntity())
+    }
+
+    suspend fun deleteDeudor(id: String) {
+        return recipesDao.deleteDeudor(id)
     }
 
     suspend fun addDeudores(recipe: ArrayList<DeudoresEntity>) {

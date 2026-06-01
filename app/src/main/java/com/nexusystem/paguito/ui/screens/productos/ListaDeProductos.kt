@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.PeopleAlt
 import androidx.compose.material.icons.outlined.Search
@@ -83,7 +84,9 @@ data class ProductItem(
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProductListScreen(onBackClick: () -> Unit = {},openProduct:(PorductosEntity)->Unit,addNewProduct:()->Unit,viewmodel:ProductosViewModel) {
+fun ProductListScreen(onBackClick: () -> Unit = {},openProduct:(PorductosEntity)->Unit,addNewProduct:()->Unit,
+                      goToMyProfile:()->Unit,
+                      viewmodel:ProductosViewModel) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("Más vendidos") }
     val listaProductos by viewmodel.produtosList.collectAsState()
@@ -112,6 +115,7 @@ fun ProductListScreen(onBackClick: () -> Unit = {},openProduct:(PorductosEntity)
         })
     }
     val profile = viewmodel.profileState
+    var urlPhotoProfile by remember { mutableStateOf("") }
     if(showAlertFreeLimited)
     {
         PremiumLimitReachedDialog({
@@ -130,18 +134,11 @@ fun ProductListScreen(onBackClick: () -> Unit = {},openProduct:(PorductosEntity)
     }
     LaunchedEffect(profile) {
         if (profile != null) {
+            urlPhotoProfile=profile.fotoUrl
             isSucriptionActive = profile.userSuscription.isActive
         }
     }
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Mis Productos", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
-
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = MaterialTheme.colorScheme.background),
-                windowInsets = WindowInsets(0.dp)
-            )
-        },
         floatingActionButton = {
             if(filteredDebtors.size>0) {
                     FloatingActionButton(
@@ -171,8 +168,59 @@ fun ProductListScreen(onBackClick: () -> Unit = {},openProduct:(PorductosEntity)
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
         ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    // Se usa .padding para separar la barra de los bordes
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                // Alinea verticalmente todos los elementos de la fila
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Mis Productos",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    // Eliminé top y bottom padding de aquí para que el verticalAlignment del Row funcione perfectamente
+                    modifier = Modifier.padding(start = 16.dp)
+                )
+
+                // --- ESTE ES EL CAMBIO CLAVE ---
+                // Este Spacer actúa como un "muelle" que empuja el Box de la derecha hasta el extremo
+                Spacer(modifier = Modifier.weight(1f))
+
+                Box(
+                    modifier = Modifier
+                        .size(50.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary)
+                        .clickable {
+                            goToMyProfile()
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    // Lógica corregida: Si NO hay imagen, muestra el icono. Si hay, usa AsyncImage.
+                    if (urlPhotoProfile.isNullOrEmpty()) {
+                        Icon(
+                            imageVector = Icons.Filled.Person,
+                            contentDescription = "Placeholder de perfil",
+                            tint = Color(0xFFEC4899),
+                            modifier = Modifier.size(40.dp)
+                        )
+                    } else {
+                        AsyncImage(
+                            model = urlPhotoProfile,
+                            contentDescription = "Imagen de perfil del usuario",
+                            modifier = Modifier
+                                .size(45.dp) // Reducido para que quepa bien en el Box de 50.dp
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                }
+            }
+
             // Buscador
             OutlinedTextField(
                 value = searchQuery,

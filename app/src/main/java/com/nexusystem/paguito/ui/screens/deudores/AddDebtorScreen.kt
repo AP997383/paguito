@@ -200,7 +200,7 @@ fun AddDebtorScreen(
                 amount =  it.precioConGanancia.toString()
             else
                 amount = (amount.toFloat() + it.precioConGanancia).toString()
-        },listaBusquedaProductos)
+        },listaBusquedaProductos,productosViewModel)
     }
 
 

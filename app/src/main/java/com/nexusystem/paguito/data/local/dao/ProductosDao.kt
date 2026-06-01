@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.nexus.medi.data.local.entity.PorductosEntity
+import com.nexusystem.paguito.domain.data.ProductosSummary1
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -28,6 +29,14 @@ interface  ProductosDao {
 
     @Query("SELECT COUNT(*) FROM ProductosTble")
     fun obtenerNumeroDeProductos(): Flow<Int>
+
+    @Query("""
+        SELECT 
+            COUNT(*) AS numeroProductos, 
+            SUM(precioOriginal) AS totalCostoProductos 
+        FROM ProductosTble
+    """)
+    fun obtenerInversionProdcutos(): Flow<ProductosSummary1>
 
     @Query("SELECT * FROM ProductosTble  WHERE nombre=:nombre ")
     fun obtenerProductoPorNombre(nombre: String):  Flow<List<PorductosEntity>>

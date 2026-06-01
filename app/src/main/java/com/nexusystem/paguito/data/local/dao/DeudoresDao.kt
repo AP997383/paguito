@@ -59,6 +59,9 @@ interface  DeudoresDao {
     @Query("UPDATE DeudoresTable SET inRemote=true WHERE idRemoteDatabase=:id")
     suspend fun updateSync(id: String)
 
+    @Query("DELETE FROM DeudoresTable  WHERE idRemoteDatabase=:id")
+    suspend fun deleteDeudor(id: String)
+
     @Delete
     suspend fun elominarDeudor(mascota: DeudoresEntity)
 }

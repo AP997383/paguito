@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.People
@@ -58,9 +59,14 @@ fun RoundedBottomBar(
 ) {
     val items = listOf(
         BottomNavItem(
-            label = "Resumen",
+            label = "Home",
             icon = BottomIcon.Vector(Icons.Default.Home),
             route = Routes.HomeGraph.route
+        ),
+        BottomNavItem(
+            label = "Analisis",
+            icon = BottomIcon.Vector(Icons.Default.BarChart),
+            route = Routes.AnalisisGraph.route
         ),
         BottomNavItem(
             label = "Clientes",
@@ -71,12 +77,8 @@ fun RoundedBottomBar(
             label = "Productos",
             icon = BottomIcon.Vector(Icons.Default.ShoppingCart),
             route = Routes.ProductosGraph.route
-        ),
-        BottomNavItem(
-            label = "Perfil",
-            icon = BottomIcon.Vector(Icons.Default.Settings),
-            route = Routes.ProfileGraph.route
         )
+
     )
 
     val navBarsPadding = WindowInsets.navigationBars

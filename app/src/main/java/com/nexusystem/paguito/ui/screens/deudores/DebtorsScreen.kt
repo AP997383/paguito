@@ -5,7 +5,9 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -17,6 +19,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Search
@@ -30,16 +33,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.nexus.medi.data.local.entity.DeudoresEntity
 import com.nexusystem.paguito.BuildConfig
 import com.nexusystem.paguito.R
 import com.nexusystem.paguito.ui.screens.home.BorderLight
 import com.nexusystem.paguito.ui.screens.productos.NativeAdBanner
 import com.nexusystem.paguito.ui.screens.productos.ProductCardItem
+import com.nexusystem.paguito.utils.dialogs.EliminarClienteDialog
 import com.nexusystem.paguito.utils.dialogs.PremiumLimitReachedDialog
 import com.nexusystem.paguito.utils.emptyStates.DynamicEmptyState
 import com.nexusystem.paguito.utils.formatAsCurrency
@@ -74,11 +80,24 @@ fun DebtorsScreen(
     agregarDeudor: () -> Unit,
     registrarPago: (DeudoresEntity) -> Unit,
     registrarVenta: (DeudoresEntity) -> Unit,
+    goToMyProfile:()->Unit,
     viewmodel: DeudoresViewModel
 ) {
     var isSucriptionActive by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var showAlertFreeLimited by remember { mutableStateOf(false) }
+    var showDeleteClient by remember { mutableStateOf(false) }
+    var currentDebtorSelected by remember { mutableStateOf(DeudoresEntity()) }
+
+    if(showDeleteClient) {
+        EliminarClienteDialog(currentDebtorSelected.nombre, {
+            showDeleteClient =false
+        }, {
+            viewmodel.eliminarDeudorYpagos(currentDebtorSelected.idRemoteDatabase)
+            showDeleteClient=false
+        })
+    }
+
     val sampleDebtors by viewmodel.deudores.collectAsState()
   if(showAlertFreeLimited)
   {
@@ -92,9 +111,11 @@ fun DebtorsScreen(
             viewmodel.loadUserProfile()
         }
     val profile = viewmodel.profileState
+    var urlPhotoProfile by remember { mutableStateOf("") }
     LaunchedEffect(profile) {
         if (profile != null) {
             isSucriptionActive = profile.userSuscription.isActive
+            urlPhotoProfile = profile.fotoUrl
         }
     }
     val filteredDebtors = remember(searchQuery, sampleDebtors) {
@@ -140,18 +161,63 @@ fun DebtorsScreen(
                 .fillMaxSize()
                 .padding(0.dp) // Aplicamos paddingValues aquí para evitar superposición
         ) {
-            Text(
-                text = "Deudores",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 12.dp)
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    // Se usa .padding para separar la barra de los bordes
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                // Alinea verticalmente todos los elementos de la fila
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Clientes",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    // Eliminé top y bottom padding de aquí para que el verticalAlignment del Row funcione perfectamente
+                    modifier = Modifier.padding(start = 16.dp)
+                )
+
+                // --- ESTE ES EL CAMBIO CLAVE ---
+                // Este Spacer actúa como un "muelle" que empuja el Box de la derecha hasta el extremo
+                Spacer(modifier = Modifier.weight(1f))
+
+                Box(
+                    modifier = Modifier
+                        .size(50.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary)
+                        .clickable {
+                            goToMyProfile()
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    // Lógica corregida: Si NO hay imagen, muestra el icono. Si hay, usa AsyncImage.
+                    if (urlPhotoProfile.isNullOrEmpty()) {
+                        Icon(
+                            imageVector = Icons.Filled.Person,
+                            contentDescription = "Placeholder de perfil",
+                            tint = Color(0xFFEC4899),
+                            modifier = Modifier.size(40.dp)
+                        )
+                    } else {
+                        AsyncImage(
+                            model = urlPhotoProfile,
+                            contentDescription = "Imagen de perfil del usuario",
+                            modifier = Modifier
+                                .size(45.dp) // Reducido para que quepa bien en el Box de 50.dp
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                }
+            }
+
 
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("Buscar deudor por nombre...", color = TextGray1) },
+                placeholder = { Text("Buscar cliente por nombre...", color = TextGray1) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextGray1) },
                 // Añadimos un botón para limpiar la búsqueda si hay texto
                 trailingIcon = {
@@ -191,7 +257,10 @@ fun DebtorsScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         itemsIndexed(filteredDebtors) { index, debtor ->
-                            DebtorListItem(debtor = debtor!!, verPerfilDeudor, registrarPago, registrarVenta)
+                            DebtorListItem(debtor = debtor!!, verPerfilDeudor, registrarPago, registrarVenta,{
+                                currentDebtorSelected =it
+                                showDeleteClient=true
+                            })
                             Divider(color = MaterialTheme.colorScheme.background, thickness = 1.dp)
                             if(isSucriptionActive==false){
                             val isLast = index == filteredDebtors.lastIndex
@@ -269,7 +338,7 @@ fun FilterChipItem(text: String, count: Int, isSelected: Boolean, onClick: () ->
 }
 
 @Composable
-fun DebtorListItem(debtor: DeudoresEntity,verPerfilDeudor:(DeudoresEntity)->Unit,registrarPago:(DeudoresEntity)->Unit,registrarVenta:(DeudoresEntity)->Unit) {
+fun DebtorListItem(debtor: DeudoresEntity,verPerfilDeudor:(DeudoresEntity)->Unit,registrarPago:(DeudoresEntity)->Unit,registrarVenta:(DeudoresEntity)->Unit,elminarCliente:(DeudoresEntity)->Unit) {
     Card(
         modifier = Modifier.fillMaxWidth().padding(10.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -376,8 +445,24 @@ fun DebtorListItem(debtor: DeudoresEntity,verPerfilDeudor:(DeudoresEntity)->Unit
                 ) {
                     Text("Nueva venta", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 }
+                Spacer(modifier = Modifier.width(10.dp))
+                Button(
+                    onClick = { elminarCliente(debtor) },
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = RedUrgent),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp), // Reducido para el icono
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Delete, // O usa tu icono vectorial de basura
+                        contentDescription = "Eliminar Cliente",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp) // Tamaño adecuado para el icono
+                    )
+                }
             }
-            Row() {
+            Spacer(modifier = Modifier.height(10.dp))
+            Row(horizontalArrangement =Arrangement.Center, modifier = Modifier.fillMaxWidth() ) {
                 Text(
                     text = "Ver detalles",
                     fontSize = 14.sp,

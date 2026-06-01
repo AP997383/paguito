@@ -81,7 +81,7 @@ fun DetalleVentaScreen(ventaPago : PagosEntinty, productosViewModel: ProductosVi
             showListProducts =false
             selectedProducts.add(it)
             montoRelacionado.value += it.precioConGanancia.toInt()
-        },listaBusquedaProductos)
+        },listaBusquedaProductos,productosViewModel)
     }
     LaunchedEffect(Unit) {
         productosViewModel.obtenerProductos()

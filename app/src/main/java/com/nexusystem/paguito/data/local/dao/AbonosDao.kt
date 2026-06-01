@@ -9,6 +9,7 @@ import androidx.room.Transaction
 import androidx.room.Update
 import com.nexus.medi.data.local.entity.PagosEntinty
 import com.nexus.medi.data.local.entity.PorductosEntity
+import com.nexusystem.paguito.data.local.entity.AbonosDelMes
 import com.nexusystem.paguito.data.local.entity.PagoConNombre
 import kotlinx.coroutines.flow.Flow
 
@@ -31,29 +32,43 @@ interface  AbonosDao {
             p.notas, 
             p.jsonAbonoPorProducto
         FROM PagosTable AS p
-        LEFT JOIN DeudoresTable AS d ON p.idDeudor = CAST(d.id AS TEXT)
+        LEFT JOIN DeudoresTable AS d ON p.idDeudorRemoteDatabase = CAST(d.idRemoteDatabase AS TEXT)
+           ORDER BY p.fechaAbono DESC
     """)
     fun getPagosConNombre(): Flow<List<PagoConNombre>>
 
     @Query("""
-        SELECT 
-            p.id, 
-            p.idDeudor, 
-            d.nombre AS nameDeudor, 
-            p.montoAbonado, 
-            p.fechaAbono, 
-            p.pagoATiempo, 
-            p.tipoPago, 
-            p.isIngreso, 
-            p.notas, 
-            p.jsonAbonoPorProducto
-        FROM PagosTable AS p
-        LEFT JOIN DeudoresTable AS d ON p.idDeudor = CAST(d.id AS TEXT) LIMIT 5
-    """)
+    SELECT 
+        p.id, 
+        p.idDeudor, 
+        d.nombre AS nameDeudor, 
+        p.montoAbonado, 
+        p.fechaAbono, 
+        p.pagoATiempo, 
+        p.tipoPago, 
+        p.isIngreso, 
+        p.notas, 
+        p.jsonAbonoPorProducto
+    FROM PagosTable AS p
+    LEFT JOIN DeudoresTable AS d ON p.idDeudorRemoteDatabase = CAST(d.idRemoteDatabase AS TEXT)
+    ORDER BY p.fechaAbono DESC
+    LIMIT 5
+""")
     fun getPagosConNombre5(): Flow<List<PagoConNombre>>
+
+    @Query("""
+        SELECT
+            p.montoAbonado, 
+            p.fechaAbono,
+            p.isIngreso
+        FROM PagosTable AS p WHERE fechaAbono BETWEEN :fechaInicio AND :fechaFin
+    """)
+    fun obtenerPagosByMonth(fechaInicio: String,fechaFin: String): Flow<List<AbonosDelMes>>
 
     @Query("SELECT * FROM PagosTable WHERE idDeudor=:idCiente")
     fun obtenerAbonosPorCliente(idCiente: String): Flow<List<PagosEntinty>>
+    @Query("SELECT * FROM PagosTable WHERE idDeudorRemoteDatabase=:idCiente")
+    fun obtenerAbonosPorClienteIdRemote(idCiente: String): Flow<List<PagosEntinty>>
 
     @Query("SELECT COUNT(*) FROM PagosTable")
     fun getNetNumberTicket(): Flow<Int>
@@ -80,6 +95,10 @@ interface  AbonosDao {
         val idInt = pago.idDeudor.toIntOrNull() ?: 0
         deudoresDao.sumarSaldo(idInt, pago.montoAbonado.toFloat())
     }
+    @Query("DELETE  FROM PagosTable WHERE idDeudorRemoteDatabase=:idCiente")
+    suspend fun borrarAbonosYventas(idCiente: String)
+
+
 
     @Transaction
     suspend fun registrarVentaYActualizarDeudor(pago: PagosEntinty, deudoresDao: DeudoresDao) {

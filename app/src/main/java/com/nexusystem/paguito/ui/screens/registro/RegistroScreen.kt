@@ -6,6 +6,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,10 +27,18 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.withLink
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nexusystem.paguito.domain.data.auth.UserDataModelAuth
@@ -106,6 +115,7 @@ fun RegisterScreen(
     var showError by remember { mutableStateOf(false) }
     val isIdentifierValid = Patterns.EMAIL_ADDRESS.matcher(identifier).matches() || (identifier.all { it.isDigit() } && identifier.length >= 10)
     val isFormValid = name.isNotBlank() && isIdentifierValid && conditionsMetCount == 4 && password == confirmPassword && termsAccepted
+    Log.e("TERMS","->"+ name +"/"+isIdentifierValid+"/"+conditionsMetCount+"/"+(password == confirmPassword)+"/"+termsAccepted)
     Box(){
     Scaffold(
         topBar = {
@@ -192,26 +202,11 @@ fun RegisterScreen(
             }
 
             // --- 3. TÉRMINOS Y CONDICIONES ---
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(
-                    checked = termsAccepted,
-                    onCheckedChange = { termsAccepted = it },
-                    colors = CheckboxDefaults.colors(checkedColor =  MaterialTheme.colorScheme.primary)
-                )
-                Text(
-                    text = "Al registrarme, acepto los ", color = TextGray, fontSize = 12.sp
-                )
-                Text(
-                    text = "Términos de Servicio", color =  MaterialTheme.colorScheme.primary, fontSize = 12.sp, fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable { /* Acción TS */ }
-                )
-            }
-            Text(
-                text = " y la Política de Privacidad.", color =  MaterialTheme.colorScheme.primary, fontSize = 12.sp, fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(start = 48.dp).clickable { /* Acción PP */ }
-            )
+            TermsAndConditionsSection({
+                termsAccepted=it
+            })
 
-            // Mensaje de error general si intentan registrarse sin llenar todo
+            Log.e("TERMS","->"+ isFormValid +"/"+showError)
             if (showError && !isFormValid) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text("Por favor, completa correctamente todos los campos y acepta los términos.", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
@@ -255,7 +250,88 @@ fun RegisterScreen(
         )
     }
 }
+@Composable
+fun TermsAndConditionsSection(termsAccepted:(Boolean)->Unit) {
+    // 1. Instanciamos el manejador de URIs de Compose
+    val uriHandler = LocalUriHandler.current
+    var termsAcceptedLocal by remember { mutableStateOf(false) }
+    // URLs de tus documentos
+    val urlTerminos = "https://www.nexusecosystem-mx.com/sections/terms-paguito.html"
+    val urlPrivacidad = "https://www.nexusecosystem-mx.com/sections/terms-paguito.html"
+// Guardamos la referencia del layout del texto para saber exactamente dónde se hace click
+    var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
 
+    // Volvemos al esquema clásico con TAGS que funciona en todas las versiones
+    val annotatedString = buildAnnotatedString {
+        withStyle(style = SpanStyle(color = Color(0xFF64748B), fontSize = 12.sp)) {
+            append("Al registrarme, acepto los ")
+        }
+
+        pushStringAnnotation(tag = "URL_TERMS", annotation = urlTerminos)
+        withStyle(style = SpanStyle(
+            color = MaterialTheme.colorScheme.primary,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold
+        )) {
+            append("Términos de Servicio")
+        }
+        pop()
+
+        withStyle(style = SpanStyle(color = Color(0xFF64748B), fontSize = 12.sp)) {
+            append(" y la ")
+        }
+
+        pushStringAnnotation(tag = "URL_PRIVACY", annotation = urlPrivacidad)
+        withStyle(style = SpanStyle(
+            color = MaterialTheme.colorScheme.primary,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold
+        )) {
+            append("Política de Privacidad.")
+        }
+        pop()
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Checkbox(
+            checked = termsAcceptedLocal,
+            onCheckedChange = {
+                termsAcceptedLocal =it
+                termsAccepted(it) },
+            colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
+        )
+
+        Spacer(modifier = Modifier.width(4.dp))
+
+        Text(
+            text = annotatedString,
+            onTextLayout = { textLayoutResult = it },
+            modifier = Modifier.pointerInput(Unit) {
+                detectTapGestures { offset ->
+                    textLayoutResult?.let { layoutResult ->
+                        // Calculamos qué caracter de la cadena recibió el toque
+                        val position = layoutResult.getOffsetForPosition(offset)
+
+                        // Buscamos si ese caracter pertenece a la anotación de Términos
+                        annotatedString.getStringAnnotations(tag = "URL_TERMS", start = position, end = position)
+                            .firstOrNull()?.let { annotation ->
+                                uriHandler.openUri(annotation.item)
+                            }
+
+                        // Buscamos si ese caracter pertenece a la anotación de Privacidad
+                        annotatedString.getStringAnnotations(tag = "URL_PRIVACY", start = position, end = position)
+                            .firstOrNull()?.let { annotation ->
+                                uriHandler.openUri(annotation.item)
+                            }
+                    }
+                }
+            }
+        )
+    }
+}
 // ================= COMPONENTES SECUNDARIOS =================
 
 @Composable

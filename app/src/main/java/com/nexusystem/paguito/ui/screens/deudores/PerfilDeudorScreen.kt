@@ -58,6 +58,8 @@ import com.nexusystem.paguito.utils.emptyStates.PaymentHistoryEmptyState
 import com.nexusystem.paguito.utils.formatAsCurrency
 import com.nexusystem.paguito.utils.getTodayDateString
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import kotlin.text.toInt
 
 // --- COLORES PRINCIPALES ---
@@ -86,7 +88,7 @@ data class Transaction(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntity,viewmodelDeudro: DeudoresViewModel,pagosViewModel: PagosViewModel,
-                          openPreviewTicket:(PagostoPreviewTiket)->Unit,openDetailVenta:(PagosEntinty)->Unit) {
+                          openPreviewTicket:(PagostoPreviewTiket)->Unit,openDetailVenta:(PagosEntinty)->Unit,openAcountState:(DeudoresEntity)->Unit) {
     var showFastPayment by remember { mutableStateOf(false) }
     val pagosPorCliente by pagosViewModel.pagos.collectAsState()
     val deleteSuccess by pagosViewModel.deleteSuccess.collectAsState()
@@ -97,6 +99,19 @@ fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntit
     var pagado = 0.0f
     var saldoPendiente = 0.0f
     var showDeleteDialog by remember { mutableStateOf(false) }
+
+    var filtroSeleccionado by remember { mutableStateOf(PagoFiltro.TODOS) }
+
+    // 2. Filtrado inteligente de la lista usando derivedStateOf
+    val listaFiltrada by remember {
+        derivedStateOf {
+            when (filtroSeleccionado) {
+                PagoFiltro.TODOS -> pagosPorCliente
+                PagoFiltro.ABONOS -> pagosPorCliente.filter { it?.isIngreso == true }
+                PagoFiltro.VENTAS -> pagosPorCliente.filter { it?.isIngreso == false }
+            }
+        }
+    }
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -121,9 +136,11 @@ fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntit
     }
 
     LaunchedEffect(pagosPorCliente) {
-        pagosPorCliente.forEach {
-            if (it!!.isIngreso) {
-                pagado += it!!.montoAbonado
+        if(pagosPorCliente.size>0) {
+            pagosPorCliente.forEach {
+                if (it!!.isIngreso) {
+                    pagado += it!!.montoAbonado
+                }
             }
         }
     }
@@ -131,10 +148,25 @@ fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntit
 
     val profile = pagosViewModel.profileState
     val fechasPagosRealizados = remember(pagosPorCliente) {
-        pagosPorCliente.mapNotNull {
-            try { LocalDate.parse(it?.fechaAbono) } catch (e: Exception) { null }
-        }
+        pagosPorCliente.filter { it?.isIngreso!! }.mapNotNull { pago ->
+            pago?.fechaAbono?.let { fechaStr ->
+                try {
+                    // Intentar primero como fecha y hora (yyyy-MM-dd HH:mm:ss)
+                    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                    LocalDateTime.parse(fechaStr, formatter).toLocalDate()
+                } catch (e: Exception) {
+                    try {
+                        // Si falla, intentar como fecha simple (yyyy-MM-dd)
+                        LocalDate.parse(fechaStr)
+                    } catch (e2: Exception) {
+                        Log.e("DATA_CALCULATE", "Error al parsear fecha: $fechaStr", e2)
+                        null
+                    }
+                }
+            }
+        }.sorted() // Ordenamos las fechas ya parseadas
     }
+    Log.e("DATA_CALCULATE","-->"+pagosPorCliente)
     val proximaFecha by remember(deudorData.fechaInicialDeuda, fechasPagosRealizados) {
         derivedStateOf {
             try {
@@ -203,7 +235,7 @@ fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntit
     }
 
     LaunchedEffect(Unit) {
-        pagosViewModel.obtenerAbonos(deudorData.id.toString())
+        pagosViewModel.obtenerAbonos(deudorData.id.toString(),deudorData.idRemoteDatabase.toString())
     }
         if(deleteSuccess) {
             SuccessDialog("¡Se elimino el pago correctamente!",{
@@ -281,7 +313,9 @@ fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntit
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // 2. CABECERA DEL PERFIL (Avatar, Nombre, Botones)
-                ProfileHeaderSection(deudorData.nombre, deudorData.telefono)
+                ProfileHeaderSection(deudorData.nombre, deudorData.telefono,{
+                    openAcountState(deudorData)
+                })
 
                 Spacer(modifier = Modifier.height(24.dp))
 
@@ -306,14 +340,44 @@ fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntit
                     modifier = Modifier.padding(horizontal = 20.dp)
                 )
                 Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 20.dp),
+                        horizontalArrangement = Arrangement.Center, // Centra los elementos horizontalmente
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        PagoFiltro.values().forEach { filtro ->
+                            val isSelected = filtroSeleccionado == filtro
+
+                            Surface(
+                                modifier = Modifier
+                                    .padding(horizontal = 8.dp) // Espaciado entre chips
+                                    .clickable { filtroSeleccionado = filtro },
+                                shape = RoundedCornerShape(20.dp), // Esquinas muy redondeadas tipo píldora
+                                color = if (isSelected) Color(0xFF3283F6) else Color(0xFFF1F3F4) // Color azul o gris de image_14.png
+                            ) {
+                                Text(
+                                    text = filtro.name, // Usar title con capitalización correcta
+                                    color = if (isSelected) Color.White else Color(0xFF5F6368), // Texto blanco o gris oscuro
+                                    fontSize = 12.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp) // Padding interno generoso
+                                )
+                            }
+                        }
                     }
-                if (pagosPorCliente.isEmpty()) {
+                    }
+
+                // 3. Barra Horizontal de Chips
+
+                if (listaFiltrada.isEmpty()) {
                     item {   PaymentHistoryEmptyState(modifier = Modifier, {}) }
                 } else {
-                    items(pagosPorCliente) { tx ->
+                    items(listaFiltrada) { tx ->
                         if (tx != null) {
                             val contactText = listOfNotNull(profile?.email, profile?.phone).joinToString(" / ")
-                            TransactionItem(transaction = tx, isLast = tx == pagosPorCliente.last(),{
+                            TransactionItem(transaction = tx, isLast = tx == listaFiltrada.last(),{
                                 openDetailVenta(tx)
                             },{
                                 paymentDatapreviewTiket =PagostoPreviewTiket(
@@ -343,11 +407,15 @@ fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntit
         }
     }
 }
-
+enum class PagoFiltro {
+    TODOS,
+    VENTAS,
+    ABONOS
+}
 // --- COMPONENTES SECUNDARIOS ---
 
 @Composable
-fun ProfileHeaderSection(name:String,phone: String) {
+fun ProfileHeaderSection(name:String,phone: String,openAcountState:()->Unit) {
     val context = LocalContext.current
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -411,6 +479,13 @@ fun ProfileHeaderSection(name:String,phone: String) {
                     val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(waUrl))
                     context.startActivity(browserIntent)
                 }
+            }
+            ActionIconButton(
+                icon = Icons.Outlined.AccountBalance,
+                tint = BluePrimary2,
+                label = "Enviar Historial"
+            ) {
+                openAcountState()
             }
         }
     }

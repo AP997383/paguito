@@ -13,7 +13,9 @@ class DeudoresUseCase @Inject constructor(
 
     suspend fun obtenerDatosDeCards(): Flow<DeudoresSummary> = localRepository.obtenerDatosDeCards()
     suspend fun obtener5DatosDeCards(): Flow<DeudoresSummary> = localRepository.obtener5DatosDeCards()
+
     suspend fun agregarDeudor(data:DeudoresEntity):Long = localRepository.add(data)
+    suspend fun aliminarDeudorDeudor(id:String) = localRepository.deleteDeudor(id)
     suspend fun agregarDeudores(data: ArrayList<DeudoresEntity>) = localRepository.addDeudores(data)
     suspend fun updateSync(data:DeudoresEntity) = localRepository.updateSync(data)
     //suspend fun deleteMyRegister(data:MyBloodPresureAndGlucosaEntity) = localRepository.delete(data)

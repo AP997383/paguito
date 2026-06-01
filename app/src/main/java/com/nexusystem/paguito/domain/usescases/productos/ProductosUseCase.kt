@@ -4,6 +4,8 @@ import android.net.Uri
 import com.nexus.medi.data.local.entity.PorductosEntity
 import com.nexus.medi.data.repository.local.room.bloodAndPresure.PorductosRepository
 import com.nexusystem.paguito.data.repository.remote.auth.StorageRepository
+import com.nexusystem.paguito.domain.data.DeudoresSummary
+import com.nexusystem.paguito.domain.data.ProductosSummary1
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
@@ -13,7 +15,7 @@ class ProductosUseCase @Inject constructor(
 ) {
     suspend fun obtenerProductos(): Flow<List<PorductosEntity>> = localRepository.obtenerTodos()
     suspend fun obtenerNumeroProductos(): Flow<Int> = localRepository.obtenerNumeroProductos()
-
+    suspend fun inversionEnProductos(): Flow<ProductosSummary1> = localRepository.inversionEnProductos()
 
      suspend fun guardarProducto(data:PorductosEntity):Long = localRepository.add(data)
     suspend fun deleteProduct(data:PorductosEntity) = localRepository.deleteProduct(data)

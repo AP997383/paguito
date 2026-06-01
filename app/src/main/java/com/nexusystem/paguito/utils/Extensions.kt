@@ -864,7 +864,27 @@ fun formatLongDateTime(inputDate: String?): String {
             .replaceFirstChar { it.uppercase() } // Capitalizar la primera letra (el día)
 
     } catch (e: Exception) {
+        Log.e("FALLO_FECHA","-->"+  e.toString())
         inputDate // Si falla, devolvemos el string original para no romper la UI
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+fun formatFecha(fechaStr: String): String {
+    return try {
+        // 1. Limpiamos espacios y nos quedamos solo con la parte de la fecha (YYYY-MM-DD)
+        val soloFecha = fechaStr.trim().split(" ")[0]
+
+        // 2. Parseamos al objeto LocalDate
+        val fecha = LocalDate.parse(soloFecha, DateTimeFormatter.ISO_LOCAL_DATE)
+
+        // 3. Formateamos al estilo "dd MMMM yyyy" en español
+        val formatter = DateTimeFormatter.ofPattern("dd MMMM yyyy", Locale("es", "MX"))
+
+        // 4. Capitalizamos la primera letra (opcional, p.ej. "13 Mayo 2026" en vez de "13 mayo 2026")
+        fecha.format(formatter).replaceFirstChar { it.uppercase() }
+    } catch (e: Exception) {
+        "" // Retorna un string vacío o la cadena original si falla el parseo
     }
 }
 @RequiresApi(Build.VERSION_CODES.O)
@@ -994,47 +1014,50 @@ data class LanguageOption(
 )
 
 
-
 @RequiresApi(Build.VERSION_CODES.O)
 fun calcularSiguienteVencimiento(
-    fechaInicio: LocalDate,       // 28-01-2026
-    periodicidad: String,        // "Semanal", "Quincenal", "Mensual"
+    fechaInicio: LocalDate,
+    periodicidad: String,
     historialPagos: List<LocalDate>
 ): LocalDate {
+    var vencimientoCandidato = fechaInicio
     val hoy = LocalDate.now()
-    var fechaVencimientoActual = fechaInicio
 
-    // Iteramos mientras la fecha de vencimiento sea anterior o igual a hoy
-    // para encontrar cuál es el pago que toca "ahora" o el que está pendiente.
-    while (fechaVencimientoActual.isBefore(hoy) || fechaVencimientoActual.isEqual(hoy)) {
+    // 1. Avanzamos el candidato hasta que llegamos a uno que no se ha cumplido
+    while (!vencimientoCandidato.isAfter(hoy)) {
 
-        // Definimos el rango de búsqueda: desde el vencimiento anterior hasta el actual
-        // Si es quincenal, buscamos si hubo un pago en los últimos 15 días antes de esta fecha.
-        val diasAtras = cuandoRestar(periodicidad)
-        val inicioPeriodo = fechaVencimientoActual.minusDays(diasAtras)
+        // Buscamos si existe un pago que pertenezca al "mes/año" de este vencimiento
+        val pagoCumplido = historialPagos.any { pago ->
+            // El pago cumple si tiene el mismo mes y mismo año que el vencimiento
+            pago.month == vencimientoCandidato.month &&
+                    pago.year == vencimientoCandidato.year
+        }
 
-        // ¿Existe un pago realizado para cubrir este vencimiento específico?
-        val pagoRealizado = historialPagos.any { it.isAfter(inicioPeriodo) && (it.isBefore(fechaVencimientoActual) || it.isEqual(fechaVencimientoActual)) }
-
-        if (pagoRealizado) {
-            // Si ya pagó, el siguiente vencimiento es el que sigue según la periodicidad
-            fechaVencimientoActual = cuandoEsLaSiguiente(fechaVencimientoActual, periodicidad)
+        if (pagoCumplido) {
+            // Si hay pago en ese mes, saltamos al mes siguiente
+            vencimientoCandidato = sumarPeriodo(vencimientoCandidato, periodicidad)
         } else {
-            // Si NO hay pago en ese rango, este es el vencimiento que debe mostrarse (está pendiente)
+            // Si no hay pago para este mes, este es el vencimiento pendiente
             break
         }
     }
 
-    return fechaVencimientoActual
+    return vencimientoCandidato
+}
+@RequiresApi(Build.VERSION_CODES.O)
+fun sumarPeriodo(fecha: LocalDate, periodicidad: String): LocalDate = when (periodicidad.uppercase()) {
+    "S" -> fecha.plusWeeks(1)
+    "Q" -> fecha.plusDays(15)
+    "M" -> fecha.plusMonths(1)
+    else -> fecha.plusMonths(1)
 }
 
-fun cuandoRestar(periodicidad: String): Long {
-    return when (periodicidad.lowercase()) {
-        "S" -> 7L
-        "Q" -> 15L
-        "M" -> 30L // Aproximado para la ventana de búsqueda
-        else -> 30L
-    }
+@RequiresApi(Build.VERSION_CODES.O)
+fun restarPeriodo(fecha: LocalDate, periodicidad: String): LocalDate = when (periodicidad.uppercase()) {
+    "S" -> fecha.minusWeeks(1)
+    "Q" -> fecha.minusDays(15)
+    "M" -> fecha.minusMonths(1)
+    else -> fecha.minusMonths(1)
 }
 
 @RequiresApi(Build.VERSION_CODES.O)

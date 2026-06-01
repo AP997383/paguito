@@ -4,6 +4,7 @@ import android.util.Log
 import com.nexusystem.paguito.data.local.dao.AbonosDao
 import com.nexus.medi.data.local.entity.PagosEntinty
 import com.nexusystem.paguito.data.local.dao.DeudoresDao
+import com.nexusystem.paguito.data.local.entity.AbonosDelMes
 import com.nexusystem.paguito.data.local.entity.PagoConNombre
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
@@ -15,8 +16,11 @@ class AbonosRepository @Inject constructor(
     private val deudoresDao: DeudoresDao
 ) {
 
-    fun obtenerAbonoPorCliente(idCliente: String): Flow<List<PagosEntinty>> {
-        return recipesDao.obtenerAbonosPorCliente(idCliente)
+    fun obtenerAbonoPorCliente(idCliente: String,idRemote:String): Flow<List<PagosEntinty>> {
+        if(!idRemote.isNullOrEmpty())
+            return recipesDao.obtenerAbonosPorClienteIdRemote(idRemote)
+        else
+            return recipesDao.obtenerAbonosPorCliente(idCliente)
     }
 
     fun getLastTicketNumer(): Flow<Int> {
@@ -28,6 +32,9 @@ class AbonosRepository @Inject constructor(
     }
     fun obtenerUltimosAbono5(): Flow<List<PagoConNombre>> {
         return recipesDao.getPagosConNombre5()
+    }
+    fun obtenerPagosByMonth(fechaInicio: String,fechaFin: String): Flow<List<AbonosDelMes>> {
+        return recipesDao.obtenerPagosByMonth(fechaInicio,fechaFin)
     }
 
 
@@ -43,8 +50,11 @@ class AbonosRepository @Inject constructor(
         recipesDao.eliminaAbonoyActualizaMonto(recipe.toEntity(),deudoresDao)
         //  recipesDao.agregarAbono(recipe.toEntity())
     }
+    suspend fun eliminarAbonos(idDeudor: String) {
+        recipesDao.borrarAbonosYventas(idDeudor)
+        //  recipesDao.agregarAbono(recipe.toEntity())
+    }
     suspend fun addPagosOrVentas(recipe: ArrayList<PagosEntinty>) {
-        Log.e("ADDDD","--<" + recipe)
         val existingIds = recipesDao.getAllRemoteIds()
         val nuevosAbonos = recipe?.filter { it.idRemoteDatabase !in existingIds }
         if (!nuevosAbonos.isNullOrEmpty()) {

@@ -12,17 +12,24 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.nexus.medi.data.local.entity.DeudoresEntity
 import com.nexus.medi.data.local.entity.PagosEntinty
+import com.nexusystem.paguito.data.local.entity.AbonosDelMes
 import com.nexusystem.paguito.data.local.entity.PagoConNombre
 import com.nexusystem.paguito.data.local.entity.UserProfileEntity
 import com.nexusystem.paguito.domain.usescases.abonos.AbonosUseCase
 import com.nexusystem.paguito.domain.usescases.deudores.DeudoresUseCase
 import com.nexusystem.paguito.utils.SecureStorageManager
+import com.nexusystem.paguito.utils.getTodayDateString
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
@@ -58,9 +65,22 @@ class PagosViewModel @Inject constructor(
     var profileState by mutableStateOf<UserProfileEntity?>(null)
         private set
 
+    private val _pagosByMonth = MutableStateFlow<List<AbonosDelMes>>(emptyList())
+    val pagosByMonth = _pagosByMonth.asStateFlow()
+
     init {
         loadUserProfile()
     }
+
+    val totalPagos: StateFlow<Int> = _pagos
+        .map { lista ->
+            lista.filterNotNull().filter { it.isIngreso }.sumOf { it.montoAbonado ?: 0 }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 0
+        )
 
     fun loadUserProfile() {
         // Recuperamos del Secure Storage
@@ -72,10 +92,10 @@ class PagosViewModel @Inject constructor(
 
 
     @RequiresApi(Build.VERSION_CODES.O)
-    fun obtenerAbonos(idDeudor: String) {
+    fun obtenerAbonos(idDeudor: String,idRemote:String) {
         viewModelScope.launch {
-            abonosUseCase.obtenerAbonos(idDeudor).collect { list ->
-                _pagos.value = list
+            abonosUseCase.obtenerAbonos(idDeudor,idRemote).collect { list ->
+                _pagos.value = list.sortedBy { it.fechaAbono }
             }
         }
     }
@@ -102,6 +122,26 @@ class PagosViewModel @Inject constructor(
         viewModelScope.launch {
             abonosUseCase.obtenerUltimosAbonos5().collect { list ->
                 _pagosConNombre5.value = list
+            }
+        }
+    }
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun obtenerAbonosdelMes() {
+        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+
+        // 1. La fecha límite final es el día de hoy
+        val hoy = LocalDate.now()
+
+        // 2. La fecha límite inicial es hoy menos 30 días hacia el pasado
+        val hace30Dias = hoy.minusDays(30)
+
+        viewModelScope.launch {
+            // Pasamos 'hace30Dias' como la fecha de inicio y 'hoy' como la fecha de fin
+            abonosUseCase.obtenerPagosByMonth(
+                hace30Dias.format(formatter),
+                hoy.format(formatter)
+            ).collect { list ->
+                _pagosByMonth.value = list
             }
         }
     }
@@ -143,6 +183,7 @@ class PagosViewModel @Inject constructor(
     fun resetdeleteSuccess() {
         _deleteSuccess.value = false
     }
+    @RequiresApi(Build.VERSION_CODES.O)
     fun registrarVentaRemoteFirebase(userId: String, pago: PagosEntinty?) {
         viewModelScope.launch {
             pago?.let { pago ->
@@ -150,13 +191,16 @@ class PagosViewModel @Inject constructor(
                     if(userId.isNullOrEmpty()){
                         abonosUseCase.guardarVenta(pago)
                     }else{
+                        val now = LocalDateTime.now()
+                        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                        val customId = now.format(formatter)
                         // 1. Creamos una referencia a un nuevo documento (genera el ID localmente)
                         val newDocRef = firestore.collection("deudores")
                             .document(userId)
                             .collection("deudores")
                             .document(pago.idDeudorRemoteDatabase)
                             .collection("ventas")
-                            .document()
+                            .document(customId)
                         // 2. Obtenemos ese ID generado y lo asignamos a tu entidad
                         val generatedId = newDocRef.id
                         pago.idRemoteDatabase = generatedId

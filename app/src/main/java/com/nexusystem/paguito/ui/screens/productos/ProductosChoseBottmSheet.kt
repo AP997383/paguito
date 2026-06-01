@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
@@ -48,7 +49,8 @@ import com.nexusystem.paguito.utils.emptyStates.DynamicEmptyState
 fun ChoseProductBottomSheet(
     onDismiss: () -> Unit,
     onConfirm: (PorductosEntity) -> Unit,
-    listaProductos: List<PorductosEntity?>
+    listaProductos: List<PorductosEntity?>,
+    viewmodel: ProductosViewModel,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -61,7 +63,8 @@ fun ChoseProductBottomSheet(
         AbonoBottomSheetContent(
             onDismiss = onDismiss,
             onConfirm = onConfirm,
-            listaProductos
+            listaProductos,
+            viewmodel
         )
     }
 }
@@ -70,56 +73,84 @@ fun ChoseProductBottomSheet(
 fun AbonoBottomSheetContent(
     onDismiss: () -> Unit,
     onConfirm: (PorductosEntity) -> Unit,
-    listaProductos: List<PorductosEntity?>
+    listaProductos: List<PorductosEntity?>,
+    viewmodel: ProductosViewModel,
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("1,250.00") }
     var isFullPayment by remember { mutableStateOf(true) }
     var sendSms by remember { mutableStateOf(true) }
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-    ) {
-        // Buscador
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { searchQuery = it },
+    var showProductFlash by remember { mutableStateOf(false) }
+
+    if(showProductFlash){
+        ProductoFlashBottomSheet({
+            showProductFlash=false
+        },{
+            showProductFlash=false
+        },viewmodel)
+    }
+    Box{
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            placeholder = { Text("Buscar por nombre de producto...", color = TextLightGray, fontSize = 14.sp) },
-            leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null, tint = TextLightGray) },
-            shape = RoundedCornerShape(12.dp),
-            singleLine = true,
-            colors = OutlinedTextFieldDefaults.colors(
-                unfocusedBorderColor = MaterialTheme.colorScheme.surface,
-                focusedBorderColor =  MaterialTheme.colorScheme.primary,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                focusedContainerColor = MaterialTheme.colorScheme.surface
+                .fillMaxSize()
+        ) {
+            // Buscador
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                placeholder = { Text("Buscar por nombre de producto...", color = TextLightGray, fontSize = 14.sp) },
+                leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null, tint = TextLightGray) },
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = MaterialTheme.colorScheme.surface,
+                    focusedBorderColor =  MaterialTheme.colorScheme.primary,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                    focusedContainerColor = MaterialTheme.colorScheme.surface
+                )
             )
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        if(listaProductos.size>0) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(listaProductos) { product ->
-                    ProductCardItem(product = product!!,onConfirm,{})
+            Spacer(modifier = Modifier.height(8.dp))
+            if(listaProductos.size>0) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(listaProductos) { product ->
+                        ProductCardItem(product = product!!,onConfirm,{})
+                    }
                 }
+            }else{
+                DynamicEmptyState(
+                    imagePainter = painterResource(id = R.drawable.empty_state_products),
+                    title = "Aún no tienes productos",
+                    description = "No pierdas tiempo!, agrega un producto en segundos, con la información necesaria",
+                    buttonText = "Producto FLASH",
+                    buttonIcon = Icons.Default.Add,
+                    onButtonClick = { showProductFlash=true }
+                )
             }
-        }else{
-            DynamicEmptyState(
-                imagePainter = painterResource(id = R.drawable.empty_state_products),
-                title = "Aún no tienes productos",
-                description = "Comienza a agregar tu inventario para gestionar tus ventas...",
-                buttonText = "Agregar Primer Producto",
-                buttonIcon = Icons.Default.Add,
-                onButtonClick = {  }
+        }
+        FloatingActionButton(
+            onClick = { showProductFlash = true },
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = Color.White,
+            shape = RoundedCornerShape(10.dp),
+            modifier = Modifier
+                .align(Alignment.BottomEnd) // <--- Lo posiciona en la esquina inferior derecha
+                .padding(15.dp)             // <--- Aplica el margen de 10.dp desde los bordes
+        ) {
+            Icon(
+                Icons.Default.FlashOn,
+                contentDescription = "Flash",
+                modifier = Modifier.size(28.dp)
             )
         }
     }
+
 }
 // --- COMPONENTES SECUNDARIOS ---
 

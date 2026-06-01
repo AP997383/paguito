@@ -217,14 +217,14 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Continuar sin registro
-        Text(
+      /*  Text(
             text = "Continuar sin registro (Modo Invitado)",
             color = TextLightGray,
             fontSize = 13.sp,
             modifier = Modifier
                 .clickable { onGuestClick() }
                 .padding(8.dp)
-        )
+        )*/
 
         Spacer(modifier = Modifier.weight(1f)) // Empuja el texto inferior hasta abajo
 

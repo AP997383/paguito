@@ -150,7 +150,7 @@ fun DeudoresBottomSheet(
                 .padding(bottom = 32.dp)
         ) {
             Text(
-                text = "Deudores",
+                text = "Clientes",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 16.dp)
@@ -161,7 +161,7 @@ fun DeudoresBottomSheet(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Buscar deudor por nombre...") },
+                placeholder = { Text("Buscar cliente por nombre...") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(

@@ -49,13 +49,16 @@ class DeudoresViewModel @Inject constructor(
     private val _sumaryFive = MutableStateFlow<DeudoresSummary?>(null)
     val sumaryFive = _sumaryFive.asStateFlow()
 
+    private val _sumaryInvestment = MutableStateFlow<DeudoresSummary?>(null)
+    val sumaryInvestment = _sumaryInvestment.asStateFlow()
+
     private val _sumaryAll = MutableStateFlow<DeudoresSummary?>(null)
     val sumaryAll = _sumaryAll.asStateFlow()
     var profileState by mutableStateOf<UserProfileEntity?>(null)
         private set
 
-    private val _medicineNotFound = MutableStateFlow(false)
-    val medicineNotFound = _medicineNotFound.asStateFlow()
+    private val _deleteClientSuccess = MutableStateFlow(false)
+    val deleteClientSuccess = _deleteClientSuccess.asStateFlow()
 
     val settings = firestoreSettings {
         isPersistenceEnabled = true
@@ -87,7 +90,25 @@ class DeudoresViewModel @Inject constructor(
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
+    fun eliminarDeudorYpagos(idDeudor:String) {
+        viewModelScope.launch {
+            deudoresUseCase.aliminarDeudorDeudor(idDeudor)
+            abonosUseCase.eliminarAbonos(idDeudor)
+            obtenerDeudores()
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
     fun obtener5DatosCards() {
+        viewModelScope.launch {
+            deudoresUseCase.obtener5DatosDeCards().collect { list ->
+                _sumaryFive.value = list
+            }
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun obtenerInversionTotal() {
         viewModelScope.launch {
             deudoresUseCase.obtener5DatosDeCards().collect { list ->
                 _sumaryFive.value = list
@@ -216,7 +237,5 @@ class DeudoresViewModel @Inject constructor(
     }
 
 
-    fun reset() {
-        _medicineNotFound.value = false
-    }
+
 }

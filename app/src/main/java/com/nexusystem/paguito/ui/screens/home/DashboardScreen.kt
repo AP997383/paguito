@@ -1,9 +1,15 @@
 package com.nexusystem.paguito.ui.screens.home
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.Brush
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -32,8 +38,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -42,9 +49,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.nexus.medi.data.local.entity.DeudoresEntity
 import com.nexus.medi.data.local.entity.PagosEntinty
 import com.nexusystem.paguito.BuildConfig
+import com.nexusystem.paguito.data.local.entity.AbonosDelMes
 import com.nexusystem.paguito.data.local.entity.PagoConNombre
 import com.nexusystem.paguito.domain.data.DeudoresSummary
 import com.nexusystem.paguito.ui.screens.deudores.DeudoresViewModel
@@ -57,8 +66,13 @@ import com.nexusystem.paguito.ui.screens.productos.ProductosViewModel
 import com.nexusystem.paguito.utils.dashedBorder
 import com.nexusystem.paguito.utils.dialogs.PremiumLimitReachedDialog
 import com.nexusystem.paguito.utils.formatAsCurrency
+import com.nexusystem.paguito.utils.formatFecha
 import com.nexusystem.paguito.utils.formatLongDateTime
 import com.nexusystem.paguito.utils.getDaysUntilNextPayment
+import com.nexusystem.paguito.utils.toPx
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 // --- COLORES ---
 val BluePrimary = Color(0xFF1AAF83)
@@ -76,6 +90,7 @@ fun DashboardScreen(seeDeudorProfile:(DeudoresEntity)->Unit, registerPayment:() 
                     registerNewSell:() ->Unit,
                     seeAllDeudores:()->Unit,
                     seeAllPayments:()->Unit,
+                    goToMyProfile:()->Unit,
                     deudoresViewModel: DeudoresViewModel,
                     pagosViewModel: PagosViewModel,productosViewmodel: ProductosViewModel) {
     val deudoresHisotiral by deudoresViewModel.deudores.collectAsState()
@@ -84,8 +99,10 @@ fun DashboardScreen(seeDeudorProfile:(DeudoresEntity)->Unit, registerPayment:() 
     var isBalanceVisible by remember { mutableStateOf(false) }
     val pagosHistorial by pagosViewModel.pagosConNombre5.collectAsState()
     val profile = deudoresViewModel.profileState
+    val pagosPormes by pagosViewModel.pagosByMonth.collectAsState()
     var isSucriptionActive by remember { mutableStateOf(false) }
     var showAlertFreeLimited by remember { mutableStateOf(false) }
+    var urlPhotoProfile by remember { mutableStateOf("") }
     val deudoresOrdenados = remember(deudoresHisotiral) {
         deudoresHisotiral
             .filterNotNull()
@@ -103,6 +120,7 @@ fun DashboardScreen(seeDeudorProfile:(DeudoresEntity)->Unit, registerPayment:() 
         deudoresViewModel.obtenerDeudores()
         deudoresViewModel.obtener5DatosCards()
         pagosViewModel.obtenerUltimos5Abonos()
+        pagosViewModel.obtenerAbonosdelMes()
     }
 
     if(showAlertFreeLimited)
@@ -115,7 +133,9 @@ fun DashboardScreen(seeDeudorProfile:(DeudoresEntity)->Unit, registerPayment:() 
     }
     LaunchedEffect(profile) {
         if (profile != null) {
+            Log.e("PROFILE_PHOTO","-->"+profile)
             isSucriptionActive = profile.userSuscription.isActive
+            urlPhotoProfile =profile.fotoUrl
         }
     }
     Column(
@@ -125,14 +145,16 @@ fun DashboardScreen(seeDeudorProfile:(DeudoresEntity)->Unit, registerPayment:() 
             .verticalScroll(rememberScrollState())
     ) {
         // 1. App Bar
-        TopBar()
+        TopBar(urlPhotoProfile,{
+            goToMyProfile()
+        })
 
 
         Column(modifier = Modifier.padding(horizontal = 16.dp)) {
             Spacer(modifier = Modifier.height(16.dp))
 
             // 2. Tarjeta Principal
-            BalanceCarousel(sumary1?: DeudoresSummary(0,0f),isBalanceVisible,{
+            BalanceCarousel(pagosPormes,sumary1?: DeudoresSummary(0,0f),isBalanceVisible,{
                 isBalanceVisible = !isBalanceVisible
             })
             Spacer(modifier = Modifier.height(20.dp))
@@ -181,7 +203,7 @@ fun DashboardScreen(seeDeudorProfile:(DeudoresEntity)->Unit, registerPayment:() 
 }
 
 @Composable
-fun BalanceCarousel(sumary1: DeudoresSummary,showBalance: Boolean,  onToggleBalance: () -> Unit) {
+fun BalanceCarousel( pagosList: List<AbonosDelMes>,sumary1: DeudoresSummary,showBalance: Boolean,  onToggleBalance: () -> Unit) {
     val pagerState = rememberPagerState(pageCount = { 1 })
 
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -195,22 +217,17 @@ fun BalanceCarousel(sumary1: DeudoresSummary,showBalance: Boolean,  onToggleBala
                 0 -> MainBalanceCard(
                     title = "Saldo Pendiente Total",
                     amount = formatAsCurrency(sumary1.sumaTotalMontos?:0.0f),
-                    count1 = sumary1!!.totalDeudores.toString()?:"0", label1 = "Deudores",
+                    count1 = sumary1!!.totalDeudores.toString()?:"0", label1 = "Clientes",
                     count2 = "12", label2 = "Vencidos",
                     backgroundColor = Color(0xFF1A73E8), // Azul
                     icon = Icons.Outlined.AccountBalanceWallet,
                     showBalance = showBalance,
                     onToggleBalance = {onToggleBalance() }
                 )
-                1 -> MainBalanceCard(
-                    title = "Cobrado este Mes",
-                    amount = "$12,300",
-                    count1 = "28", label1 = "Pagos",
-                    count2 = "5", label2 = "Pendientes",
+                1 -> MainRecoveryCard(
+                    pagosList,
                     backgroundColor = Color(0xFF2E7D32), // Verde
                     icon = Icons.Default.CheckCircle,
-                    showBalance = showBalance,
-                    onToggleBalance = { onToggleBalance() }
                 )
                 2 -> MainBalanceCard(
                     title = "Cuentas por Vencer",
@@ -248,22 +265,27 @@ fun BalanceCarousel(sumary1: DeudoresSummary,showBalance: Boolean,  onToggleBala
 }
 // --- 1. TOP BAR ---
 @Composable
-fun TopBar() {
+fun TopBar(imageUser: String?,goToMyProfile:()->Unit) {
+    Log.e("PROFILE_PHOTO","-->"+imageUser)
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            // Se usa .padding para separar la barra de los bordes
             .padding(horizontal = 16.dp, vertical = 12.dp),
+        // Alinea verticalmente todos los elementos de la fila
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // --- SECCIÓN IZQUIERDA: Logo y Nombre ---
         Box(
             modifier = Modifier
                 .size(32.dp)
-                .clip(RoundedCornerShape(8.dp))
-               ,
+                .clip(RoundedCornerShape(8.dp)),
             contentAlignment = Alignment.Center
         ) {
             Image(
+                // Reemplaza con tu referencia de recurso de logo correcta
                 painter =  painterResource(id = com.nexusystem.paguito.R.drawable.abonia_a),
+
                 contentDescription = null,
                 modifier = Modifier.size(40.dp)
             )
@@ -275,6 +297,314 @@ fun TopBar() {
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
         )
+
+        // --- SECCIÓN CENTRAL: Espaciador Flexible ---
+        // Este espaciador "empuja" todo lo que sigue hacia la derecha
+        Spacer(modifier = Modifier.weight(1f))
+
+        // --- SECCIÓN DERECHA: Imagen de Perfil ---
+        // ESTO ES LO QUE ESTABA FUERA Y AHORA ESTÁ DENTRO DEL ROW
+        Box(
+            modifier = Modifier
+                .size(50.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary).clickable{
+                    goToMyProfile()
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            // Lógica corregida: Si NO hay imagen, muestra el icono. Si hay, usa AsyncImage.
+            if (imageUser.isNullOrEmpty()) {
+                Icon(
+                    imageVector = Icons.Filled.Person,
+                    contentDescription = "Placeholder de perfil",
+                    tint = Color(0xFFEC4899),
+                    modifier = Modifier.size(40.dp)
+                )
+            } else {
+                AsyncImage(
+                    model = imageUser,
+                    contentDescription = "Imagen de perfil del usuario",
+                    modifier = Modifier
+                        .size(45.dp) // Reducido para que quepa bien en el Box de 50.dp
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            }
+        }
+    }
+}
+@Composable
+fun MainRecoveryCard(
+    pagosList: List<AbonosDelMes>,
+    backgroundColor: Color,
+    icon: ImageVector,
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(200.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = backgroundColor)
+    ) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.12f),
+                modifier = Modifier
+                    .size(150.dp)
+                    .align(Alignment.TopEnd)
+                    .offset(x = 40.dp, y = (-30).dp)
+            )
+
+            Column(modifier = Modifier.padding(24.dp)) {
+                CobrosChartScreen(pagosList)
+            }
+        }
+    }
+}
+fun prepareChartData(pagos: List<AbonosDelMes>): List<ChartPoint> {
+    val parser =
+        SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) // Ajusta el formato al que uses
+    val calendar = Calendar.getInstance()
+
+    // Agrupar la suma de montos por el número de día del mes
+    val groupedByDay = pagos
+        .filter { it?.isIngreso!! } // Filtrar solo si es un ingreso/cobro
+        .groupBy {
+            try {
+                val date = parser.parse(it?.fechaAbono)
+                if (date != null) {
+                    calendar.time = date
+                    calendar.get(Calendar.DAY_OF_MONTH)
+                } else { -1 }
+            } catch (e: Exception) { -1 }
+        }
+        .filterKeys { it != -1 }
+        .mapValues { entry -> entry.value.sumOf { it?.montoAbonado!! }.toFloat() }
+
+    // Generar la lista completa para los 30 días (rellenando con 0f si no hubo cobro ese día)
+    return (1..30).map { day ->
+        ChartPoint(day = day, amount = groupedByDay[day] ?: 0f)
+    }
+}
+@Composable
+fun CobrosChartScreen(pagosList: List<AbonosDelMes>) {
+    val chartData = remember(pagosList) { prepareChartData(pagosList) }
+
+    // Cálculos para los cuadros informativos inferiores
+    val total30D = remember(chartData) { chartData.sumOf { it.amount.toDouble() }.toInt() }
+    val promedioDiario = remember(chartData) { if (chartData.isNotEmpty()) total30D / 30 else 0 }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(0.dp)
+    ) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF8FAFF))
+            .padding(14.dp)
+    ) {
+        // Contenedor de la Gráfica
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(250.dp)
+        ) {
+            EarningsChart(points = chartData)
+        }
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Tarjeta de Resumen Inferior (Total y Promedio)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        "TOTAL 30D",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF64748B),
+                        letterSpacing = 0.5.sp
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        formatAsCurrency(total30D),
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFF0F172A)
+                    )
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        "PROMEDIO DIARIO",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF64748B),
+                        letterSpacing = 0.5.sp
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        formatAsCurrency(promedioDiario),
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFF0F172A)
+                    )
+                }
+            }
+        }
+    }
+    }
+}
+data class ChartPoint(val day: Int, val amount: Float)
+@Composable
+fun EarningsChart(points: List<ChartPoint>, modifier: Modifier = Modifier) {
+    val maxAmount = remember(points) { (points.maxOfOrNull { it.amount } ?: 80f).coerceAtLeast(80f) }
+
+    // Ajustar renglones de guía del eje Y basados en el máximo
+    val yLines = listOf(maxAmount, maxAmount * 0.75f, maxAmount * 0.5f, maxAmount * 0.25f, 0f)
+    val xLabels = listOf("05", "10", "15", "20", "25", "30")
+
+    Row(modifier = modifier.fillMaxSize()) {
+        // 1. Indicadores del Eje Y
+        Column(
+            modifier = Modifier
+                .fillMaxHeight()
+                .padding(end = 8.dp, bottom = 24.dp), // Espacio para alineación con las líneas horizontales
+            verticalArrangement = Arrangement.SpaceBetween,
+            horizontalAlignment = Alignment.End
+        ) {
+            yLines.forEach { valText ->
+                Text(
+                    text = "$${valText.toInt()}",
+                    color = Color(0xFF94A3B8),
+                    fontSize = 11.sp,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.width(35.dp)
+                )
+            }
+        }
+
+        // 2. Lienzo de la Gráfica (Líneas + Curva + Eje X)
+        Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val width = size.width
+                    val height = size.height
+                    val spacingX = width / (points.size - 1)
+
+                    // Dibujar líneas guía horizontales punteadas
+                    yLines.forEach { value ->
+                        val yRatio = 1f - (value / maxAmount)
+                        val yPos = height * yRatio
+
+                        // Línea punteada de guía
+                        drawLine(
+                            color = Color(0xFFE2E8F0),
+                            start = Offset(0f, yPos),
+                            end = Offset(width, yPos),
+                            strokeWidth = 1.dp.toPx(),
+                            pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                        )
+                    }
+
+                    if (points.size > 1) {
+                        val strokePath = Path()
+                        val fillPath = Path()
+
+                        // Punto inicial de la curva
+                        val firstYRatio = 1f - (points[0].amount / maxAmount)
+                        val firstX = 0f
+                        val firstY = height * firstYRatio
+
+                        strokePath.moveTo(firstX, firstY)
+                        fillPath.moveTo(firstX, height) // Iniciar sombra en la base
+                        fillPath.lineTo(firstX, firstY)
+
+                        // Dibujar conexiones curvas suaves (Cubic Bézier)
+                        for (i in 0 until points.size - 1) {
+                            val p0 = points[i]
+                            val p1 = points[i + 1]
+
+                            val x0 = i * spacingX
+                            val y0 = height * (1f - (p0.amount / maxAmount))
+                            val x1 = (i + 1) * spacingX
+                            val y1 = height * (1f - (p1.amount / maxAmount))
+
+                            // Puntos de control para suavizar la curva intermedia
+                            val controlX1 = x0 + (spacingX / 2f)
+                            val controlY1 = y0
+                            val controlX2 = x0 + (spacingX / 2f)
+                            val controlY2 = y1
+
+                            strokePath.cubicTo(controlX1, controlY1, controlX2, controlY2, x1, y1)
+                            fillPath.cubicTo(controlX1, controlY1, controlX2, controlY2, x1, y1)
+                        }
+
+                        // Cerrar el path de relleno/sombra hacia el fondo del lienzo
+                        fillPath.lineTo(width, height)
+                        fillPath.close()
+
+                        // Dibujar el área sombreada translúcida verde esmeralda
+                        drawPath(
+                            path = fillPath,
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color(0xFF10B981).copy(alpha = 0.22f), // Verde esmeralda translúcido arriba
+                                    Color(0xFF10B981).copy(alpha = 0.00f)  // Desvanecido a cero abajo
+                                )
+                            )
+                        )
+
+                        // Dibujar la línea sólida verde principal
+                        drawPath(
+                            path = strokePath,
+                            color = Color(0xFF10B981),
+                            style = Stroke(
+                                width = 3.dp.toPx(),
+                                cap = StrokeCap.Round // <-- CORRECCIÓN: Se cambió 'strokeCap' por 'cap'
+                            )
+                        )
+                    }
+                }
+            }
+
+            // 3. Eje X: Etiquetas de los Días del Mes
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(24.dp)
+                    .padding(top = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Espaciadores para cuadrar las posiciones 5, 10, 15, 20...
+                Spacer(modifier = Modifier.weight(4f))
+                xLabels.forEach { label ->
+                    Text(
+                        text = label,
+                        color = Color(0xFF94A3B8),
+                        fontSize = 11.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.weight(4f)
+                    )
+                }
+                Spacer(modifier = Modifier.weight(1f))
+            }
+        }
     }
 }
 
@@ -545,7 +875,7 @@ fun RecentPaymentsSection(pagos :List<PagoConNombre?>, seeAllPayments:()->Unit) 
                         stringTyePayment = "Trajeta"
                     }
                 }
-                RecentPaymentItem(it.nameDeudor?:"", formatLongDateTime(it.fechaAbono)+" • $stringTyePayment", it.montoAbonado.toString(),it.isIngreso)
+                RecentPaymentItem(it.nameDeudor?:"", formatFecha(it.fechaAbono)+" • $stringTyePayment", it.montoAbonado.toString(),it.isIngreso)
                 Divider(color = BorderLight, thickness = 1.dp, modifier = Modifier.padding(horizontal = 16.dp))
             }
             // Footer

@@ -155,6 +155,9 @@ class AuthViewModel @Inject constructor(
                 if(!result.deudores.isNullOrEmpty()) {
                     deudoresUserCase.agregarDeudores(result.deudores)
                     result.deudores.forEach { deudor->
+                        Log.e("NOMBRE_DEUDOR","-->"+deudor.nombre)
+                        Log.e("NOMBRE_DEUDOR","pagos-->"+deudor.pagos)
+                        Log.e("NOMBRE_DEUDOR","ventas-->"+deudor.ventas)
                         if(!deudor.pagos.isNullOrEmpty()){
                             pagosUserCase.guardarAbonos(deudor.pagos)
                         }

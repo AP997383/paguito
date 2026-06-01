@@ -11,6 +11,7 @@ sealed class Routes(val route: String) {
     object ClientesGraph : Routes("clientes_graph")
     object ProductosGraph : Routes("productos_graph")
     object ProfileGraph : Routes("profile_graph")
+    object AnalisisGraph : Routes("analisis_graph")
 
     object LoginGraph : Routes("login_graph")
 
@@ -22,6 +23,7 @@ sealed class Routes(val route: String) {
      * ===================================================== */
 
     object ScreenHome : Routes("home")
+    object ScreenAnalisis : Routes("analisis")
     object ScreenViewAllDeudores : Routes("viewAllDeudores")
     object ScreenViewAllPayments : Routes("viewAllPayments")
     object ScreenRegisterPayment : Routes("registerPayment")
@@ -33,6 +35,7 @@ sealed class Routes(val route: String) {
     object ScreenAddNewDebtor: Routes("newDebtor")
     object ScreenProfile : Routes("profile")
     object ScreenPreviewTicket : Routes("previewTicket")
+    object ScreenPreviewTicketAccountState : Routes("previewTicketAccountState")
 
     object ScreenNuevoProducto : Routes("newProduct")
     object ScreenListaProductos : Routes("listProducts")

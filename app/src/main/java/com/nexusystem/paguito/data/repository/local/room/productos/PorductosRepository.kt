@@ -3,6 +3,8 @@ package com.nexus.medi.data.repository.local.room.bloodAndPresure
 import android.util.Log
 import com.nexusystem.paguito.data.local.dao.ProductosDao
 import com.nexus.medi.data.local.entity.PorductosEntity
+import com.nexusystem.paguito.domain.data.DeudoresSummary
+import com.nexusystem.paguito.domain.data.ProductosSummary1
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -39,6 +41,11 @@ class PorductosRepository @Inject constructor(
     suspend fun obtenerNumeroProductos(): Flow<Int> {
        return recipesDao.obtenerNumeroDeProductos()
     }
+
+    suspend fun inversionEnProductos(): Flow<ProductosSummary1> {
+        return recipesDao.obtenerInversionProdcutos()
+    }
+
     suspend fun update(recipe: PorductosEntity) {
         val entity = recipe.toEntity()
        // recipesDao.updateBotiquin(entity.quiantity,entity.codigo )

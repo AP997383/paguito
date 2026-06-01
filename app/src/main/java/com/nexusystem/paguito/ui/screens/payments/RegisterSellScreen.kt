@@ -96,7 +96,7 @@ fun RegisterSellScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit = 
                 amount =  it.precioConGanancia.toString()
             else
                 amount = (amount.toFloat() + it.precioConGanancia).toString()
-                                                           },listaBusquedaProductos)
+                                                           },listaBusquedaProductos,productosViewModel)
     }
     if(showListDeudoresBottomSheeet){
         DeudoresBottomSheet({

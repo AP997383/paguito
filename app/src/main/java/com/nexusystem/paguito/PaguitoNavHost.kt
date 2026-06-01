@@ -33,6 +33,8 @@ import com.nexus.medi.data.local.entity.PorductosEntity
 import com.nexusystem.paguito.domain.data.auth.UserDataModelAuth
 import com.nexusystem.paguito.ui.components.navigation.Routes
 import com.nexusystem.paguito.ui.screens.SelectLanguageScreen
+import com.nexusystem.paguito.ui.screens.analisis.AnalisisScreen
+import com.nexusystem.paguito.ui.screens.analisis.AnalisisViewModel
 import com.nexusystem.paguito.ui.screens.deudores.AddDebtorScreen
 import com.nexusystem.paguito.ui.screens.deudores.CustomerProfileScreen
 import com.nexusystem.paguito.ui.screens.deudores.DebtorsScreen
@@ -46,6 +48,7 @@ import com.nexusystem.paguito.ui.screens.login.LoginScreen
 import com.nexusystem.paguito.ui.screens.login.OtpRecoveryScreen
 import com.nexusystem.paguito.ui.screens.login.ProcessingScreen
 import com.nexusystem.paguito.ui.screens.onboarding.OnboardingScreen
+import com.nexusystem.paguito.ui.screens.payments.AccountClientStateScreen
 import com.nexusystem.paguito.ui.screens.payments.DetalleVentaScreen
 import com.nexusystem.paguito.ui.screens.payments.PagosViewModel
 import com.nexusystem.paguito.ui.screens.payments.RegisterPaymentScreen
@@ -74,6 +77,7 @@ fun MediNavHost(
     deudoresViewModel: DeudoresViewModel,
     pagosViewModel: PagosViewModel,
     productosViewModel: ProductosViewModel,
+    analisisViewModel: AnalisisViewModel,
     perfilViewModel: PerfiViewModel,
     authViewModel: AuthViewModel,
     registerwModel: RegisterViewModel,
@@ -87,6 +91,7 @@ fun MediNavHost(
         Routes.ScreenHome.route -> Routes.HomeGraph.route
         Routes.ScreenDeudoresList.route -> Routes.ClientesGraph.route
         Routes.ScreenProfile.route -> Routes.ProfileGraph.route
+        Routes.ScreenAnalisis.route -> Routes.AnalisisGraph.route
         Routes.ScreenLogin.route -> Routes.LoginGraph.route
         else -> startDestination
     }
@@ -127,8 +132,34 @@ fun MediNavHost(
                     navController.navigate(Routes.ScreenViewAllDeudores.route)
                 },{
                     navController.navigate(Routes.ScreenViewAllPayments.route)
+                },{
+                    navController.navigate(Routes.ScreenProfile.route)
                 },deudoresViewModel,pagosViewModel,productosViewModel)
             }
+
+            composable(Routes.ScreenProfile.route) {
+                ProfileScreen( {
+                    navController.navigate(Routes.ScreenLogin.route) {
+                        // 1. Buscamos el ID del grafo o la ruta de inicio y lo removemos
+                        popUpTo(Routes.ProfileGraph.route) {
+                            inclusive = true // Esto elimina también el grafo de perfil
+                        }
+                        // 2. Evitamos que se creen múltiples copias del Login
+                        launchSingleTop = true
+                    }
+                },{
+                    navController.navigate(Routes.ScreenPerfilEditar.route)
+                },{
+                    navController.popBackStack()
+                }, openIdiomas = {
+                    navController.navigate(Routes.ScreenIdioms.route)
+                } , openChangePassword = {
+                        data ->
+                    val json = Uri.encode(Gson().toJson(data))
+                    navController.navigate(Routes.ScreenChangePasswordProfile.route+ "/$json")
+                },viewModel = perfilViewModel)
+            }
+
             composable(Routes.ScreenRegisterPayment.route+ "/{params}",
                 arguments = listOf(
                     navArgument("params") {
@@ -233,6 +264,19 @@ fun MediNavHost(
             }
         }
 
+
+        navigation(
+            startDestination = Routes.ScreenAnalisis.route,
+            route = Routes.AnalisisGraph.route
+        ) {
+            composable(Routes.ScreenAnalisis.route) {
+                AnalisisScreen(
+                    {   navController.navigate(Routes.ScreenProfile.route)},
+                    deudoresViewModel,pagosViewModel,productosViewModel,analisisViewModel)
+            }
+        }
+
+
         navigation(
             startDestination = Routes.ScreenProfile.route,
             route = Routes.ProfileGraph.route
@@ -249,7 +293,11 @@ fun MediNavHost(
                     }
                 },{
                     navController.navigate(Routes.ScreenPerfilEditar.route)
-                }, openIdiomas = {
+                }, onBack = {
+
+                        navController.popBackStack()
+                    }
+                , openIdiomas = {
                     navController.navigate(Routes.ScreenIdioms.route)
                 } , openChangePassword = {
                         data ->
@@ -328,9 +376,32 @@ fun MediNavHost(
                     navController.navigate(Routes.ScreenNuevoProducto.route+ "/$json")
                 },{
                     navController.navigate(Routes.ScreenNuevoProducto.route+"/")
+                },{
+                    navController.navigate(Routes.ScreenProfile.route)
                 },productosViewModel)
             }
-
+            composable(Routes.ScreenProfile.route) {
+                ProfileScreen( {
+                    navController.navigate(Routes.ScreenLogin.route) {
+                        // 1. Buscamos el ID del grafo o la ruta de inicio y lo removemos
+                        popUpTo(Routes.ProfileGraph.route) {
+                            inclusive = true // Esto elimina también el grafo de perfil
+                        }
+                        // 2. Evitamos que se creen múltiples copias del Login
+                        launchSingleTop = true
+                    }
+                },{
+                    navController.navigate(Routes.ScreenPerfilEditar.route)
+                }, {
+                    navController.popBackStack()
+                },openIdiomas = {
+                    navController.navigate(Routes.ScreenIdioms.route)
+                } , openChangePassword = {
+                        data ->
+                    val json = Uri.encode(Gson().toJson(data))
+                    navController.navigate(Routes.ScreenChangePasswordProfile.route+ "/$json")
+                },viewModel = perfilViewModel)
+            }
 
         }
 
@@ -495,7 +566,32 @@ fun MediNavHost(
                         data->
                     val json = Uri.encode(Gson().toJson(data))
                     navController.navigate(Routes.ScreenRegisterSell.route+ "/$json")
+                },{
+                    navController.navigate(Routes.ScreenProfile.route)
                 },deudoresViewModel)
+            }
+
+            composable(Routes.ScreenProfile.route) {
+                ProfileScreen( {
+                    navController.navigate(Routes.ScreenLogin.route) {
+                        // 1. Buscamos el ID del grafo o la ruta de inicio y lo removemos
+                        popUpTo(Routes.ProfileGraph.route) {
+                            inclusive = true // Esto elimina también el grafo de perfil
+                        }
+                        // 2. Evitamos que se creen múltiples copias del Login
+                        launchSingleTop = true
+                    }
+                },{
+                    navController.navigate(Routes.ScreenPerfilEditar.route)
+                }, openIdiomas = {
+                    navController.navigate(Routes.ScreenIdioms.route)
+                }, onBack = {
+                    navController.popBackStack()
+                }, openChangePassword = {
+                        data ->
+                    val json = Uri.encode(Gson().toJson(data))
+                    navController.navigate(Routes.ScreenChangePasswordProfile.route+ "/$json")
+                },viewModel = perfilViewModel)
             }
 
             composable(Routes.ScreenPerfilDeudor.route+ "/{params}",
@@ -522,6 +618,11 @@ fun MediNavHost(
                     val json = Uri.encode(Gson().toJson(data))
                     navController.popBackStack()
                     navController.navigate(Routes.ScreenDetalledeVenta.route+ "/$json")
+                },{
+                        data ->
+                    val json = Uri.encode(Gson().toJson(data))
+                    navController.popBackStack()
+                    navController.navigate(Routes.ScreenPreviewTicketAccountState.route+ "/$json")
                 })
             }
 
@@ -568,6 +669,30 @@ fun MediNavHost(
                     navController.popBackStack()
                 },data )*/
             }
+
+            composable(Routes.ScreenPreviewTicketAccountState.route+ "/{params}",
+                arguments = listOf(
+                    navArgument("params") {
+                        type = NavType.StringType
+                        defaultValue = ""
+                    }
+                )) {
+                    params ->
+                val json = params.arguments?.getString("params") ?: ""
+                val data = if (json.isNotEmpty()) {
+                    Gson().fromJson(json, DeudoresEntity::class.java)
+                } else {
+                    DeudoresEntity()
+                }
+                AccountClientStateScreen(data.nombre,data.idRemoteDatabase,data.montoAcomulado.toInt(),data.montoActualAdeudado.toInt(),data.id!!.toInt()?:0, onBack = {
+                        navController.popBackStack()
+                    }, pagosViewModel = pagosViewModel)
+                /* TicketShareScreen({
+                     navController.popBackStack()
+                 },data )*/
+            }
+
+
 
             composable(Routes.ScreenAddNewDebtor.route) {
                 AddDebtorScreen(deudoresViewModel,{

@@ -2,6 +2,7 @@ package com.nexus.medi.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.google.gson.annotations.SerializedName
 
 @Entity(tableName = "PagosTable")
 data class PagosEntinty(
@@ -15,6 +16,7 @@ data class PagosEntinty(
     val fechaAbono: String="",
     val pagoATiempo: Boolean=false,
     val tipoPago:Int=1,
+    @SerializedName("ingreso")
     val isIngreso: Boolean =false,
     val notas:String="",
     var jsonAbonoPorProducto: String=""
