@@ -202,11 +202,13 @@ fun ProductListScreen(onBackClick: () -> Unit = {},openProduct:(PorductosEntity)
                 ) {
                     // Lógica corregida: Si NO hay imagen, muestra el icono. Si hay, usa AsyncImage.
                     if (urlPhotoProfile.isNullOrEmpty()) {
-                        Icon(
-                            imageVector = Icons.Filled.Person,
-                            contentDescription = "Placeholder de perfil",
-                            tint = Color(0xFFEC4899),
-                            modifier = Modifier.size(40.dp)
+                        AsyncImage(
+                            model = R.drawable.avatar,
+                            contentDescription = "Imagen de perfil del usuario",
+                            modifier = Modifier
+                                .size(45.dp) // Reducido para que quepa bien en el Box de 50.dp
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
                         )
                     } else {
                         AsyncImage(

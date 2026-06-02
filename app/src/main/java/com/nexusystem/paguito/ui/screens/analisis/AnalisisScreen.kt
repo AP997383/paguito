@@ -38,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.PathEffect
@@ -163,30 +164,80 @@ fun AnalisisScreen(
                 isBalanceVisible = !isBalanceVisible
             })
             Spacer(modifier = Modifier.height(20.dp))
-            if(isSucriptionActive) {
+            EarningsCardScreen(isSucriptionActive,pagosPormes)
+            Spacer(modifier = Modifier.height(150.dp))
+        }
+    }
+}
 
-                Card(
+@Composable
+fun EarningsCardScreen(isSucriptionActive: Boolean, pagosPormes: List<AbonosDelMes>) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        // Envolvemos todo en un Box para poder encimar la capa de bloqueo
+        Box(modifier = Modifier.fillMaxWidth()) {
+
+            // 1. La gráfica original (Se aplica blur si NO es premium)
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 10.dp)
+                    .then(
+                        if (!isSucriptionActive) {
+                            // Un blur de 8.dp a 12.dp es ideal para que se note que hay datos pero sea ilegible
+                            Modifier.blur(10.dp)
+                        } else {
+                            Modifier
+                        }
+                    )
+            ) {
+                Spacer(modifier = Modifier.height(20.dp))
+                Text(
+                    text = "Cobros - últimos 30 días",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF0F172A),
+                    modifier = Modifier.padding(bottom = 24.dp)
+                )
+                CobrosChartScreen(pagosPormes)
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // 2. Capa de bloqueo superpuesta (Solo se dibuja si NO es premium)
+            if (!isSucriptionActive) {
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                    shape = RoundedCornerShape(16.dp)
+                        .matchParentSize() // Se estira exactamente al tamaño que ocupe la gráfica inferior
+                        .background(Color.White.copy(alpha = 0.4f)) // Añade un velo blanquecino sutil
+                        .padding(24.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Column(modifier = Modifier.padding(horizontal = 0.dp)) {
-                        Spacer(modifier = Modifier.height(20.dp))
-                        Text(
-                            text = "Cobros - últimos 30 días",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF0F172A),
-                            modifier = Modifier.padding(bottom = 24.dp, start = 10.dp)
-                        )
-                        CobrosChartScreen(pagosPormes)
-                    }
+                    // Icono representativo (Corona o Candado de Premium)
+                    Icon(
+                        imageVector = Icons.Default.Lock, // Reemplázalo por tu icono de corona si tienes uno propio
+                        contentDescription = "Contenido Premium",
+                        tint = Color(0xFFEAB308), // Color Dorado/Amarillo Premium (Tailwind Yellow 500)
+                        modifier = Modifier.size(44.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = "SOLO DISPONIBLE PARA USUARIOS CON SUSCRIPCIÓN",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFF1E293B), // Slate 800 muy legible
+                        textAlign = TextAlign.Center,
+                        lineHeight = 20.sp
+                    )
                 }
             }
-            Spacer(modifier = Modifier.height(150.dp))
         }
     }
 }
@@ -329,11 +380,13 @@ fun TopBar(imageUser: String?,onClick:()->Unit) {
         ) {
             // Lógica corregida: Si NO hay imagen, muestra el icono. Si hay, usa AsyncImage.
             if (imageUser.isNullOrEmpty()) {
-                Icon(
-                    imageVector = Icons.Filled.Person,
-                    contentDescription = "Placeholder de perfil",
-                    tint = Color(0xFFEC4899),
-                    modifier = Modifier.size(40.dp)
+                AsyncImage(
+                    model = R.drawable.avatar,
+                    contentDescription = "Imagen de perfil del usuario",
+                    modifier = Modifier
+                        .size(45.dp) // Reducido para que quepa bien en el Box de 50.dp
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
                 )
             } else {
                 AsyncImage(

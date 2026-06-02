@@ -21,6 +21,8 @@ data class PagosEntinty(
     val notas:String="",
     var jsonAbonoPorProducto: String=""
 )
+
+
 data class PagostoPreviewTiket(
     var correoAndPhone:String="",
     var nameClient: String="",

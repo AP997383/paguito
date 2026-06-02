@@ -736,6 +736,7 @@ fun formatDateToChartsHours(value: String): String{
 object PaguitoStore {
     private val KEY_SEEN = booleanPreferencesKey("onboarding_seen")
     private val IS_LOGGED = booleanPreferencesKey("is_logged")
+    private val VERIFY_PENDING = booleanPreferencesKey("is_verify_pending")
     private val IS_INVITED= booleanPreferencesKey("is_invited")
     private val TYPE_USER = intPreferencesKey("type_user")
     private val MY_PROFILE = stringPreferencesKey("my_profile")
@@ -774,6 +775,17 @@ object PaguitoStore {
         context.onboardingDataStore.edit { prefs ->
             prefs[IS_LOGGED] = true
         }
+    }
+
+    suspend fun setVerified(context: Context,verified: Boolean) {
+        context.onboardingDataStore.edit { prefs ->
+            prefs[VERIFY_PENDING] = verified
+        }
+    }
+    suspend fun isVerified(context: Context): Boolean {
+        return context.onboardingDataStore.data
+            .map { it[VERIFY_PENDING] ?: false }
+            .first()
     }
     suspend fun setLogout(context: Context) {
         context.onboardingDataStore.edit { prefs ->

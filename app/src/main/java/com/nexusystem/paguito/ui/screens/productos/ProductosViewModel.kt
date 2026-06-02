@@ -126,7 +126,7 @@ class ProductosViewModel @Inject constructor(
 
     fun guardarProductos(producto: ArrayList<PorductosEntity>) {
         viewModelScope.launch {
-            productosUserCase.guardarProductos(producto)
+           // productosUserCase.guardarProductos(producto)
         }
     }
 

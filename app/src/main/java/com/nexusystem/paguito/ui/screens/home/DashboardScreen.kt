@@ -53,6 +53,7 @@ import coil.compose.AsyncImage
 import com.nexus.medi.data.local.entity.DeudoresEntity
 import com.nexus.medi.data.local.entity.PagosEntinty
 import com.nexusystem.paguito.BuildConfig
+import com.nexusystem.paguito.R
 import com.nexusystem.paguito.data.local.entity.AbonosDelMes
 import com.nexusystem.paguito.data.local.entity.PagoConNombre
 import com.nexusystem.paguito.domain.data.DeudoresSummary
@@ -315,11 +316,13 @@ fun TopBar(imageUser: String?,goToMyProfile:()->Unit) {
         ) {
             // Lógica corregida: Si NO hay imagen, muestra el icono. Si hay, usa AsyncImage.
             if (imageUser.isNullOrEmpty()) {
-                Icon(
-                    imageVector = Icons.Filled.Person,
-                    contentDescription = "Placeholder de perfil",
-                    tint = Color(0xFFEC4899),
-                    modifier = Modifier.size(40.dp)
+                AsyncImage(
+                    model = R.drawable.avatar,
+                    contentDescription = "Imagen de perfil del usuario",
+                    modifier = Modifier
+                        .size(45.dp) // Reducido para que quepa bien en el Box de 50.dp
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
                 )
             } else {
                 AsyncImage(

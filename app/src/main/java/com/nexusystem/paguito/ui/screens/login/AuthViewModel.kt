@@ -1,5 +1,6 @@
 package com.nexusystem.paguito.ui.screens.login
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -13,6 +14,7 @@ import com.nexusystem.paguito.domain.data.auth.UserDataModelAuth
 import com.nexusystem.paguito.domain.usescases.abonos.AbonosUseCase
 import com.nexusystem.paguito.domain.usescases.deudores.DeudoresUseCase
 import com.nexusystem.paguito.domain.usescases.productos.ProductosUseCase
+import com.nexusystem.paguito.utils.PaguitoStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -88,6 +90,11 @@ class AuthViewModel @Inject constructor(
     fun clearError(){
         _userAlreadyExist.value=""
         _errorMessage.value = ""
+    }
+    fun clearverify(context: Context){
+        viewModelScope.launch {
+            PaguitoStore.setVerified(context, false)
+        }
     }
     fun verifyOtp(email: String, otp: String) {
         viewModelScope.launch {
@@ -168,8 +175,10 @@ class AuthViewModel @Inject constructor(
                 }
                 _allDataSucessfull.value =true
             } catch (e: Exception) {
+                Log.e("ERROR_PARSEO","-->"+e.toString())
                 _errorMessage.value = e.message?:""
             } finally {
+                _allDataSucessfull.value =true
                 _isLoading.value = false
             }
         }
@@ -177,8 +186,9 @@ class AuthViewModel @Inject constructor(
 
 
 
-    fun completeRegisterUser(data: UserDataModelAuth) {
+    fun completeRegisterUser(context: Context, data: UserDataModelAuth) {
         viewModelScope.launch {
+            PaguitoStore.setVerified(context,true)
             _isLoading.value = true
             _errorMessage.value = ""
             Log.e("ESTATUS REGISTER","SI")

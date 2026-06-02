@@ -3,6 +3,8 @@ package com.nexus.medi.data.repository.local.room.bloodAndPresure
 import android.util.Log
 import com.nexusystem.paguito.data.local.dao.ProductosDao
 import com.nexus.medi.data.local.entity.PorductosEntity
+import com.nexus.medi.data.local.entity.PorductosResponse
+import com.nexus.medi.data.local.entity.toEntity
 import com.nexusystem.paguito.domain.data.DeudoresSummary
 import com.nexusystem.paguito.domain.data.ProductosSummary1
 import kotlinx.coroutines.flow.Flow
@@ -29,9 +31,9 @@ class PorductosRepository @Inject constructor(
         recipesDao.deleteProduct(recipe.toEntity())
     }
 
-    suspend fun addProductos(recipe: ArrayList<PorductosEntity>) {
+    suspend fun addProductos(recipe: ArrayList<PorductosResponse>) {
         val existingIds = recipesDao.getAllRemoteIds()
-        val nuevosProductos = recipe?.filter { it.idRemoteDatabase !in existingIds }
+        val nuevosProductos = recipe?.filter { it.idRemoteDatabase !in existingIds }?.map { it.toEntity() }
         if (!nuevosProductos.isNullOrEmpty()) {
             recipesDao.agregarProductos(nuevosProductos)
         }

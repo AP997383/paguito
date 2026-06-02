@@ -45,6 +45,7 @@ import coil.compose.AsyncImage
 import com.nexusystem.paguito.BuildConfig
 import com.nexusystem.paguito.R
 import com.nexusystem.paguito.data.local.entity.SuscriptionsItems
+import com.nexusystem.paguito.ui.screens.productos.RedAlert
 import com.nexusystem.paguito.utils.LoadingOverlay
 import com.nexusystem.paguito.utils.PaguitoStore
 import com.nexusystem.paguito.utils.dialogs.CuentaEliminacionScreen
@@ -77,6 +78,7 @@ fun ProfileScreen(
     var businessName by remember { mutableStateOf("") }
     var myName by remember { mutableStateOf("") }
     var isSucriptionActive by remember { mutableStateOf(false) }
+    var isVerified by remember { mutableStateOf(true) }
     var phone by remember { mutableStateOf("") }
     var fotoUrl by remember { mutableStateOf("") }
     var isBiometricEnabled by remember { mutableStateOf(true) }
@@ -137,6 +139,7 @@ fun ProfileScreen(
             phone = it.phone
             fotoUrl = it.fotoUrl
             isSucriptionActive =it.userSuscription.isActive
+            isVerified = it.verified
             if(!isSucriptionActive){
                 viewModel.getAllSuscriptions()
             }
@@ -209,7 +212,7 @@ fun ProfileScreen(
             if (isInvited) {
                 GuestModeScreen(onLoginClick = { logout() })
             } else {
-                ProfileHeaderCard(editProfile, myName, businessName, phone, fotoUrl,isSucriptionActive)
+                ProfileHeaderCard(editProfile, myName, businessName, phone, fotoUrl,isSucriptionActive,isVerified)
 
                 Spacer(modifier = Modifier.height(24.dp))
                 if(isSucriptionActive==false) {
@@ -441,7 +444,8 @@ fun ProfileHeaderCard(
     bussinesName: String,
     email: String, // He cambiado 'phone' por 'email' para coincidir con tu requerimiento
     fotoUrl: String,
-    isPremium: Boolean // Nuevo parámetro para mostrar el badge
+    isPremium: Boolean,
+    isVerified: Boolean
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surface,
@@ -459,7 +463,14 @@ fun ProfileHeaderCard(
                     contentAlignment = Alignment.Center
                 ) {
                     if (fotoUrl.isEmpty()) {
-                        Icon(Icons.Filled.Person, null, tint = Color(0xFFEC4899), modifier = Modifier.size(40.dp))
+                        AsyncImage(
+                            model = R.drawable.avatar,
+                            contentDescription = "Imagen de perfil del usuario",
+                            modifier = Modifier
+                                .size(45.dp) // Reducido para que quepa bien en el Box de 50.dp
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
                     } else {
                         AsyncImage(
                             model = fotoUrl,
@@ -491,6 +502,9 @@ fun ProfileHeaderCard(
 
                     Text(text = name, fontSize = 19.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                     Text(text = email, fontSize = 12.sp, color = TextSecondary)
+                    if(!isVerified){
+                        Text(text = "(SIN VERIFICAR)", fontSize = 12.sp, color = RedAlert)
+                    }
                     Text(text = bussinesName.ifEmpty { "Sin nombre comercial" }, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 }
             }

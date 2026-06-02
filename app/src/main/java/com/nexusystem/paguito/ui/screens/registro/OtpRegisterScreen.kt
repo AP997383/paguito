@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -29,9 +30,11 @@ import com.nexusystem.paguito.R
 import com.nexusystem.paguito.domain.data.auth.UserDataModelAuth
 import com.nexusystem.paguito.ui.screens.login.AuthViewModel
 import com.nexusystem.paguito.utils.LoadingOverlay
+import com.nexusystem.paguito.utils.PaguitoStore
 import com.nexusystem.paguito.utils.dialogs.ErrorAlertDialog
 import com.nexusystem.paguito.utils.dialogs.SuccessRegistrationDialog
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 // --- COLORES ---
 
@@ -54,7 +57,8 @@ fun OtpVerificationScreen(
 
     // Estado del temporizador
     var timeLeft by remember { mutableStateOf(30) }
-
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     // Focus requester para abrir el teclado automáticamente
     val focusRequester = remember { FocusRequester() }
     val isLoading by authViewModel.isLoading.collectAsState()
@@ -71,7 +75,8 @@ fun OtpVerificationScreen(
     }
 
     if (isVerified==1) {
-        authViewModel.completeRegisterUser(dataUser)
+        dataUser.verified =true
+        authViewModel.completeRegisterUser(context,dataUser)
         authViewModel.resetVerified()
     }else{
         if(isVerified==2){
@@ -99,12 +104,16 @@ fun OtpVerificationScreen(
     }
 
     if(!userAlreadyExist.isNullOrEmpty()){
+
         ErrorAlertDialog(
             userAlreadyExist,
             onDismissRequest = { authViewModel.clearError()
+                authViewModel.clearverify(context)
                 goToHome() }, // Función para resetear el Flow a ""
             onConfirmClick = { authViewModel.clearError()
-                goToHome() }
+                goToHome()
+                authViewModel.clearverify(context)
+            }
         )
     }
 
@@ -237,12 +246,28 @@ fun OtpVerificationScreen(
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.clickable {
+                            if (dataUser.email.isNotBlank()) {
+                                authViewModel.sendOtp(dataUser.email)
+                            }
                             // Acción para reenviar código
                             timeLeft = 30 // Reiniciar temporizador
                             otpValue = "" // Limpiar cajas
                         }
                     )
                 }
+            }
+            Row(
+                modifier = Modifier.padding(bottom = 32.dp).clickable{
+                    dataUser.verified =false
+                    authViewModel.completeRegisterUser(context,dataUser)
+                    authViewModel.resetVerified()
+                    scope.launch {
+                        PaguitoStore.setVerified(context,false)
+                    }
+                },
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text("VERIFICARME DESPUES", color = TextLightGray, fontSize = 13.sp)
             }
         }
         LoadingOverlay(

@@ -68,6 +68,7 @@ fun LoginScreen(
     val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
     if (successLogin != null) {
         val profileToSave = UserProfileEntity(
+            verified = successLogin!!.verified,
             email =successLogin!!.email?:"" ,
             fotoUrl = successLogin!!.fotoUrl ?: "",
             fullName = successLogin!!.fullName?:"",

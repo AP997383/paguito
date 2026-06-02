@@ -177,7 +177,7 @@ Box{
                         val symbol = if (isMultiplierMode) "x" else "%"
                         val finalStock = if (stock.isEmpty()) 0 else stock.toInt()
                         viewmodel.addNewCartilla(PorductosEntity(
-                            id = null,
+                            id = currentProduct.id,
                             nombre = name,
                             idRemoteDatabase = "",
                             urlFoto = newUrlFromServer,
@@ -291,7 +291,7 @@ Box{
                         val symbol = if (isMultiplierMode) "x" else "%"
                         val finalStock = if (stock.isEmpty()) 0 else stock.toInt()
                         viewmodel.addNewCartilla(PorductosEntity(
-                            id = null,
+                            id =currentProduct.id,
                             nombre = name,
                             idRemoteDatabase = "",
                             urlFoto = newUrlFromServer,

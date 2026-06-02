@@ -7,7 +7,8 @@ data class UserProfileEntity(
     val bussinesName: String,
     val phone: String,
     val token: String,
-    val userSuscription:UserSuscriptionData =UserSuscriptionData()
+    val userSuscription:UserSuscriptionData =UserSuscriptionData(),
+   var verified: Boolean =true
 )
 
 data class UserSuscriptionData(

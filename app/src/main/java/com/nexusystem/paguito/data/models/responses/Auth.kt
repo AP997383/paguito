@@ -10,6 +10,7 @@ data class LoginResponse(
     val phone: String = "",
     val fotoUrl: String,
     val bussinesName: String,
+    val verified: Boolean,
 val userSuscription:UserSuscriptionData = UserSuscriptionData()
 )
 
