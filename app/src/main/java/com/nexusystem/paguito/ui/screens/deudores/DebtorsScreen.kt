@@ -42,9 +42,7 @@ import coil.compose.AsyncImage
 import com.nexus.medi.data.local.entity.DeudoresEntity
 import com.nexusystem.paguito.BuildConfig
 import com.nexusystem.paguito.R
-import com.nexusystem.paguito.ui.screens.home.BorderLight
 import com.nexusystem.paguito.ui.screens.productos.NativeAdBanner
-import com.nexusystem.paguito.ui.screens.productos.ProductCardItem
 import com.nexusystem.paguito.utils.dialogs.EliminarClienteDialog
 import com.nexusystem.paguito.utils.dialogs.PremiumLimitReachedDialog
 import com.nexusystem.paguito.utils.emptyStates.DynamicEmptyState
@@ -155,7 +153,7 @@ fun DebtorsScreen(
             }
         },
         containerColor = MaterialTheme.colorScheme.background
-    ) { paddingValues ->
+    ) { _ ->
         Column(
             modifier = Modifier
                 .fillMaxSize()

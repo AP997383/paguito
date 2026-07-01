@@ -11,17 +11,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
-import com.google.gson.Gson
-import com.nexus.medi.data.local.entity.PagosEntinty
 import com.nexus.medi.data.local.entity.PorductosEntity
 import com.nexusystem.paguito.data.local.entity.UserProfileEntity
+import com.nexusystem.paguito.data.models.request.SyncCatalogProduct
+import com.nexusystem.paguito.data.models.request.SyncCatalogRequest
+import com.nexusystem.paguito.data.repository.remote.auth.CatalogRepository
 import com.nexusystem.paguito.domain.usescases.productos.ProductosUseCase
 import com.nexusystem.paguito.utils.SecureStorageManager
-import com.nexusystem.paguito.utils.getTodayDateString
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
@@ -34,26 +35,30 @@ import javax.inject.Inject
 class ProductosViewModel @Inject constructor(
     private val productosUserCase: ProductosUseCase,
     private val firestore: FirebaseFirestore,
-    private val secureStorage: SecureStorageManager
+    private val secureStorage: SecureStorageManager,
+    private val catalogRepository: CatalogRepository
 ) : ViewModel() {
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
     private val _numProducts = MutableStateFlow(0)
     val numProducts: StateFlow<Int> = _numProducts
 
-    private val _newUrlServer = MutableStateFlow<String>("")
+    private val _newUrlServer = MutableStateFlow("")
     val newUrlServer = _newUrlServer.asStateFlow()
+
     private val _medicine = MutableStateFlow<PorductosEntity?>(null)
     val medicine = _medicine.asStateFlow()
 
     private val _produtosList = MutableStateFlow<List<PorductosEntity?>>(emptyList())
     val produtosList = _produtosList.asStateFlow()
-    var profileState by mutableStateOf<UserProfileEntity?>(null)
-        private set
 
     private val _medicineNotFound = MutableStateFlow(false)
     val medicineNotFound = _medicineNotFound.asStateFlow()
+
+    var profileState by mutableStateOf<UserProfileEntity?>(null)
+        private set
 
     var mail by mutableStateOf<String?>("")
         private set
@@ -61,15 +66,14 @@ class ProductosViewModel @Inject constructor(
     init {
         loadUserProfile()
     }
-    fun setUriLocal(url: String){
+
+    fun setUriLocal(url: String) {
         _newUrlServer.value = url
     }
 
-
     fun loadUserProfile() {
-        // Recuperamos del Secure Storage
         val savedProfile = secureStorage.getUserProfile()
-        mail = savedProfile?.email?:""
+        mail = savedProfile?.email.orEmpty()
         profileState = savedProfile
     }
 
@@ -81,11 +85,12 @@ class ProductosViewModel @Inject constructor(
             }
         }
     }
+
     @RequiresApi(Build.VERSION_CODES.O)
     fun obtenerNumeroProductos() {
         viewModelScope.launch {
-            productosUserCase.obtenerNumeroProductos().collect { list ->
-                _numProducts.value = list
+            productosUserCase.obtenerNumeroProductos().collect { count ->
+                _numProducts.value = count
             }
         }
     }
@@ -96,53 +101,93 @@ class ProductosViewModel @Inject constructor(
         val yearMonth = YearMonth.parse(dateStr, formatter)
         val lastDayOfMonth = yearMonth.atEndOfMonth()
         val today = LocalDate.now()
+
         if (!today.isBefore(lastDayOfMonth)) return 0
+
         return ChronoUnit.DAYS.between(today, lastDayOfMonth).toInt()
     }
 
-    fun addNewCartilla(producto: PorductosEntity) {
+    fun addNewCartilla(
+        producto: PorductosEntity,
+        onSuccess: () -> Unit = {},
+        onError: (Throwable) -> Unit = {}
+    ) {
+        val userEmail = mail.orEmpty()
 
-        if(!mail.isNullOrEmpty()) {
-            viewModelScope.launch {
-                saveProductInFirebase(mail!!, producto)
-                _newUrlServer.value =""
-            }
+        if (userEmail.isBlank()) {
+            onError(IllegalStateException("No se encontró el correo del usuario"))
+            return
         }
-    }
 
-    fun deleteProduct(producto: PorductosEntity) {
         viewModelScope.launch {
-            productosUserCase.deleteProduct(producto)
-        }
-        if(!mail.isNullOrEmpty()) {
-            Log.e("DELETE_PRODUCT","SI")
-            viewModelScope.launch {
-                deleteProduct(mail!!, producto)
-                _newUrlServer.value =""
+            _isLoading.value = true
+
+            try {
+                saveProductInFirebaseSuspend(userEmail, producto)
+                syncWebsiteCatalogIfExists(userEmail)
+
+                _newUrlServer.value = ""
+                _isLoading.value = false
+                onSuccess()
+            } catch (e: Throwable) {
+                _isLoading.value = false
+                onError(e)
             }
         }
     }
 
+    fun deleteProduct(
+        producto: PorductosEntity,
+        onSuccess: () -> Unit = {},
+        onError: (Throwable) -> Unit = {}
+    ) {
+        val userEmail = mail.orEmpty()
+
+        if (userEmail.isBlank()) {
+            onError(IllegalStateException("No se encontró el correo del usuario"))
+            return
+        }
+
+        viewModelScope.launch {
+            _isLoading.value = true
+
+            try {
+                productosUserCase.deleteProduct(producto)
+                deleteProductInFirebaseSuspend(userEmail, producto)
+                syncWebsiteCatalogIfExists(userEmail)
+
+                _newUrlServer.value = ""
+                _isLoading.value = false
+                onSuccess()
+            } catch (e: Throwable) {
+                _isLoading.value = false
+                onError(e)
+            }
+        }
+    }
 
     fun guardarProductos(producto: ArrayList<PorductosEntity>) {
         viewModelScope.launch {
-           // productosUserCase.guardarProductos(producto)
+            // productosUserCase.guardarProductos(producto)
         }
     }
 
     fun savePhotoProduct(userId: String, newUri: Uri?) {
-        _isLoading.value =true
+        _isLoading.value = true
+
         viewModelScope.launch {
-            newUri?.let {
-                Log.e("IMAGEN_PRODUCTO","SI 2")
-                val url = productosUserCase.guardarFoto(userId, it)
-                Log.e("IMAGEN_PRODUCTO","SI 3"+url)
-                if (url != null) {
-                    _isLoading.value =false
-                    _newUrlServer.value = url
-                }else{
-                    _isLoading.value =false
+            try {
+                newUri?.let {
+                    val url = productosUserCase.guardarFoto(userId, it)
+
+                    if (url != null) {
+                        _newUrlServer.value = url
+                    }
                 }
+            } catch (e: Throwable) {
+                Log.e("IMAGEN_PRODUCTO", "Error guardando imagen: ${e.message}")
+            } finally {
+                _isLoading.value = false
             }
         }
     }
@@ -150,14 +195,14 @@ class ProductosViewModel @Inject constructor(
     fun updateCartilla(recipe: PorductosEntity) {
         viewModelScope.launch {
             if (recipe.id == null) return@launch
-           // productosUserCase.update(recipe)
+            // productosUserCase.update(recipe)
         }
     }
 
     fun deleteCartilla(recipe: PorductosEntity) {
         viewModelScope.launch {
             if (recipe.id == null) return@launch
-            //productosUserCase.delete(recipe)
+            // productosUserCase.delete(recipe)
         }
     }
 
@@ -165,42 +210,76 @@ class ProductosViewModel @Inject constructor(
         _medicineNotFound.value = false
     }
 
-    fun saveProductInFirebase(userId: String, producto: PorductosEntity?) {
-        viewModelScope.launch {
+    private suspend fun saveProductInFirebaseSuspend(
+        userId: String,
+        producto: PorductosEntity
+    ) {
+        val newDocRef = firestore
+            .collection("productos")
+            .document(userId)
+            .collection("productos")
+            .document()
 
-            // 1. Preparamos los datos
-            val newDocRef =  firestore.collection("productos").document(userId)
-                .collection("productos")
-                .document()
-            val generatedId = newDocRef.id
-            producto!!.idRemoteDatabase = generatedId
-            val idLocal =  productosUserCase.guardarProducto(producto!!)
-            newDocRef.set(producto, SetOptions.merge())
-                .addOnSuccessListener {}
-                .addOnFailureListener { e ->
-                    Log.e("SAVEDEUDOE", "Error en cola de sincronización: ${e.message}")
-                }
-        }
+        val generatedId = newDocRef.id
+
+        producto.idRemoteDatabase = generatedId
+
+        productosUserCase.guardarProducto(producto)
+
+        newDocRef
+            .set(producto, SetOptions.merge())
+            .await()
     }
 
-    fun deleteProduct(userId: String, producto: PorductosEntity?) {
-        Log.e("DELETE_PRODUCT","SI"+userId+"/"+producto!!.idRemoteDatabase)
-        viewModelScope.launch {
-            producto?.let { product ->
-                try {
-                    firestore.collection("productos").document(userId)
-                        .collection("productos")
-                        .document(producto.idRemoteDatabase)
-                        .delete()
-                        .addOnCompleteListener {
-                            Log.e("DELETE_PRODUCT","addOnCompleteListener")
-                        }
-                        .addOnFailureListener {
-                            Log.e("DELETE_PRODUCT","addOnFailureListener"+it.toString())
-                        }
-                        .await()
-                } catch (e: Exception) {}
-            }
+    private suspend fun deleteProductInFirebaseSuspend(
+        userId: String,
+        producto: PorductosEntity
+    ) {
+        if (producto.idRemoteDatabase.isBlank()) return
+
+        firestore
+            .collection("productos")
+            .document(userId)
+            .collection("productos")
+            .document(producto.idRemoteDatabase)
+            .delete()
+            .await()
+    }
+
+    private suspend fun syncWebsiteCatalogIfExists(userEmail: String) {
+        try {
+            val store = catalogRepository.getPublicStoreByBusinessId(userEmail)
+
+            val products = productosUserCase
+                .obtenerProductos()
+                .first()
+                .filterNotNull()
+
+            val request = SyncCatalogRequest(
+                businessId = userEmail,
+                subdomain = store.subdomain,
+                businessName = store.businessName,
+                whatsapp = store.whatsapp,
+                products = products.map { product ->
+                    SyncCatalogProduct(
+                        id = product.idRemoteDatabase.ifBlank {
+                            product.id?.toString().orEmpty()
+                        },
+                        name = product.nombre,
+                        imageUrl = product.urlFoto,
+                        originalPrice = product.precioOriginal.toDouble(),
+                        finalPrice = product.precioConGanancia.toDouble(),
+                        stock = product.inventario,
+                        notes = product.notasAdicionales,
+                        sales = product.ventas,
+                        buyers = emptyList()
+                    )
+                }
+            )
+
+            catalogRepository.syncCatalog(request)
+        } catch (e: Throwable) {
+            Log.e("WEBSITE_SYNC", "No se sincronizó sitio: ${e.message}")
         }
     }
 }

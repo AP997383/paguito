@@ -10,6 +10,7 @@ import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -64,6 +65,8 @@ import com.nexusystem.paguito.ui.screens.productos.ProductosViewModel
 import com.nexusystem.paguito.ui.screens.registro.OtpVerificationScreen
 import com.nexusystem.paguito.ui.screens.registro.RegisterScreen
 import com.nexusystem.paguito.ui.screens.registro.RegisterViewModel
+import com.nexusystem.paguito.ui.screens.website.WebsiteScreen
+import com.nexusystem.paguito.ui.screens.website.setup.WebsiteSetupScreen
 import com.nexusystem.paguito.utils.OnboardingStore
 import com.nexusystem.paguito.utils.PaguitoStore
 
@@ -117,24 +120,90 @@ fun MediNavHost(
             route = Routes.HomeGraph.route
         ) {
             composable(Routes.ScreenHome.route) {
-                DashboardScreen({data->
-                    val json = Uri.encode(Gson().toJson(data))
-                    navController.navigate(Routes.ScreenPerfilDeudor.route+ "/$json")
-                },{
-                    navController.navigate(Routes.ScreenRegisterPayment.route+ "/")
-                },{
-                    navController.navigate(Routes.ScreenAddNewDebtor.route)
-                } ,{
-                    navController.navigate(Routes.ScreenNuevoProducto.route+"/")
-                },{},{
-                    navController.navigate(Routes.ScreenRegisterSell.route+ "/")
-                },{
-                    navController.navigate(Routes.ScreenViewAllDeudores.route)
-                },{
-                    navController.navigate(Routes.ScreenViewAllPayments.route)
-                },{
-                    navController.navigate(Routes.ScreenProfile.route)
-                },deudoresViewModel,pagosViewModel,productosViewModel)
+                DashboardScreen(
+                    seeDeudorProfile = { data ->
+                        val json = Uri.encode(Gson().toJson(data))
+                        navController.navigate(Routes.ScreenPerfilDeudor.route + "/$json")
+                    },
+                    registerPayment = {
+                        navController.navigate(Routes.ScreenRegisterPayment.route + "/")
+                    },
+                    registerDebtor = {
+                        navController.navigate(Routes.ScreenAddNewDebtor.route)
+                    },
+                    registerProduct = {
+                        navController.navigate(Routes.ScreenNuevoProducto.route + "/")
+                    },
+                    registerCampaing = {},
+                    registerNewSell = {
+                        navController.navigate(Routes.ScreenRegisterSell.route + "/")
+                    },
+                    openWebsite = {
+                        navController.navigate(Routes.ScreenWebsite.route)
+                    },
+                    seeAllDeudores = {
+                        navController.navigate(Routes.ScreenViewAllDeudores.route)
+                    },
+                    seeAllPayments = {
+                        navController.navigate(Routes.ScreenViewAllPayments.route)
+                    },
+                    goToMyProfile = {
+                        navController.navigate(Routes.ScreenProfile.route)
+                    },
+                    deudoresViewModel = deudoresViewModel,
+                    pagosViewModel = pagosViewModel,
+                    productosViewmodel = productosViewModel
+                )
+            }
+
+            composable(Routes.ScreenWebsite.route) {
+                WebsiteScreen(
+                    onBack = {
+                        navController.popBackStack()
+                    },
+                    onCreateWebsite = {
+                        navController.navigate(
+                            Routes.ScreenWebsiteSetup.createEmptyRoute()
+                        )
+                    },
+                    onEditWebsite = { businessName, subdomain, whatsapp ->
+                        navController.navigate(
+                            Routes.ScreenWebsiteSetup.createRoute(
+                                businessName = businessName,
+                                subdomain = subdomain,
+                                whatsapp = whatsapp
+                            )
+                        )
+                    }
+                )
+            }
+
+            composable(
+                route = Routes.ScreenWebsiteSetup.route,
+                arguments = listOf(
+                    navArgument("businessName") {
+                        type = NavType.StringType
+                        defaultValue = ""
+                    },
+                    navArgument("subdomain") {
+                        type = NavType.StringType
+                        defaultValue = ""
+                    },
+                    navArgument("whatsapp") {
+                        type = NavType.StringType
+                        defaultValue = ""
+                    }
+                )
+            ) { backStack ->
+                val products by productosViewModel.produtosList.collectAsState()
+
+                WebsiteSetupScreen(
+                    onBack = { navController.popBackStack() },
+                    initialBusinessName = backStack.arguments?.getString("businessName").orEmpty(),
+                    initialSubdomain = backStack.arguments?.getString("subdomain").orEmpty(),
+                    initialWhatsapp = backStack.arguments?.getString("whatsapp").orEmpty(),
+                    isEditingWebsite = backStack.arguments?.getString("subdomain")?.isNotEmpty() == true,
+                    products = products.filterNotNull())
             }
 
             composable(Routes.ScreenProfile.route) {
@@ -252,7 +321,10 @@ fun MediNavHost(
                 val data = if (json.isNotEmpty()) {
                     Gson().fromJson(json, PorductosEntity::class.java)
                 } else {
-                    PorductosEntity()
+                    PorductosEntity(
+                        id = null,
+                        idRemoteDatabase = ""
+                    )
                 }
                 AddProductScreen( { navController.popBackStack()},productosViewModel,data)
             }
@@ -364,7 +436,10 @@ fun MediNavHost(
                 val data = if (json.isNotEmpty()) {
                     Gson().fromJson(json, PorductosEntity::class.java)
                 } else {
-                    PorductosEntity()
+                    PorductosEntity(
+                        id = null,
+                        idRemoteDatabase = ""
+                    )
                 }
                 AddProductScreen( { navController.popBackStack()},productosViewModel,data)
             }

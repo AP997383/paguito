@@ -51,7 +51,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nexus.medi.data.local.entity.DeudoresEntity
 import com.nexusystem.paguito.ui.screens.deudores.BluePrimary2
-import com.nexusystem.paguito.ui.screens.home.DummyPaymentItem
 
 @Composable
 fun DeudorItem(deudor: DeudoresEntity, onSelect: (DeudoresEntity) -> Unit) {

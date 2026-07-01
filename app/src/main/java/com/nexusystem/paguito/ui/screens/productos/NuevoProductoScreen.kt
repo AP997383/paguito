@@ -71,82 +71,82 @@ fun AddProductScreen(
     val context = LocalContext.current
     val email = viewmodel.mail
     val isLoading by viewmodel.isLoading.collectAsState()
-    // --- ESTADOS: FOTOS ---
+    val newUrlFromServer by viewmodel.newUrlServer.collectAsState()
+
+    val isEditingProduct = currentProduct.idRemoteDatabase.isNotBlank()
+
     var imageUri by remember { mutableStateOf<Uri?>(null) }
-    var imageBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var tempUri by remember { mutableStateOf<Uri?>(null) }
-    fun Context.createImageUri(): Uri {
-        val authority = "${context.packageName}.fileprovider"
 
-
-        val file = File(cacheDir, "temp_image_${System.currentTimeMillis()}.jpg")
-        return  FileProvider.getUriForFile(
-            context,
-            authority, // Esto resolverá a "com.nexusystem.paguito.fileprovider"
-            file
+    var name by remember { mutableStateOf(currentProduct.nombre) }
+    var costPrice by remember {
+        mutableStateOf(
+            if (currentProduct.precioOriginal > 0f) currentProduct.precioOriginal.toString() else ""
         )
     }
+    var stock by remember {
+        mutableStateOf(
+            if (currentProduct.inventario > 0) currentProduct.inventario.toString() else ""
+        )
+    }
+    var notes by remember { mutableStateOf(currentProduct.notasAdicionales) }
 
-    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    var isMultiplierMode by remember {
+        mutableStateOf(currentProduct.signoMultiplicador != "%")
+    }
+    var sliderMultiplier by remember {
+        mutableStateOf(if (currentProduct.factorMultiplicador > 0f) currentProduct.factorMultiplicador else 2.0f)
+    }
+    var sliderPercentage by remember {
+        mutableStateOf(if (currentProduct.factorMultiplicador > 0f) currentProduct.factorMultiplicador else 100f)
+    }
+
+    var finalPrice by remember { mutableStateOf("") }
+    var profitAmount by remember { mutableStateOf("") }
+    var showSuccessPayment by remember { mutableStateOf(false) }
+
+    LaunchedEffect(currentProduct.urlFoto) {
+        if (currentProduct.urlFoto.isNotBlank()) {
+            viewmodel.setUriLocal(currentProduct.urlFoto)
+        }
+    }
+
+    fun Context.createImageUri(): Uri {
+        val authority = "${packageName}.fileprovider"
+        val file = File(cacheDir, "temp_image_${System.currentTimeMillis()}.jpg")
+        return FileProvider.getUriForFile(this, authority, file)
+    }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
         if (uri != null) {
             if (!email.isNullOrEmpty()) viewmodel.savePhotoProduct(email, uri)
             else viewmodel.setUriLocal(uri.toFile().absolutePath)
+
             imageUri = uri
-            imageBitmap = null
         }
     }
-    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicture()
+    ) { success ->
         if (success && tempUri != null) {
-            // La foto se guardó exitosamente en tempUri
-            if (!email.isNullOrEmpty()) {
-                viewmodel.savePhotoProduct(email, tempUri!!)
-            } else {
-                viewmodel.setUriLocal(tempUri!!.toString())
-            }
+            if (!email.isNullOrEmpty()) viewmodel.savePhotoProduct(email, tempUri)
+            else viewmodel.setUriLocal(tempUri.toString())
+
             imageUri = tempUri
-            imageBitmap = null
         }
     }
-    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
         if (isGranted) {
             val uri = context.createImageUri()
-            tempUri = uri // Guardamos la referencia para usarla en el callback
+            tempUri = uri
             cameraLauncher.launch(uri)
         }
-    }
-
-    // --- ESTADOS: FORMULARIO ---
-    var name by remember { mutableStateOf(currentProduct.nombre ?: "") }
-    var costPrice by remember { mutableStateOf(currentProduct.precioOriginal.toString() ?: "0") }
-    var stock by remember { mutableStateOf(currentProduct.inventario.toString() ?: "") }
-    var notes by remember { mutableStateOf(currentProduct.notasAdicionales ?: "") }
-
-    // --- ESTADOS: CALCULADORA DE GANANCIA ---
-    var isMultiplierMode by remember { mutableStateOf(true) }
-    var sliderMultiplier by remember { mutableStateOf(currentProduct.factorMultiplicador ?: 2.0f) }
-    var sliderPercentage by remember { mutableStateOf(currentProduct.factorMultiplicador ?: 100f) }
-    var finalPrice by remember { mutableStateOf("") }
-    var profitAmount by remember { mutableStateOf("") }
-
-    var showSuccessPayment by remember { mutableStateOf(false) }
-    val newUrlFromServer by viewmodel.newUrlServer.collectAsState()
-     if(!currentProduct.urlFoto.isNullOrEmpty()){
-         viewmodel.setUriLocal(currentProduct.urlFoto)
-     }
-    if (showSuccessPayment) {
-        SuccessAlertDialog(
-            mesage = stringResource(R.string.product_registered_success),
-            onDismissRequest = {
-                showSuccessPayment = false
-                viewmodel.setUriLocal("")
-                onBackClick()
-            },
-            onConfirmClick = {
-                viewmodel.setUriLocal("")
-                showSuccessPayment = false
-                onBackClick()
-            }
-        )
     }
 
     LaunchedEffect(costPrice, isMultiplierMode, sliderMultiplier, sliderPercentage) {
@@ -156,173 +156,214 @@ fun AddProductScreen(
         } else {
             cost * (1 + (sliderPercentage / 100))
         }
-        val profit = calculatedPrice - cost
 
         finalPrice = String.format(Locale.US, "%.2f", calculatedPrice)
-        profitAmount = String.format(Locale.US, "%.2f", profit)
+        profitAmount = String.format(Locale.US, "%.2f", calculatedPrice - cost)
     }
-Box{
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text(stringResource(R.string.title_new_product), fontSize = 18.sp, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, stringResource(R.string.content_desc_back))
-                    }
 
-                },
-                actions = {
-                    TextButton(onClick = {
-                        val symbol = if (isMultiplierMode) "x" else "%"
-                        val finalStock = if (stock.isEmpty()) 0 else stock.toInt()
-                        viewmodel.addNewCartilla(PorductosEntity(
-                            id = currentProduct.id,
-                            nombre = name,
-                            idRemoteDatabase = "",
-                            urlFoto = newUrlFromServer,
-                            precioOriginal = costPrice.toFloat(),
-                            precioConGanancia = finalPrice.toFloat(),
-                            factorMultiplicador = 0.5F,
-                            signoMultiplicador = symbol,
-                            inventario = finalStock,
-                            notasAdicionales = "",
-                            ventas = 0
-                        ))
-                        showSuccessPayment = true
-                    }, enabled = !name.isEmpty()&& !costPrice.isEmpty()&& costPrice.toDouble()>0) {
+    fun isFormValid(): Boolean {
+        return name.isNotBlank() &&
+                costPrice.isNotBlank() &&
+                (costPrice.toFloatOrNull() ?: 0f) > 0f
+    }
+
+    fun saveProduct() {
+        val symbol = if (isMultiplierMode) "x" else "%"
+        val finalStock = stock.toIntOrNull() ?: 0
+
+        val productToSave = PorductosEntity(
+            id = if (isEditingProduct) currentProduct.id else null,
+            nombre = name,
+            idRemoteDatabase = if (isEditingProduct) currentProduct.idRemoteDatabase else "",
+            urlFoto = newUrlFromServer,
+            precioOriginal = costPrice.toFloatOrNull() ?: 0f,
+            precioConGanancia = finalPrice.toFloatOrNull() ?: 0f,
+            factorMultiplicador = if (isMultiplierMode) sliderMultiplier else sliderPercentage,
+            signoMultiplicador = symbol,
+            inventario = finalStock,
+            notasAdicionales = notes,
+            ventas = if (isEditingProduct) currentProduct.ventas else 0
+        )
+
+        viewmodel.addNewCartilla(
+            producto = productToSave,
+            onSuccess = {
+                showSuccessPayment = true
+            },
+            onError = {
+                Log.e("PRODUCT", "Error guardando producto", it)
+            }
+        )
+    }
+
+    if (showSuccessPayment) {
+        SuccessAlertDialog(
+            mesage = stringResource(R.string.product_registered_success),
+            onDismissRequest = {
+                showSuccessPayment = false
+                viewmodel.setUriLocal("")
+                onBackClick()
+            },
+            onConfirmClick = {
+                showSuccessPayment = false
+                viewmodel.setUriLocal("")
+                onBackClick()
+            }
+        )
+    }
+
+    Box {
+        Scaffold(
+            topBar = {
+                CenterAlignedTopAppBar(
+                    title = {
                         Text(
-                            text = "Guardar",
-                            fontWeight = FontWeight.Bold,
-                            color = if (!name.isEmpty()&& !costPrice.isEmpty()) GreenPrimary else TextLightGray
+                            text = if (isEditingProduct) "Editar producto" else stringResource(R.string.title_new_product),
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
                         )
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = MaterialTheme.colorScheme.background),
-                windowInsets = WindowInsets(0.dp)
-            )
-        },
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                                stringResource(R.string.content_desc_back)
+                            )
+                        }
+                    },
+                    actions = {
+                        TextButton(
+                            onClick = { saveProduct() },
+                            enabled = isFormValid()
+                        ) {
+                            Text(
+                                text = "Guardar",
+                                fontWeight = FontWeight.Bold,
+                                color = if (isFormValid()) GreenPrimary else TextLightGray
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background
+                    ),
+                    windowInsets = WindowInsets(0.dp)
+                )
+            },
+            containerColor = MaterialTheme.colorScheme.background
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp)
+                    .imePadding()
+            ) {
+                Spacer(modifier = Modifier.height(16.dp))
 
-        containerColor = MaterialTheme.colorScheme.background
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp)
-                .imePadding()
-        ) {
-            Spacer(modifier = Modifier.height(16.dp))
                 ImageUploadSection(
                     imageBitmap = newUrlFromServer,
                     onGalleryClick = { galleryLauncher.launch("image/*") },
                     onCameraClick = { permissionLauncher.launch(Manifest.permission.CAMERA) }
                 )
 
+                Spacer(modifier = Modifier.height(24.dp))
 
-            Spacer(modifier = Modifier.height(24.dp))
+                CustomFieldLabel(stringResource(R.string.label_product_name))
+                CustomOutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    placeholder = stringResource(R.string.placeholder_product_name)
+                )
 
-            CustomFieldLabel(stringResource(R.string.label_product_name))
-            CustomOutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                placeholder = stringResource(R.string.placeholder_product_name)
-            )
+                Spacer(modifier = Modifier.height(16.dp))
 
-            Spacer(modifier = Modifier.height(16.dp))
+                CustomFieldLabel(stringResource(R.string.label_cost_price))
+                CustomOutlinedTextField(
+                    value = costPrice,
+                    onValueChange = { costPrice = it },
+                    placeholder = stringResource(R.string.placeholder_zero),
+                    icon = Icons.Outlined.AttachMoney,
+                    keyboardType = KeyboardType.Number
+                )
 
-            CustomFieldLabel(stringResource(R.string.label_cost_price))
-            CustomOutlinedTextField(
-                value = costPrice,
-                onValueChange = { costPrice = it },
-                placeholder = stringResource(R.string.placeholder_zero),
-                icon = Icons.Outlined.AttachMoney,
-                keyboardType = KeyboardType.Number
-            )
+                Spacer(modifier = Modifier.height(32.dp))
 
-            Spacer(modifier = Modifier.height(32.dp))
+                ProfitCalculatorCard(
+                    costPrice = costPrice,
+                    finalPrice = finalPrice,
+                    profitAmount = profitAmount,
+                    isMultiplierMode = isMultiplierMode,
+                    sliderMultiplier = sliderMultiplier,
+                    sliderPercentage = sliderPercentage,
+                    onModeChange = { isMultiplierMode = it },
+                    onSliderMultiplierChange = { sliderMultiplier = it },
+                    onSliderPercentageChange = { sliderPercentage = it },
+                    onFinalPriceManualChange = {
+                        finalPrice = it
+                        val cost = costPrice.toDoubleOrNull() ?: 0.0
+                        val finalP = it.toDoubleOrNull() ?: 0.0
+                        profitAmount = String.format(Locale.US, "%.2f", finalP - cost)
+                    }
+                )
 
-            ProfitCalculatorCard(
-                costPrice = costPrice,
-                finalPrice = finalPrice,
-                profitAmount = profitAmount,
-                isMultiplierMode = isMultiplierMode,
-                sliderMultiplier = sliderMultiplier,
-                sliderPercentage = sliderPercentage,
-                onModeChange = { isMultiplierMode = it },
-                onSliderMultiplierChange = { sliderMultiplier = it },
-                onSliderPercentageChange = { sliderPercentage = it },
-                onFinalPriceManualChange = {
-                    finalPrice = it
-                    val cost = costPrice.toDoubleOrNull() ?: 0.0
-                    val finalP = it.toDoubleOrNull() ?: 0.0
-                    profitAmount = String.format(Locale.US, "%.2f", finalP - cost)
-                }
-            )
+                Spacer(modifier = Modifier.height(32.dp))
 
-            Spacer(modifier = Modifier.height(32.dp))
+                Text(
+                    text = stringResource(R.string.label_optionals),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
 
-            Text(stringResource(R.string.label_optionals), fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-            CustomFieldLabel(stringResource(R.string.label_stock))
-            CustomOutlinedTextField(
-                value = stock,
-                onValueChange = { stock = it },
-                placeholder = stringResource(R.string.placeholder_stock),
-                keyboardType = KeyboardType.Number
-            )
+                CustomFieldLabel(stringResource(R.string.label_stock))
+                CustomOutlinedTextField(
+                    value = stock,
+                    onValueChange = { stock = it },
+                    placeholder = stringResource(R.string.placeholder_stock),
+                    keyboardType = KeyboardType.Number
+                )
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-            CustomFieldLabel(stringResource(R.string.label_additional_notes))
-            CustomOutlinedTextField(
-                value = notes,
-                onValueChange = { notes = it },
-                placeholder = stringResource(R.string.placeholder_notes),
-                singleLine = false,
-                modifier = Modifier.height(100.dp)
-            )
-            Spacer(modifier = Modifier.height(15.dp))
-            Box(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background).padding( bottom = 60.dp)) {
+                CustomFieldLabel(stringResource(R.string.label_additional_notes))
+                CustomOutlinedTextField(
+                    value = notes,
+                    onValueChange = { notes = it },
+                    placeholder = stringResource(R.string.placeholder_notes),
+                    singleLine = false,
+                    modifier = Modifier.height(100.dp)
+                )
+
+                Spacer(modifier = Modifier.height(15.dp))
+
                 Button(
-                    onClick = {
-                        val symbol = if (isMultiplierMode) "x" else "%"
-                        val finalStock = if (stock.isEmpty()) 0 else stock.toInt()
-                        viewmodel.addNewCartilla(PorductosEntity(
-                            id =currentProduct.id,
-                            nombre = name,
-                            idRemoteDatabase = "",
-                            urlFoto = newUrlFromServer,
-                            precioOriginal = costPrice.toFloat(),
-                            precioConGanancia = finalPrice.toFloat(),
-                            factorMultiplicador = 0.5F,
-                            signoMultiplicador = symbol,
-                            inventario = finalStock,
-                            notasAdicionales = "",
-                            ventas = 0
-                        ))
-                        showSuccessPayment = true
-                    },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    onClick = { saveProduct() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary),
-                    enabled =  !name.isEmpty()&& !costPrice.isEmpty() && costPrice.toDouble()>0
+                    enabled = isFormValid()
                 ) {
-                    Text(stringResource(R.string.btn_save_product), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text(
+                        text = stringResource(R.string.btn_save_product),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
                 }
+
+                Spacer(modifier = Modifier.height(100.dp))
             }
-
-            Spacer(modifier = Modifier.height(40.dp))
         }
-    }
-    LoadingOverlay(
-        isLoading = isLoading,
-        lottieRes = R.raw.loadings
-    )
-}
 
+        LoadingOverlay(
+            isLoading = isLoading,
+            lottieRes = R.raw.loadings
+        )
+    }
 }
 
 // ================= COMPONENTES SECUNDARIOS =================
