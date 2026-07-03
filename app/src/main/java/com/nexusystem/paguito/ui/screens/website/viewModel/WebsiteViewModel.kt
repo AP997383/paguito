@@ -3,6 +3,7 @@ package com.nexusystem.paguito.ui.screens.website.viewModel
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nexusystem.paguito.data.local.entity.UserProfileEntity
 import com.nexusystem.paguito.data.repository.remote.auth.CatalogRepository
 import com.nexusystem.paguito.ui.screens.website.components.WebsitePreviewProduct
 import com.nexusystem.paguito.utils.SecureStorageManager
@@ -24,6 +25,16 @@ class WebsiteViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(WebsiteUiState())
     val uiState: StateFlow<WebsiteUiState> = _uiState.asStateFlow()
+
+    fun getUserProfile(): UserProfileEntity? {
+        return secureStorage.getUserProfile()
+    }
+
+    fun isPremiumUser(): Boolean {
+        return secureStorage.getUserProfile()
+            ?.userSuscription
+            ?.isActive == true
+    }
 
     fun refresh() {
         val email = secureStorage.getUserProfile()?.email

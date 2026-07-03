@@ -39,6 +39,7 @@ import com.nexus.medi.data.local.entity.DeudoresEntity
 import com.nexus.medi.data.local.entity.PagosEntinty
 import com.nexus.medi.data.local.entity.PagostoPreviewTiket
 import com.nexus.medi.data.local.entity.PorductosEntity
+import com.nexusystem.paguito.ui.components.navigation.view.AppHeader
 import com.nexusystem.paguito.ui.screens.deudores.BorderColor
 import com.nexusystem.paguito.ui.screens.deudores.CustomOutlinedTextField
 import com.nexusystem.paguito.ui.screens.deudores.DeudoresViewModel
@@ -144,185 +145,204 @@ fun RegisterSellScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit = 
     }
 
     var notes by remember { mutableStateOf("") }
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Nueva venta", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Atrás", tint = MaterialTheme.colorScheme.onSurface)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
-                windowInsets = WindowInsets(0.dp)
-            )
-        },
-        bottomBar = {
-            // Botón inferior
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background)
-                    .padding(bottom = 50.dp, end = 16.dp, start = 16.dp)
-            ) {
-                val isButtonEnabled =(amount.isNotEmpty() && amount.toFloat()>0) && (!nameInCard.equals("Selecciona un deudor") && !nameInCard.isNullOrEmpty())
-                Button(
-                    onClick = {
-                        if(isButtonEnabled) {
-                            val jsonCompleto: String = Gson().toJson(selectedProducts)
-                            paymentDatapreviewTiket = PagostoPreviewTiket(
-                                contactText,
-                                currentDeudorSelected!!.nombre, "", amount.toFloat().toInt(),
-                                saldoAntesDeAbono = currentDeudorSelected!!.montoActualAdeudado.toInt(),
-                                getTodayDateString(),
-                                currentDeudorSelected!!.montoActualAdeudado.toInt() + amount.toFloat()
-                                    .toInt(),
-                                1,
-                                jsonCompleto,
-                                isIngreso = false
-
-                            )
-                            paymentData = PagosEntinty(
-                                null,
-                                "",
-                                currentDeudorSelected!!.idRemoteDatabase,
-                                currentDeudorSelected!!.id.toString(),
-                                amount.toFloat().toInt(),
-                                saldoAntesDeAbono = currentDeudorSelected!!.montoActualAdeudado.toInt(),
-                                getTodayDateString(),
-                                true,
-                                selectedMethodId,
-                                false,
-                                notes,
-                                jsonCompleto
-                            )
-                            pagosViewModel.guardarNuevaVenta(paymentData)
-                            showSuccessPayment = true
-                        }else{
-                            scope.launch {
-                                val result = snackbarHostState.showSnackbar(
-                                    message = "Debes seleccionar un deudor y un monto mayor a 0",
-                                    actionLabel = "Ok",
-                                    duration = SnackbarDuration.Short
-                                )
-
-                                // 4. (Opcional) Detectar si el usuario hizo clic en la acción
-                                when (result) {
-                                    SnackbarResult.ActionPerformed -> {
-                                        /* Lógica para deshacer o reaccionar */
-                                    }
-                                    SnackbarResult.Dismissed -> {
-                                        /* Se cerró solo */
-                                    }
-                                }
-                            }
-                        }
-                    },
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        Scaffold(
+            bottomBar = {
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isButtonEnabled) BluePrimary else BlueDisabled
-                    )
+                        .background(MaterialTheme.colorScheme.background)
+                        .padding(bottom = 50.dp, end = 16.dp, start = 16.dp)
                 ) {
-                    Text(
-                        "Guardar venta",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
+                    val isButtonEnabled =
+                        (amount.isNotEmpty() && amount.toFloat() > 0) &&
+                                (!nameInCard.equals("Selecciona un deudor") && !nameInCard.isNullOrEmpty())
+
+                    Button(
+                        onClick = {
+                            if (isButtonEnabled) {
+                                val jsonCompleto: String = Gson().toJson(selectedProducts)
+
+                                paymentDatapreviewTiket = PagostoPreviewTiket(
+                                    contactText,
+                                    currentDeudorSelected!!.nombre,
+                                    "",
+                                    amount.toFloat().toInt(),
+                                    saldoAntesDeAbono = currentDeudorSelected!!.montoActualAdeudado.toInt(),
+                                    getTodayDateString(),
+                                    currentDeudorSelected!!.montoActualAdeudado.toInt() + amount.toFloat().toInt(),
+                                    1,
+                                    jsonCompleto,
+                                    isIngreso = false
+                                )
+
+                                paymentData = PagosEntinty(
+                                    null,
+                                    "",
+                                    currentDeudorSelected!!.idRemoteDatabase,
+                                    currentDeudorSelected!!.id.toString(),
+                                    amount.toFloat().toInt(),
+                                    saldoAntesDeAbono = currentDeudorSelected!!.montoActualAdeudado.toInt(),
+                                    getTodayDateString(),
+                                    true,
+                                    selectedMethodId,
+                                    false,
+                                    notes,
+                                    jsonCompleto
+                                )
+
+                                pagosViewModel.guardarNuevaVenta(paymentData)
+                                showSuccessPayment = true
+                            } else {
+                                scope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        message = "Debes seleccionar un deudor y un monto mayor a 0",
+                                        actionLabel = "Ok",
+                                        duration = SnackbarDuration.Short
+                                    )
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isButtonEnabled) BluePrimary else BlueDisabled
+                        )
+                    ) {
+                        Text(
+                            "Guardar venta",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
                 }
-            }
-        },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp)
-        ) {
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // 1. DEUDOR SELECCIONADO
-            SectionLabel("Deudor seleccionado")
-            DebtorCard({
-                showListDeudoresBottomSheeet =true
-            },nameInCard,ammountInCard)
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // 2. MONTO A REGISTRAR
-            SectionLabel("Costo de producto")
-            AmountInput(amount = amount, onAmountChange = { amount = it })
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // 3. FECHA DE PAGO
-            SectionLabel("Fecha de venta")
-            DateSelectorCard({showStartDatePicker=true},startDate.toString())
-
-            Spacer(modifier = Modifier.height(24.dp))
-            FieldLabel(title = "Productos Relacionados", isOptional = true)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+            },
+            containerColor = MaterialTheme.colorScheme.background
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 104.dp)
             ) {
-                CustomOutlinedTextField(
-                    value = productSearch,
-                    onValueChange = { productSearch = it
-                        showListProducts =true},
-                    placeholder = "Buscar producto...",
-                    icon = Icons.Outlined.Search,
-                    modifier = Modifier.weight(1f)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                OutlinedButton(
-                    onClick = { showListProducts =true },
-                    modifier = Modifier.height(52.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, BorderColor),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor =  MaterialTheme.colorScheme.onSurface)
+                SectionLabel("Deudor seleccionado")
+                DebtorCard({
+                    showListDeudoresBottomSheeet = true
+                }, nameInCard, ammountInCard)
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                SectionLabel("Costo de producto")
+                AmountInput(amount = amount, onAmountChange = { amount = it })
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                SectionLabel("Fecha de venta")
+                DateSelectorCard({ showStartDatePicker = true }, startDate.toString())
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                FieldLabel(title = "Productos Relacionados", isOptional = true)
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp), tint =  MaterialTheme.colorScheme.onSurface)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Añadir", fontWeight = FontWeight.SemiBold, color =  MaterialTheme.colorScheme.onSurface)
+                    CustomOutlinedTextField(
+                        value = productSearch,
+                        onValueChange = {
+                            productSearch = it
+                            showListProducts = true
+                        },
+                        placeholder = "Buscar producto...",
+                        icon = Icons.Outlined.Search,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    OutlinedButton(
+                        onClick = { showListProducts = true },
+                        modifier = Modifier.height(52.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, BorderColor),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        )
+                    ) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            "Añadir",
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                 }
-            }
-            Spacer(modifier = Modifier.height(16.dp))
 
-            if (selectedProducts.isNotEmpty()) {
-                SectionLabel("Productos seleccionados")
-                selectedProducts.forEach { producto ->
-                    SelectedProductItem(
-                        producto = producto,
-                        onRemove = {
-                            // Al eliminar:
-                            // 1. Restamos del total
-                            val currentAmount = amount.toFloatOrNull() ?: 0f
-                            val newAmount = (currentAmount - producto.precioConGanancia).coerceAtLeast(0f)
-                            amount = if (newAmount == 0f) "" else newAmount.toString()
+                Spacer(modifier = Modifier.height(16.dp))
 
-                            // 2. Quitamos de la lista
-                            selectedProducts.remove(producto)
-                        }
+                if (selectedProducts.isNotEmpty()) {
+                    SectionLabel("Productos seleccionados")
+
+                    selectedProducts.forEach { producto ->
+                        SelectedProductItem(
+                            producto = producto,
+                            onRemove = {
+                                val currentAmount = amount.toFloatOrNull() ?: 0f
+                                val newAmount = (currentAmount - producto.precioConGanancia)
+                                    .coerceAtLeast(0f)
+
+                                amount = if (newAmount == 0f) "" else newAmount.toString()
+                                selectedProducts.remove(producto)
+                            }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Outlined.Description,
+                        contentDescription = null,
+                        tint = TextGray,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    SectionLabel(
+                        "Notas adicionales",
+                        trailingText = "(Opcional)",
+                        modifier = Modifier.padding(bottom = 0.dp)
                     )
                 }
-            }
-            Spacer(modifier = Modifier.height(24.dp))
-            // 5. NOTAS ADICIONALES
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.Description, contentDescription = null, tint = TextGray, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                SectionLabel("Notas adicionales", trailingText = "(Opcional)", modifier = Modifier.padding(bottom = 0.dp))
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            NotesInput(notes = notes, onNotesChange = { notes = it })
 
-            Spacer(modifier = Modifier.height(40.dp)) // Espacio extra para el scroll sobre el botón
+                Spacer(modifier = Modifier.height(8.dp))
+
+                NotesInput(notes = notes, onNotesChange = { notes = it })
+
+                Spacer(modifier = Modifier.height(120.dp))
+            }
         }
+
+        AppHeader(
+            onBack = onBackClick,
+            title = "Nueva venta"
+        )
     }
 }
 

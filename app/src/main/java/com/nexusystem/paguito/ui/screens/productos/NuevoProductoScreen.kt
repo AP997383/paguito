@@ -46,6 +46,7 @@ import androidx.core.net.toFile
 import coil.compose.AsyncImage
 import com.nexus.medi.data.local.entity.PorductosEntity
 import com.nexusystem.paguito.R
+import com.nexusystem.paguito.ui.components.navigation.view.AppHeader
 import com.nexusystem.paguito.utils.LoadingOverlay
 import com.nexusystem.paguito.utils.dialogs.SuccessAlertDialog
 import java.io.File
@@ -212,43 +213,12 @@ fun AddProductScreen(
         )
     }
 
-    Box {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
         Scaffold(
-            topBar = {
-                CenterAlignedTopAppBar(
-                    title = {
-                        Text(
-                            text = if (isEditingProduct) "Editar producto" else stringResource(R.string.title_new_product),
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onBackClick) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                                stringResource(R.string.content_desc_back)
-                            )
-                        }
-                    },
-                    actions = {
-                        TextButton(
-                            onClick = { saveProduct() },
-                            enabled = isFormValid()
-                        ) {
-                            Text(
-                                text = "Guardar",
-                                fontWeight = FontWeight.Bold,
-                                color = if (isFormValid()) GreenPrimary else TextLightGray
-                            )
-                        }
-                    },
-                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background
-                    ),
-                    windowInsets = WindowInsets(0.dp)
-                )
-            },
             containerColor = MaterialTheme.colorScheme.background
         ) { paddingValues ->
             Column(
@@ -257,10 +227,9 @@ fun AddProductScreen(
                     .padding(paddingValues)
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp)
+                    .padding(top = 104.dp)
                     .imePadding()
             ) {
-                Spacer(modifier = Modifier.height(16.dp))
-
                 ImageUploadSection(
                     imageBitmap = newUrlFromServer,
                     onGalleryClick = { galleryLauncher.launch("image/*") },
@@ -358,6 +327,16 @@ fun AddProductScreen(
                 Spacer(modifier = Modifier.height(100.dp))
             }
         }
+
+        AppHeader(
+            onBack = onBackClick,
+            title = if (isEditingProduct) "Editar producto" else stringResource(R.string.title_new_product),
+            rightActionText = "Guardar",
+            rightActionTextColor = if (isFormValid()) GreenPrimary else TextLightGray,
+            onRightActionClick = {
+                if (isFormValid()) saveProduct()
+            }
+        )
 
         LoadingOverlay(
             isLoading = isLoading,

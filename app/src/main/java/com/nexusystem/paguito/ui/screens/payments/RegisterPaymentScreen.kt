@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import com.nexus.medi.data.local.entity.DeudoresEntity
 import com.nexus.medi.data.local.entity.PagosEntinty
 import com.nexus.medi.data.local.entity.PagostoPreviewTiket
+import com.nexusystem.paguito.ui.components.navigation.view.AppHeader
 import com.nexusystem.paguito.ui.screens.deudores.DeudoresViewModel
 import com.nexusystem.paguito.utils.bottomsSheets.DeudoresBottomSheet
 import com.nexusystem.paguito.utils.dialogs.AbonoMayorSaldoDialog
@@ -66,8 +67,12 @@ fun RegisterPaymentScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit
     val listaBusquedaDeudores by deudoresViewModel.deudores.collectAsState()
     var selectedMethod by remember { mutableStateOf("Transfer") }
     var selectedMethodId by remember { mutableStateOf(1) }
-    var nameInCard by remember { mutableStateOf(deudorPrecarga.nombre?:"Selecciona un deudor") }
-    var ammountInCard by remember { mutableStateOf(deudorPrecarga.montoActualAdeudado.toString()?:"0.0") }
+    var nameInCard by remember { mutableStateOf(deudorPrecarga.nombre ?: "Selecciona un deudor") }
+    var ammountInCard by remember {
+        mutableStateOf(
+            deudorPrecarga.montoActualAdeudado.toString() ?: "0.0"
+        )
+    }
     var currentDeudorSelected by remember { mutableStateOf<DeudoresEntity?>(deudorPrecarga) }
     var showStartDatePicker by remember { mutableStateOf(false) }
     val today = LocalDate.now()
@@ -76,65 +81,73 @@ fun RegisterPaymentScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit
     }
     var notes by remember { mutableStateOf("") }
     val profile = pagosViewModel.profileState
-    var paymentData by remember{ mutableStateOf(PagosEntinty())}
+    var paymentData by remember { mutableStateOf(PagosEntinty()) }
     var showAlertFreeLimited by remember { mutableStateOf(false) }
-    if(showAlertFreeLimited)
-    {
-        AbonoMayorSaldoDialog(formatAsCurrency(deudorPrecarga.montoActualAdeudado.toString()),formatAsCurrency(amount),{
-            showAlertFreeLimited =false
-        },{
-            showAlertFreeLimited =false
-        },{
-            showAlertFreeLimited =false
-            paymentData = PagosEntinty(
-                null,
-                "",
-                currentDeudorSelected!!.idRemoteDatabase,
-                currentDeudorSelected!!.id.toString(),
-                amount.toInt(),
-                saldoAntesDeAbono =  currentDeudorSelected!!.montoActualAdeudado.toInt(),
-                startDate.toString(),
-                true,
-                selectedMethodId,
-                true,
-                notes,
-                ""
+    if (showAlertFreeLimited) {
+        AbonoMayorSaldoDialog(
+            formatAsCurrency(deudorPrecarga.montoActualAdeudado.toString()),
+            formatAsCurrency(amount),
+            {
+                showAlertFreeLimited = false
+            },
+            {
+                showAlertFreeLimited = false
+            },
+            {
+                showAlertFreeLimited = false
+                paymentData = PagosEntinty(
+                    null,
+                    "",
+                    currentDeudorSelected!!.idRemoteDatabase,
+                    currentDeudorSelected!!.id.toString(),
+                    amount.toInt(),
+                    saldoAntesDeAbono = currentDeudorSelected!!.montoActualAdeudado.toInt(),
+                    startDate.toString(),
+                    true,
+                    selectedMethodId,
+                    true,
+                    notes,
+                    ""
 
-            )
-            pagosViewModel.guardarDeudor(paymentData)
-            showSuccessPayment = true
-        })
+                )
+                pagosViewModel.guardarDeudor(paymentData)
+                showSuccessPayment = true
+            })
     }
 
-    if(amount.isNullOrEmpty()){
-        amount  ="0"
+    if (amount.isNullOrEmpty()) {
+        amount = "0"
     }
     val contactText = listOfNotNull(profile?.email, profile?.phone).joinToString(" / ")
     val paymentDatapreviewTiket by remember {
-        derivedStateOf {PagostoPreviewTiket(
-        contactText,
-        nameInCard,"",amount.toInt(),
-        saldoAntesDeAbono = currentDeudorSelected!!.montoActualAdeudado.toInt(),
-            startDate.toString(),
-        currentDeudorSelected!!.montoActualAdeudado.toInt(),
-        selectedMethodId,
-        "",
-            isIngreso = true
+        derivedStateOf {
+            PagostoPreviewTiket(
+                contactText,
+                nameInCard, "", amount.toInt(),
+                saldoAntesDeAbono = currentDeudorSelected!!.montoActualAdeudado.toInt(),
+                startDate.toString(),
+                currentDeudorSelected!!.montoActualAdeudado.toInt(),
+                selectedMethodId,
+                "",
+                isIngreso = true
 
-    )}}
+            )
+        }
+    }
     val startPickerState = rememberDatePickerState(
-        initialSelectedDateMillis = startDate!!.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        initialSelectedDateMillis = startDate!!.atStartOfDay(ZoneId.systemDefault()).toInstant()
+            .toEpochMilli()
     )
-    if(showListDeudoresBottomSheeet){
+    if (showListDeudoresBottomSheeet) {
         DeudoresBottomSheet({
-            showListDeudoresBottomSheeet=false
-        },{
+            showListDeudoresBottomSheeet = false
+        }, {
             nameInCard = it.nombre
             ammountInCard = it.montoActualAdeudado.toString()
             deudorPrecarga.montoActualAdeudado = it.montoActualAdeudado
-            currentDeudorSelected  = it
-            showListDeudoresBottomSheeet=false
-        },listaBusquedaDeudores)
+            currentDeudorSelected = it
+            showListDeudoresBottomSheeet = false
+        }, listaBusquedaDeudores)
     }
 
     if (showStartDatePicker) {
@@ -145,14 +158,19 @@ fun RegisterPaymentScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit
                     onClick = {
                         val millis = startPickerState.selectedDateMillis
                         if (millis != null) {
-                            val date = Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
+                            val date =
+                                Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
                             startDate = LocalDate.of(date.year, date.monthValue, date.dayOfMonth)
                         }
                         showStartDatePicker = false
                     }
                 ) { Text("Aceptar") }
             },
-            dismissButton = { TextButton(onClick = { showStartDatePicker = false }) { Text("Cancelar") } }
+            dismissButton = {
+                TextButton(onClick = {
+                    showStartDatePicker = false
+                }) { Text("Cancelar") }
+            }
         ) { DatePicker(state = startPickerState) }
     }
 
@@ -160,142 +178,142 @@ fun RegisterPaymentScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit
         deudoresViewModel.obtenerDeudores()
     }
 
-    if(showSuccessPayment){
+    if (showSuccessPayment) {
         SuccessAbonoDialog({
             showSuccessPayment = false
             onBackClick()
-        },{
-            showSuccessPayment =false
-            Log.e("DATA_IN TIKET","->"+paymentDatapreviewTiket)
+        }, {
+            showSuccessPayment = false
+            Log.e("DATA_IN TIKET", "->" + paymentDatapreviewTiket)
             openPreviewTicket(paymentDatapreviewTiket)
-        },"Pago registrado","El abono se registro correctamente.\n ¿Deseas ver el  ticket?")
+        }, "Pago registrado", "El abono se registro correctamente.\n ¿Deseas ver el  ticket?")
     }
-
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Registrar Pago", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Atrás", tint = MaterialTheme.colorScheme.onSurface)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
-                windowInsets = WindowInsets(0.dp)
-            )
-        },
-        bottomBar = {
-            // Botón inferior
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background)
-                    .padding(bottom = 50.dp, end = 16.dp, start = 16.dp)
-            ) {
-                val isButtonEnabled =(amount.isNotEmpty() && amount.toInt()>0) && (!nameInCard.equals("Selecciona un deudor") && !nameInCard.isNullOrEmpty())
-
-                Button(
-                    onClick = {
-                        if(isButtonEnabled) {
-
-                            if(deudorPrecarga.montoActualAdeudado < amount.toInt() ){
-                                showAlertFreeLimited = true
-                            }else{
-                                paymentData = PagosEntinty(
-                                    null,
-                                    "",
-                                    currentDeudorSelected!!.idRemoteDatabase,
-                                    currentDeudorSelected!!.id.toString(),
-                                    amount.toInt(),
-                                    saldoAntesDeAbono =  currentDeudorSelected!!.montoActualAdeudado.toInt(),
-                                    startDate.toString(),
-                                    true,
-                                    selectedMethodId,
-                                    true,
-                                    notes,
-                                    ""
-
-                                )
-                                pagosViewModel.guardarDeudor(paymentData)
-                                showSuccessPayment = true
-                            }
-
-
-                        }
-                    },
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        Scaffold(
+            bottomBar = {
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isButtonEnabled) BluePrimary else BlueDisabled
-                    )
+                        .background(MaterialTheme.colorScheme.background)
+                        .padding(bottom = 50.dp, end = 16.dp, start = 16.dp)
                 ) {
-                    Text(
-                        "Guardar pago",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
+                    val isButtonEnabled =
+                        (amount.isNotEmpty() && amount.toInt() > 0) &&
+                                (!nameInCard.equals("Selecciona un deudor") && !nameInCard.isNullOrEmpty())
+
+                    Button(
+                        onClick = {
+                            if (isButtonEnabled) {
+                                if (deudorPrecarga.montoActualAdeudado < amount.toInt()) {
+                                    showAlertFreeLimited = true
+                                } else {
+                                    paymentData = PagosEntinty(
+                                        null,
+                                        "",
+                                        currentDeudorSelected!!.idRemoteDatabase,
+                                        currentDeudorSelected!!.id.toString(),
+                                        amount.toInt(),
+                                        saldoAntesDeAbono = currentDeudorSelected!!.montoActualAdeudado.toInt(),
+                                        startDate.toString(),
+                                        true,
+                                        selectedMethodId,
+                                        true,
+                                        notes,
+                                        ""
+                                    )
+                                    pagosViewModel.guardarDeudor(paymentData)
+                                    showSuccessPayment = true
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isButtonEnabled) BluePrimary else BlueDisabled
+                        )
+                    ) {
+                        Text(
+                            "Guardar pago",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.background
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 104.dp)
+            ) {
+                SectionLabel("Deudor seleccionado")
+                DebtorCard({
+                    showListDeudoresBottomSheeet = true
+                }, nameInCard, ammountInCard)
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                SectionLabel("Monto a registrar")
+                AmountInput(amount = amount, onAmountChange = { amount = it })
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                SectionLabel("Fecha de pago")
+                DateSelectorCard({ showStartDatePicker = true }, startDate.toString())
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                SectionLabel("Método de pago")
+                PaymentMethodsRow(
+                    selectedMethod = selectedMethod,
+                    onMethodSelected = { metodoLabel, metodoId ->
+                        selectedMethodId = metodoId
+                        selectedMethod = metodoLabel
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Outlined.Description,
+                        contentDescription = null,
+                        tint = TextGray,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    SectionLabel(
+                        "Notas adicionales",
+                        trailingText = "(Opcional)",
+                        modifier = Modifier.padding(bottom = 0.dp)
                     )
                 }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                NotesInput(notes = notes, onNotesChange = { notes = it })
+
+                Spacer(modifier = Modifier.height(120.dp))
             }
-        },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp)
-        ) {
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // 1. DEUDOR SELECCIONADO
-            SectionLabel("Deudor seleccionado")
-            DebtorCard({
-                showListDeudoresBottomSheeet =true
-            },nameInCard,ammountInCard)
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // 2. MONTO A REGISTRAR
-            SectionLabel("Monto a registrar")
-            AmountInput(amount = amount, onAmountChange = { amount = it })
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // 3. FECHA DE PAGO
-            SectionLabel("Fecha de pago")
-            DateSelectorCard({showStartDatePicker=true},startDate.toString())
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Spacer(modifier = Modifier.height(24.dp))
-            // 4. MÉTODO DE PAGO
-            SectionLabel("Método de pago")
-            PaymentMethodsRow(
-                selectedMethod = selectedMethod,
-                onMethodSelected = {metodoLabel,metodoId ->
-                    selectedMethodId = metodoId
-                    selectedMethod = metodoLabel
-                 }
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // 5. NOTAS ADICIONALES
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.Description, contentDescription = null, tint = TextGray, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                SectionLabel("Notas adicionales", trailingText = "(Opcional)", modifier = Modifier.padding(bottom = 0.dp))
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            NotesInput(notes = notes, onNotesChange = { notes = it })
-
-            Spacer(modifier = Modifier.height(40.dp)) // Espacio extra para el scroll sobre el botón
         }
+
+        AppHeader(
+            onBack = onBackClick,
+            title = "Registrar Pago"
+        )
     }
 }
 

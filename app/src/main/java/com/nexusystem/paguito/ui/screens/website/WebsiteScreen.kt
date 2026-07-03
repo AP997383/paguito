@@ -59,6 +59,9 @@ fun WebsiteScreen(
     val scrollState = rememberScrollState()
     val uiState by viewModel.uiState.collectAsState()
 
+    val profile = remember { viewModel.getUserProfile() }
+    val isPremium = profile?.userSuscription?.isActive == true
+
     var showHowItWorks by remember { mutableStateOf(false) }
     var showCopiedToast by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -177,9 +180,7 @@ fun WebsiteScreen(
                 Spacer(modifier = Modifier.height(18.dp))
 
                 DeleteWebsiteButton(
-                    onClick = {
-                        showDeleteDialog = true
-                    }
+                    onClick = { showDeleteDialog = true }
                 )
             } else {
                 WebsitePreviewCard()
@@ -194,22 +195,26 @@ fun WebsiteScreen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                Button(
-                    onClick = onCreateWebsite,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = WebsiteGreen
-                    )
-                ) {
-                    Text(
-                        text = "Crear sitio web",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
+                if (isPremium) {
+                    Button(
+                        onClick = onCreateWebsite,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = WebsiteGreen
+                        )
+                    ) {
+                        Text(
+                            text = "Crear sitio web",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                } else {
+                    PremiumWebsiteNotice()
                 }
             }
         }
@@ -261,6 +266,42 @@ fun WebsiteScreen(
             isLoading = uiState.isLoading,
             lottieRes = R.raw.loadings
         )
+    }
+}
+
+@Composable
+private fun PremiumWebsiteNotice() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+        ),
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+        ),
+        elevation = CardDefaults.cardElevation(0.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                text = "Disponible con Premium",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+                text = "Para crear y publicar el sitio web de tu negocio, activa Premium desde la sección Perfil.",
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                lineHeight = 19.sp
+            )
+        }
     }
 }
 

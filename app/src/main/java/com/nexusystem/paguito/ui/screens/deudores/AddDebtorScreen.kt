@@ -50,6 +50,7 @@ import com.nexus.medi.data.local.entity.DeudoresEntity
 import com.nexus.medi.data.local.entity.PagosEntinty
 import com.nexus.medi.data.local.entity.PorductosEntity
 import com.nexusystem.paguito.R
+import com.nexusystem.paguito.ui.components.navigation.view.AppHeader
 import com.nexusystem.paguito.ui.screens.payments.DateSelectorCard
 import com.nexusystem.paguito.ui.screens.payments.PeriodicitySelectorRow
 import com.nexusystem.paguito.ui.screens.payments.SectionLabel
@@ -221,173 +222,200 @@ fun AddDebtorScreen(
     }
 
     // --- UI ---
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("Nuevo Cliente", fontSize = 18.sp, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Atrás")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = {
-                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
-                            contactPickerLauncher.launch(null)
-                        } else {
-                            permissionLauncher.launch(Manifest.permission.READ_CONTACTS)
-                        }
-                    }) {
-                        Icon(Icons.Outlined.ContactPage, contentDescription = "Contactos", tint = GreenPrimary)
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = MaterialTheme.colorScheme.background),
-                windowInsets = WindowInsets(0.dp)
-            )
-        },
-        bottomBar = {
-            Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 24.dp)) {
-                Button(
-                    onClick = {
-                        val jsonProducts = Gson().toJson(if(selectedProducts.size>0) selectedProducts else "")
-                        deudoresViewModel.guardarDeudor(
-                            DeudoresEntity(
-                                null,
-
-                                "",
-                                inRemote = false,
-                                name,
-                                phone,
-                                "",
-
-                                address,
-                                amount.toFloat(),
-                                montoAcomulado = amount.toFloat(),
-                                fechaInicialDeuda = startDate.toString(),
-                                periodicidad = selectedPeriod,
-                                0,
-                                0,
-                                jsonProducts,
-                                ""
-
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        Scaffold(
+            bottomBar = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 24.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            val jsonProducts = Gson().toJson(
+                                if (selectedProducts.size > 0) selectedProducts else ""
                             )
+
+                            deudoresViewModel.guardarDeudor(
+                                DeudoresEntity(
+                                    null,
+                                    "",
+                                    inRemote = false,
+                                    name,
+                                    phone,
+                                    "",
+                                    address,
+                                    amount.toFloat(),
+                                    montoAcomulado = amount.toFloat(),
+                                    fechaInicialDeuda = startDate.toString(),
+                                    periodicidad = selectedPeriod,
+                                    0,
+                                    0,
+                                    jsonProducts,
+                                    ""
+                                )
+                            )
+
+                            onBackClick()
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary),
+                        enabled = isFormValid
+                    ) {
+                        Text(
+                            "Guardar y Crear Deuda",
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
                         )
-
-                        onBackClick()
-                    },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary),
-                    enabled = isFormValid
-                ) {
-                    Text("Guardar y Crear Deuda", fontWeight = FontWeight.Bold, color = Color.White)
+                    }
                 }
-            }
-        }
-    ) { paddingValues ->
-
-
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp)
-                .imePadding()
-        ) {
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("Información Personal", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(16.dp))
-
-            LabelledTextField(
-                label = "Nombre *",
-                value = name,
-                onValueChange = { name = it },
-                placeholder = "Ej. Juan Pérez",
-                icon = Icons.Outlined.Person
-            )
-
-            LabelledTextField(
-                label = "Teléfono *",
-                value = phone,
-                onValueChange = { phone = it },
-                placeholder = "10 dígitos",
-                icon = Icons.Outlined.Phone,
-                keyboardType = KeyboardType.Phone,
-                maxChars = 10
-            )
-
-            LabelledTextField(
-                label = "Domicilio",
-                isOptional = true,
-                value = address,
-                onValueChange = { address = it },
-                placeholder = "Calle, número...",
-                icon = Icons.Outlined.LocationOn
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-            Text("Detalles del Crédito", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(16.dp))
-
-            AmountCard(amount = amount, onAmountChange = { amount = it })
-
-            Spacer(modifier = Modifier.height(24.dp))
-            SectionLabel("Fecha de inicio")
-            DateSelectorCard({ showStartDatePicker = true }, startDate.toString())
-
-            Spacer(modifier = Modifier.height(24.dp))
-            SectionLabel("Periodicidad de pago")
-            PeriodicitySelectorRow(selectedPeriod = selectedPeriod, onPeriodSelected = { selectedPeriod = it })
-
-            Spacer(modifier = Modifier.height(24.dp))
-            FieldLabel(title = "Productos Relacionados", isOptional = true)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                CustomOutlinedTextField(
-                    value = productSearch,
-                    onValueChange = { productSearch = it },
-                    placeholder = "Buscar...",
-                    icon = Icons.Outlined.Search,
-                    modifier = Modifier.weight(1f)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                OutlinedButton(
-                    onClick = { showListProducts = true },
-                    modifier = Modifier.height(52.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, BorderColor)
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                    Text("Añadir")
-                }
-            }
-
-            if (selectedProducts.isNotEmpty()) {
+            },
+            containerColor = MaterialTheme.colorScheme.background
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 104.dp)
+                    .imePadding()
+            ) {
+                Text("Información Personal", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(16.dp))
-                selectedProducts.forEach { producto ->
-                    SelectedProductItem(
-                        producto = producto,
-                        onRemove = {
-                            val current = amount.toFloatOrNull() ?: 0f
-                            amount = (current - producto.precioConGanancia).coerceAtLeast(0f).toString()
-                            selectedProducts.remove(producto)
-                        }
+
+                LabelledTextField(
+                    label = "Nombre *",
+                    value = name,
+                    onValueChange = { name = it },
+                    placeholder = "Ej. Juan Pérez",
+                    icon = Icons.Outlined.Person
+                )
+
+                LabelledTextField(
+                    label = "Teléfono *",
+                    value = phone,
+                    onValueChange = { phone = it },
+                    placeholder = "10 dígitos",
+                    icon = Icons.Outlined.Phone,
+                    keyboardType = KeyboardType.Phone,
+                    maxChars = 10
+                )
+
+                LabelledTextField(
+                    label = "Domicilio",
+                    isOptional = true,
+                    value = address,
+                    onValueChange = { address = it },
+                    placeholder = "Calle, número...",
+                    icon = Icons.Outlined.LocationOn
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text("Detalles del Crédito", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(16.dp))
+
+                AmountCard(amount = amount, onAmountChange = { amount = it })
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                SectionLabel("Fecha de inicio")
+                DateSelectorCard({ showStartDatePicker = true }, startDate.toString())
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                SectionLabel("Periodicidad de pago")
+                PeriodicitySelectorRow(
+                    selectedPeriod = selectedPeriod,
+                    onPeriodSelected = { selectedPeriod = it }
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                FieldLabel(title = "Productos Relacionados", isOptional = true)
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CustomOutlinedTextField(
+                        value = productSearch,
+                        onValueChange = { productSearch = it },
+                        placeholder = "Buscar...",
+                        icon = Icons.Outlined.Search,
+                        modifier = Modifier.weight(1f)
                     )
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    OutlinedButton(
+                        onClick = { showListProducts = true },
+                        modifier = Modifier.height(52.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, BorderColor)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null)
+                        Text("Añadir")
+                    }
+                }
+
+                if (selectedProducts.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    selectedProducts.forEach { producto ->
+                        SelectedProductItem(
+                            producto = producto,
+                            onRemove = {
+                                val current = amount.toFloatOrNull() ?: 0f
+                                amount = (current - producto.precioConGanancia)
+                                    .coerceAtLeast(0f)
+                                    .toString()
+
+                                selectedProducts.remove(producto)
+                            }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                FieldLabel(title = "Notas / Observaciones")
+
+                CustomOutlinedTextField(
+                    value = notes,
+                    onValueChange = { notes = it },
+                    placeholder = "Detalles adicionales...",
+                    singleLine = false,
+                    modifier = Modifier.height(100.dp)
+                )
+
+                Spacer(modifier = Modifier.height(120.dp))
+            }
+        }
+
+        AppHeader(
+            onBack = onBackClick,
+            title = "Nuevo Cliente",
+            rightIcon = Icons.Outlined.ContactPage,
+            rightIconTint = GreenPrimary,
+            onRightClick = {
+                if (
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.READ_CONTACTS
+                    ) == PackageManager.PERMISSION_GRANTED
+                ) {
+                    contactPickerLauncher.launch(null)
+                } else {
+                    permissionLauncher.launch(Manifest.permission.READ_CONTACTS)
                 }
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
-            FieldLabel(title = "Notas / Observaciones")
-            CustomOutlinedTextField(
-                value = notes,
-                onValueChange = { notes = it },
-                placeholder = "Detalles adicionales...",
-                singleLine = false,
-                modifier = Modifier.height(100.dp)
-            )
-            Spacer(modifier = Modifier.height(40.dp))
-        }
+        )
     }
     if (showWizard) {
         Box(

@@ -18,12 +18,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -45,6 +43,7 @@ import coil.compose.AsyncImage
 import com.nexusystem.paguito.BuildConfig
 import com.nexusystem.paguito.R
 import com.nexusystem.paguito.data.local.entity.SuscriptionsItems
+import com.nexusystem.paguito.ui.components.navigation.view.AppHeader
 import com.nexusystem.paguito.ui.screens.productos.RedAlert
 import com.nexusystem.paguito.utils.LoadingOverlay
 import com.nexusystem.paguito.utils.PaguitoStore
@@ -58,7 +57,6 @@ import com.nexusystem.paguito.utils.languajes
 import com.nexusystem.paguito.utils.shimmerEffect
 import kotlinx.coroutines.launch
 
-// --- COLORES ---
 val RedLogout = Color(0xFFEF4444)
 val BluePrimary = Color(0xFF3B82F6)
 val TextSecondary = Color(0xFF9CA3AF)
@@ -70,7 +68,7 @@ fun ProfileScreen(
     logout: () -> Unit,
     editProfile: () -> Unit,
     onBack: () -> Unit,
-    openChangePassword:(String)->Unit,
+    openChangePassword: (String) -> Unit,
     viewModel: PerfiViewModel,
     openIdiomas: () -> Unit
 ) {
@@ -81,8 +79,8 @@ fun ProfileScreen(
     var isVerified by remember { mutableStateOf(true) }
     var phone by remember { mutableStateOf("") }
     var fotoUrl by remember { mutableStateOf("") }
-    var isBiometricEnabled by remember { mutableStateOf(true) }
     var isInvited by remember { mutableStateOf(true) }
+
     val listaSucripciones by viewModel.suscriptions.collectAsState()
     val context = LocalContext.current
     val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
@@ -90,6 +88,7 @@ fun ProfileScreen(
     val isSuscribedSuccess by viewModel.isSubscribed.collectAsState()
     val isSuscribedError by viewModel.isSubscribedError.collectAsState()
     val accountDelete by viewModel.accountDelete.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
 
     var isDarkMode by remember { mutableStateOf(prefs.getBoolean("dark_mode", false)) }
     val profile = viewModel.profileState
@@ -99,7 +98,7 @@ fun ProfileScreen(
     val currentLangCode = prefs.getString("app_language", "es") ?: "es"
     val prefijo = languajes.filter { it.regionCode == currentLangCode }
     val pref = if (prefijo.isNotEmpty()) prefijo[0].prefij else "es"
-    val isLoading by viewModel.isLoading.collectAsState()
+
     val currentLangLabel = remember(pref) {
         when (pref) {
             "en" -> "English"
@@ -107,14 +106,17 @@ fun ProfileScreen(
             else -> "Español"
         }
     }
-    if(showDeleteAccount){
-        CuentaEliminacionScreen({
-            showDeleteAccount =false
-        },{
-            viewModel.deleteMyAccount()
-            showDeleteAccount =false
-        })
+
+    if (showDeleteAccount) {
+        CuentaEliminacionScreen(
+            { showDeleteAccount = false },
+            {
+                viewModel.deleteMyAccount()
+                showDeleteAccount = false
+            }
+        )
     }
+
     LaunchedEffect(accountDelete) {
         if (accountDelete == 1) {
             scope.launch {
@@ -125,11 +127,9 @@ fun ProfileScreen(
         }
     }
 
-
     LaunchedEffect(Unit) {
         viewModel.loadUserProfile()
         isInvited = PaguitoStore.isInvited(context)
-
     }
 
     LaunchedEffect(profile) {
@@ -138,89 +138,77 @@ fun ProfileScreen(
             myName = it.fullName
             phone = it.phone
             fotoUrl = it.fotoUrl
-            isSucriptionActive =it.userSuscription.isActive
+            isSucriptionActive = it.userSuscription.isActive
             isVerified = it.verified
-            if(!isSucriptionActive){
+
+            if (!isSucriptionActive) {
                 viewModel.getAllSuscriptions()
             }
         }
     }
 
-    if(isSuscribedSuccess){
-        SubscriptionStatusDialog(DialogState.SUCCESS,{
-            viewModel.resetAllStatusPurchase()
-        },{
-            viewModel.resetAllStatusPurchase()
-        })
+    if (isSuscribedSuccess) {
+        SubscriptionStatusDialog(
+            DialogState.SUCCESS,
+            { viewModel.resetAllStatusPurchase() },
+            { viewModel.resetAllStatusPurchase() }
+        )
     }
 
-    if(isSuscribedError){
-        SubscriptionStatusDialog(DialogState.ERROR,{
-           viewModel.resetAllStatusPurchase()
-        },{
-            viewModel.resetAllStatusPurchase()
-        })
+    if (isSuscribedError) {
+        SubscriptionStatusDialog(
+            DialogState.ERROR,
+            { viewModel.resetAllStatusPurchase() },
+            { viewModel.resetAllStatusPurchase() }
+        )
     }
+
     if (closeSessionDialog) {
-        LogoutConfirmationDialog({
-            closeSessionDialog = false
-            scope.launch {
-                PaguitoStore.setLogout(context)
-                logout()
-            }
-        }, {
-            closeSessionDialog = false
-        })
+        LogoutConfirmationDialog(
+            {
+                closeSessionDialog = false
+                scope.launch {
+                    PaguitoStore.setLogout(context)
+                    logout()
+                }
+            },
+            { closeSessionDialog = false }
+        )
     }
-    Box{
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 10.dp)
+                .padding(top = 104.dp)
         ) {
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 1.dp, vertical = 1.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Regresar",
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                // Espacio de separación entre la flecha y el texto
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Text(
-                    text = stringResource(R.string.profile_settings_title),
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
             if (isInvited) {
                 GuestModeScreen(onLoginClick = { logout() })
             } else {
-                ProfileHeaderCard(editProfile, myName, businessName, phone, fotoUrl,isSucriptionActive,isVerified)
+                ProfileHeaderCard(
+                    editProfile,
+                    myName,
+                    businessName,
+                    phone,
+                    fotoUrl,
+                    isSucriptionActive,
+                    isVerified
+                )
 
                 Spacer(modifier = Modifier.height(24.dp))
-                if(isSucriptionActive==false) {
-                    // Usamos un Key para que el Shimmer no se reinicie innecesariamente
-                    val showShimmer = remember(listaSucripciones) { listaSucripciones.isNullOrEmpty() }
+
+                if (!isSucriptionActive) {
+                    val showShimmer = remember(listaSucripciones) {
+                        listaSucripciones.isEmpty()
+                    }
 
                     if (showShimmer) {
-                        // Evita usar Logs directamente en el cuerpo si no es con un Side Effect
                         LaunchedEffect(Unit) {
                             Log.e("SHIMMMER", "SI - Iniciando carga")
                         }
@@ -233,16 +221,20 @@ fun ProfileScreen(
                                 .shimmerEffect()
                         )
                     } else {
-                        SubscriptionCarousel(listaSucripciones, {
-                            val activity = context as? Activity
+                        SubscriptionCarousel(listaSucripciones) {
+                            val currentActivity = context as? Activity
                             viewModel.setCurrentProduct(it)
-                            activity?.let { viewModel.launchPurchaseFlow(it) }
-                        })
+                            currentActivity?.let { act ->
+                                viewModel.launchPurchaseFlow(act)
+                            }
+                        }
                     }
-
                 }
+
                 Spacer(modifier = Modifier.height(24.dp))
+
                 SectionTitle(title = stringResource(R.string.section_app_preferences))
+
                 SettingsCard {
                     SettingsItem(
                         icon = Icons.Outlined.Language,
@@ -250,13 +242,26 @@ fun ProfileScreen(
                         onClick = { openIdiomas() },
                         trailingContent = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(text = currentLangLabel, color = TextSecondary, fontSize = 14.sp)
+                                Text(
+                                    text = currentLangLabel,
+                                    color = TextSecondary,
+                                    fontSize = 14.sp
+                                )
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null, tint = TextSecondary, modifier = Modifier.size(20.dp))
+                                Icon(
+                                    Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                                    null,
+                                    tint = TextSecondary,
+                                    modifier = Modifier.size(20.dp)
+                                )
                             }
                         }
                     )
-                    HorizontalDivider(color = BorderColor, modifier = Modifier.padding(start = 56.dp))
+
+                    HorizontalDivider(
+                        color = BorderColor,
+                        modifier = Modifier.padding(start = 56.dp)
+                    )
 
                     SettingsItem(
                         icon = Icons.Outlined.DarkMode,
@@ -270,66 +275,35 @@ fun ProfileScreen(
                                     prefs.edit().putBoolean("dark_mode", it).apply()
                                     activity?.recreate()
                                 },
-                                colors = SwitchDefaults.colors(checkedTrackColor = BluePrimary)
+                                colors = SwitchDefaults.colors(
+                                    checkedTrackColor = BluePrimary
+                                )
                             )
                         }
                     )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(start = 56.dp))
-
-                    /*   SettingsItem(
-                           icon = Icons.Outlined.Lock,
-                           title = stringResource(R.string.item_biometric),
-                           onClick = { isBiometricEnabled = !isBiometricEnabled },
-                           trailingContent = {
-                               Switch(
-                                   checked = isBiometricEnabled,
-                                   onCheckedChange = { isBiometricEnabled = it },
-                                   colors = SwitchDefaults.colors(checkedTrackColor = BluePrimary)
-                               )
-                           }
-                       )*/
                 }
+
                 Spacer(modifier = Modifier.height(10.dp))
+
                 SectionTitle(title = "Cuenta")
+
                 SettingsCard {
                     SettingsItem(
                         icon = Icons.Outlined.Password,
                         title = "Cambiar contraseña",
-                        onClick = { openChangePassword(profile!!.email) },
-                        trailingContent = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null, tint = TextSecondary, modifier = Modifier.size(20.dp))
-                            }
-                        }
+                        onClick = { openChangePassword(profile!!.email) }
                     )
-                    HorizontalDivider(color = BorderColor, modifier = Modifier.padding(start = 56.dp))
+
+                    HorizontalDivider(
+                        color = BorderColor,
+                        modifier = Modifier.padding(start = 56.dp)
+                    )
 
                     SettingsItem(
                         icon = Icons.Outlined.Delete,
                         title = "Eliminar cuenta",
-                        onClick = { showDeleteAccount =true },
-                        trailingContent = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null, tint = TextSecondary, modifier = Modifier.size(20.dp))
-                            }
-                        }
+                        onClick = { showDeleteAccount = true }
                     )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(start = 56.dp))
-
-                    /*   SettingsItem(
-                           icon = Icons.Outlined.Lock,
-                           title = stringResource(R.string.item_biometric),
-                           onClick = { isBiometricEnabled = !isBiometricEnabled },
-                           trailingContent = {
-                               Switch(
-                                   checked = isBiometricEnabled,
-                                   onCheckedChange = { isBiometricEnabled = it },
-                                   colors = SwitchDefaults.colors(checkedTrackColor = BluePrimary)
-                               )
-                           }
-                       )*/
                 }
 
                 Spacer(modifier = Modifier.height(40.dp))
@@ -342,9 +316,21 @@ fun ProfileScreen(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.AutoMirrored.Outlined.Logout, stringResource(R.string.cd_logout_icon), tint = RedLogout, modifier = Modifier.size(20.dp))
+                    Icon(
+                        Icons.AutoMirrored.Outlined.Logout,
+                        stringResource(R.string.cd_logout_icon),
+                        tint = RedLogout,
+                        modifier = Modifier.size(20.dp)
+                    )
+
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = stringResource(R.string.btn_logout), color = RedLogout, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+
+                    Text(
+                        text = stringResource(R.string.btn_logout),
+                        color = RedLogout,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -356,20 +342,26 @@ fun ProfileScreen(
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center
                 )
+
                 Spacer(modifier = Modifier.height(10.dp))
+
                 PoweredByNexus()
+
                 Spacer(modifier = Modifier.height(150.dp))
             }
         }
+
+        AppHeader(
+            onBack = onBack,
+            title = stringResource(R.string.profile_settings_title)
+        )
+
         LoadingOverlay(
             isLoading = isLoading,
             lottieRes = R.raw.loadings
         )
     }
-
-
 }
-
 @Composable
 fun PoweredByNexus(
     modifier: Modifier = Modifier
