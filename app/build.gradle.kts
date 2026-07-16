@@ -32,7 +32,7 @@ android {
         applicationId = "com.nexusystem.paguito"
         minSdk = 26
         targetSdk = 37
-        versionCode = 14
+        versionCode = 15
         versionName = "1.4.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
