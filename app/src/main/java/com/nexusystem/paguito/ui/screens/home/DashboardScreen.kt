@@ -36,6 +36,7 @@ fun DashboardScreen(
     seeAllDeudores: () -> Unit,
     seeAllPayments: () -> Unit,
     goToMyProfile: () -> Unit,
+    openNexusPay: () -> Unit,
     deudoresViewModel: DeudoresViewModel,
     pagosViewModel: PagosViewModel,
     productosViewmodel: ProductosViewModel
@@ -125,6 +126,12 @@ fun DashboardScreen(
                 isSucriptionActive = isSucriptionActive,
                 showDialogLimitFree = { showAlertFreeLimited = true },
                 numeroProductos = numeroProductos
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            NexusPayOnlineCard(
+                onClick = openNexusPay
             )
 
             Spacer(modifier = Modifier.height(24.dp))

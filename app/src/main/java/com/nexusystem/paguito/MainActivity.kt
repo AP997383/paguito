@@ -1,5 +1,6 @@
 package com.nexusystem.paguito
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -25,6 +26,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import android.content.pm.PackageManager
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.google.firebase.messaging.FirebaseMessaging
@@ -50,6 +54,8 @@ class MainActivity : ComponentActivity() {
         setTheme(R.style.Theme_Paguito)
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        requestNotificationPermission()
+        clearNotifications()
 
         val prefs = getSharedPreferences("settings", Context.MODE_PRIVATE)
         val isDark = prefs.getBoolean("dark_mode", false)
@@ -196,7 +202,45 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (
+                ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    NOTIFICATION_PERMISSION_REQUEST_CODE
+                )
+            }
+        }
+    }
+    override fun onResume() {
+        super.onResume()
+        clearNotifications()
+    }
 
+    private fun clearNotifications() {
+        val notificationManager =
+            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        // Elimina todas las notificaciones de la bandeja
+        notificationManager.cancelAll()
+
+        // Reinicia el badge en launchers compatibles
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            notificationManager.activeNotifications.forEach {
+                notificationManager.cancel(it.id)
+            }
+        }
+    }
+
+    companion object {
+        private const val NOTIFICATION_PERMISSION_REQUEST_CODE = 1001
     }
 }
 

@@ -55,7 +55,8 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
         // 3. Construir la notificación
         val builder = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(R.drawable.abonia_a) // Usa tu icono (.png) aquí
+            .setSmallIcon(R.drawable.notification) // Usa tu icono (.png) aquí
+            .setColor(0xFF15956F.toInt())
             .setContentTitle(title)
             .setContentText(body)
             .setAutoCancel(true)

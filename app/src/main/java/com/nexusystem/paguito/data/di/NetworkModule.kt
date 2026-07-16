@@ -1,5 +1,9 @@
+// Path:
+// app/src/main/java/com/nexusystem/paguito/data/di/NetworkModule.kt
+
 package com.nexusystem.paguito.data.di
 
+import com.nexusecosystem.nexuspayment.config.NexusPayHostConfig
 import com.nexusystem.paguito.BuildConfig
 import com.nexusystem.paguito.data.remote.cloudFunctions.AuthApi
 import com.nexusystem.paguito.data.remote.cloudFunctions.CatalogApi
@@ -23,55 +27,104 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideLoggingInterceptor(): HttpLoggingInterceptor =
-        HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+    fun provideLoggingInterceptor(): HttpLoggingInterceptor {
+        return HttpLoggingInterceptor().apply {
+            level = if (BuildConfig.DEBUG) {
+                HttpLoggingInterceptor.Level.BODY
+            } else {
+                HttpLoggingInterceptor.Level.NONE
+            }
         }
+    }
 
     @Provides
     @Singleton
     fun provideOkHttpClient(
         loggingInterceptor: HttpLoggingInterceptor
-    ): OkHttpClient =
-        OkHttpClient.Builder()
+    ): OkHttpClient {
+        return OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
             .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideNexusPayHostConfig(): NexusPayHostConfig {
+        return object : NexusPayHostConfig {
+            override val baseUrl: String
+                get() = BuildConfig.BASE_URL
+        }
+    }
 
     @Provides
     @Singleton
     @Named("FirebaseRetrofit")
     fun provideFirebaseRetrofit(
         okHttpClient: OkHttpClient
-    ): Retrofit =
-        Retrofit.Builder()
+    ): Retrofit {
+        return Retrofit.Builder()
             .baseUrl(FIREBASE_BASE_URL)
             .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(
+                GsonConverterFactory.create()
+            )
             .build()
+    }
 
     @Provides
     @Singleton
     @Named("AwsRetrofit")
     fun provideAwsRetrofit(
         okHttpClient: OkHttpClient
-    ): Retrofit =
-        Retrofit.Builder()
-            .baseUrl(BuildConfig.BASE_URL)
+    ): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(
+                normalizeBaseUrl(
+                    BuildConfig.BASE_URL
+                )
+            )
             .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(
+                GsonConverterFactory.create()
+            )
             .build()
+    }
 
     @Provides
     @Singleton
     fun provideAuthApi(
-        @Named("FirebaseRetrofit") retrofit: Retrofit
-    ): AuthApi =
-        retrofit.create(AuthApi::class.java)
+        @Named("FirebaseRetrofit")
+        retrofit: Retrofit
+    ): AuthApi {
+        return retrofit.create(
+            AuthApi::class.java
+        )
+    }
 
     @Provides
     @Singleton
     fun provideCatalogApi(
-        @Named("AwsRetrofit") retrofit: Retrofit
-    ): CatalogApi =
-        retrofit.create(CatalogApi::class.java)
+        @Named("AwsRetrofit")
+        retrofit: Retrofit
+    ): CatalogApi {
+        return retrofit.create(
+            CatalogApi::class.java
+        )
+    }
+
+    private fun normalizeBaseUrl(
+        baseUrl: String
+    ): String {
+        val cleanBaseUrl = baseUrl.trim()
+
+        require(cleanBaseUrl.isNotEmpty()) {
+            "BuildConfig.BASE_URL no puede estar vacío."
+        }
+
+        return if (cleanBaseUrl.endsWith("/")) {
+            cleanBaseUrl
+        } else {
+            "$cleanBaseUrl/"
+        }
+    }
 }
