@@ -42,6 +42,7 @@ android {
     productFlavors {
         create("dev") {
             dimension = "environment"
+            applicationIdSuffix = ".dev" // Recomendado para que convivan en el mismo dispositivo
             buildConfigField("String", "ENVIRONMENT", "\"DEV\"")
             buildConfigField("String", "BASE_URL", "\"${localProperty("DEV_BASE_URL")}\"")
             buildConfigField("String", "PUBLIC_STORE_URL", "\"https://store-dev.nexusecosystem-mx.com\"")
@@ -49,6 +50,7 @@ android {
 
         create("qa") {
             dimension = "environment"
+            applicationIdSuffix = ".qa"
             buildConfigField("String", "ENVIRONMENT", "\"QA\"")
             buildConfigField("String", "BASE_URL", "\"${localProperty("QA_BASE_URL")}\"")
             buildConfigField("String", "PUBLIC_STORE_URL", "\"https://store-qa.nexusecosystem-mx.com\"")
@@ -56,6 +58,7 @@ android {
 
         create("prod") {
             dimension = "environment"
+            // Prod por lo general no lleva sufijo para mantener el paquete oficial en las tiendas
             buildConfigField("String", "ENVIRONMENT", "\"PROD\"")
             buildConfigField("String", "BASE_URL", "\"${localProperty("PROD_BASE_URL")}\"")
             buildConfigField("String", "PUBLIC_STORE_URL", "\"https://store.nexusecosystem-mx.com\"")

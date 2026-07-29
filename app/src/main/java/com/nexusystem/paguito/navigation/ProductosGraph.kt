@@ -126,7 +126,8 @@ fun NavGraphBuilder.productosGraph(
                                 "/$json"
                     )
                 },
-                viewModel = perfilViewModel
+                viewModel = perfilViewModel,
+                openSettingsSms = {}
             )
         }
     }

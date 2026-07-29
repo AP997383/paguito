@@ -7,9 +7,14 @@ data class UserProfileEntity(
     val bussinesName: String,
     val phone: String,
     val token: String,
+    val creditsSms: Int=0,
+    val creditsSmsTotal: Int=0,
     val userSuscription:UserSuscriptionData =UserSuscriptionData(),
-   var verified: Boolean =true
-)
+    var verified: Boolean =true,
+    var isRemindersActive: Boolean=false,
+    var reminderPreventivo: Boolean=false,
+    var reminderAtraso: Boolean=false,
+    var reminderAvisoPago:Boolean=false)
 
 data class UserSuscriptionData(
   var nameSuscription:String="",

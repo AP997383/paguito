@@ -4,6 +4,8 @@
 package com.nexusystem.paguito.navigation
 
 import android.net.Uri
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -18,7 +20,9 @@ import com.nexusystem.paguito.ui.screens.perfil.ChangePasswordProfileScreen
 import com.nexusystem.paguito.ui.screens.perfil.EditProfileScreen
 import com.nexusystem.paguito.ui.screens.perfil.PerfiViewModel
 import com.nexusystem.paguito.ui.screens.perfil.ProfileScreen
+import com.nexusystem.paguito.ui.screens.sms.SmsRemindersScreen
 
+@RequiresApi(Build.VERSION_CODES.O)
 fun NavGraphBuilder.profileGraph(
     navController: NavHostController,
     perfilViewModel: PerfiViewModel,
@@ -62,7 +66,12 @@ fun NavGraphBuilder.profileGraph(
                                 "/$json"
                     )
                 },
-                viewModel = perfilViewModel
+                viewModel = perfilViewModel,
+                openSettingsSms = {
+                    navController.navigate(
+                        Routes.ScreenSettingsSms.route
+                    )
+                }
             )
         }
 
@@ -106,6 +115,12 @@ fun NavGraphBuilder.profileGraph(
             EditProfileScreen(
                 navController::popBackStack,
                 perfilViewModel
+            )
+        }
+        composable(
+            Routes.ScreenSettingsSms.route
+        ) {
+            SmsRemindersScreen({},{},{},authViewModel
             )
         }
 

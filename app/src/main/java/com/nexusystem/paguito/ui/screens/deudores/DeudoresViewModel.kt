@@ -147,6 +147,36 @@ class DeudoresViewModel @Inject constructor(
             deudoresUseCase.agregarDeudores(recipe)
         }
     }
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun updateDeudor( producto: DeudoresEntity?) {
+        viewModelScope.launch {
+            producto?.let { product ->
+                try {
+
+                        // 1. Preparamos los datos
+                        val newDocRef = firestore.collection("deudores")
+                            .document(profileState?.email?:"")
+                            .collection("deudores")
+                            .document(producto.idRemoteDatabase)
+                        product.inRemote =true
+                        newDocRef.set(product, SetOptions.merge())
+                            .addOnSuccessListener {
+                                viewModelScope.launch {
+                                    deudoresUseCase.agregarDeudor(product)
+                                    Log.d("SAVEDEUDOE", "Sincronizado con la nube exitosamente")
+                                }
+                            }
+                            .addOnFailureListener { e ->
+                                Log.e("SAVEDEUDOE", "Error en cola de sincronización: ${e.message}")
+                            }
+
+                } catch (e: Exception) {
+                    deudoresUseCase.agregarDeudor(product)
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
 
     @RequiresApi(Build.VERSION_CODES.O)
     fun saveDeudorInFirebase(userId: String, producto: DeudoresEntity?) {

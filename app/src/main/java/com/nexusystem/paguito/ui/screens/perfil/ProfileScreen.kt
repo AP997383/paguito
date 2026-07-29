@@ -31,6 +31,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -46,6 +47,7 @@ import com.nexusystem.paguito.BuildConfig
 import com.nexusystem.paguito.R
 import com.nexusystem.paguito.data.local.entity.SuscriptionsItems
 import com.nexusystem.paguito.ui.screens.productos.RedAlert
+import com.nexusystem.paguito.ui.screens.productos.TextGray
 import com.nexusystem.paguito.utils.LoadingOverlay
 import com.nexusystem.paguito.utils.PaguitoStore
 import com.nexusystem.paguito.utils.dialogs.CuentaEliminacionScreen
@@ -72,7 +74,8 @@ fun ProfileScreen(
     onBack: () -> Unit,
     openChangePassword:(String)->Unit,
     viewModel: PerfiViewModel,
-    openIdiomas: () -> Unit
+    openIdiomas: () -> Unit,
+    openSettingsSms:()->Unit
 ) {
     val scope = rememberCoroutineScope()
     var businessName by remember { mutableStateOf("") }
@@ -100,6 +103,8 @@ fun ProfileScreen(
     val prefijo = languajes.filter { it.regionCode == currentLangCode }
     val pref = if (prefijo.isNotEmpty()) prefijo[0].prefij else "es"
     val isLoading by viewModel.isLoading.collectAsState()
+    val NeonYellow = Color(0xFFFFFF00)
+    val NeonCyan = Color(0xFF00FFE5)
     val currentLangLabel = remember(pref) {
         when (pref) {
             "en" -> "English"
@@ -274,6 +279,71 @@ fun ProfileScreen(
                             )
                         }
                     )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(start = 56.dp))
+
+                    /*   SettingsItem(
+                           icon = Icons.Outlined.Lock,
+                           title = stringResource(R.string.item_biometric),
+                           onClick = { isBiometricEnabled = !isBiometricEnabled },
+                           trailingContent = {
+                               Switch(
+                                   checked = isBiometricEnabled,
+                                   onCheckedChange = { isBiometricEnabled = it },
+                                   colors = SwitchDefaults.colors(checkedTrackColor = BluePrimary)
+                               )
+                           }
+                       )*/
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+                SectionTitle(title = "Sms y Recordatorios")
+                SettingsCard {
+                    SettingsItem(
+                        icon = Icons.Outlined.Message,
+                        title = "Recordatorios Clientes",
+                        onClick = { openSettingsSms() },
+                        trailingContent = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(text = currentLangLabel, color = TextSecondary, fontSize = 14.sp)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null, tint = TextSecondary, modifier = Modifier.size(20.dp))
+                            }
+                        }
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(end = 10.dp, start = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(text =  "Créditos recordatorios Watsap" , color = TextGray, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Text(text = (profile?.creditsSmsTotal!! - profile?.creditsSms!!).toString()  +"/" + profile.creditsSmsTotal.toString(), color = MaterialTheme.colorScheme.primary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                    val progreso: Float = if(profile?.creditsSmsTotal!!>0) ((profile?.creditsSms!! / profile?.creditsSmsTotal!!) * 100).toFloat() else 0F
+                    Column( modifier = Modifier.padding(10.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .background(MaterialTheme.colorScheme.background, CircleShape)
+
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(progreso.coerceIn(0f, 1f)) // El 84% de progreso
+                                    .fillMaxHeight()
+                                    .background(
+                                        brush = Brush.horizontalGradient(
+                                            if (progreso >= 1f ) {
+                                                listOf(Color.Red, Color(0xFF8B0000)) // Rojo si expiró
+                                            } else {
+                                                listOf(NeonYellow, NeonCyan)
+                                            }
+                                        ),
+                                        shape = CircleShape
+                                    )
+                            )
+                        }
+                    }
+
                     HorizontalDivider(color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(start = 56.dp))
 
                     /*   SettingsItem(

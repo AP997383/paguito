@@ -1,5 +1,6 @@
 package com.nexusystem.paguito.ui.screens.deudores
 
+import android.annotation.SuppressLint
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.BorderStroke
@@ -20,6 +21,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Search
@@ -71,6 +73,7 @@ data class Debtor(
 
 // Datos de prueba basados en tu imagen
 val sampleDebtors = arrayListOf<Debtor>()
+@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun DebtorsScreen(
@@ -86,6 +89,7 @@ fun DebtorsScreen(
     var showAlertFreeLimited by remember { mutableStateOf(false) }
     var showDeleteClient by remember { mutableStateOf(false) }
     var currentDebtorSelected by remember { mutableStateOf(DeudoresEntity()) }
+    var showEditContact by remember { mutableStateOf(false) }
 
     if(showDeleteClient) {
         EliminarClienteDialog(currentDebtorSelected.nombre, {
@@ -93,6 +97,17 @@ fun DebtorsScreen(
         }, {
             viewmodel.eliminarDeudorYpagos(currentDebtorSelected.idRemoteDatabase)
             showDeleteClient=false
+        })
+    }
+
+    if(showEditContact){
+        EditContactDialog(currentDebtorSelected,{
+            showEditContact=false
+        },{phone, email,nombre, paymentType->
+            currentDebtorSelected = currentDebtorSelected.copy(telefono=phone, correo = email, nombre = nombre, periodicidad = paymentType)
+            viewmodel.updateDeudor(currentDebtorSelected)
+            showEditContact=false
+
         })
     }
 
@@ -153,7 +168,7 @@ fun DebtorsScreen(
             }
         },
         containerColor = MaterialTheme.colorScheme.background
-    ) { _ ->
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -260,6 +275,9 @@ fun DebtorsScreen(
                             DebtorListItem(debtor = debtor!!, verPerfilDeudor, registrarPago, registrarVenta,{
                                 currentDebtorSelected =it
                                 showDeleteClient=true
+                            },{
+                                currentDebtorSelected = debtor
+                                showEditContact=true
                             })
                             Divider(color = MaterialTheme.colorScheme.background, thickness = 1.dp)
                             if(isSucriptionActive==false){
@@ -338,9 +356,11 @@ fun FilterChipItem(text: String, count: Int, isSelected: Boolean, onClick: () ->
 }
 
 @Composable
-fun DebtorListItem(debtor: DeudoresEntity,verPerfilDeudor:(DeudoresEntity)->Unit,registrarPago:(DeudoresEntity)->Unit,registrarVenta:(DeudoresEntity)->Unit,elminarCliente:(DeudoresEntity)->Unit) {
+fun DebtorListItem(debtor: DeudoresEntity,verPerfilDeudor:(DeudoresEntity)->Unit,registrarPago:(DeudoresEntity)->Unit,registrarVenta:(DeudoresEntity)->Unit,elminarCliente:(DeudoresEntity)->Unit,onEditContact:()->Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth().padding(10.dp),
+        modifier = Modifier.fillMaxWidth().padding(10.dp).clickable{
+            onEditContact()
+        },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(10.dp),
         elevation = CardDefaults.cardElevation(0.dp)
@@ -421,7 +441,7 @@ fun DebtorListItem(debtor: DeudoresEntity,verPerfilDeudor:(DeudoresEntity)->Unit
             // --- Fila Inferior: Botones de Acción ---
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
+                horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
 
@@ -431,7 +451,7 @@ fun DebtorListItem(debtor: DeudoresEntity,verPerfilDeudor:(DeudoresEntity)->Unit
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = BluePrimary2),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    modifier = Modifier.height(36.dp)
+                    modifier = Modifier.height(36.dp).weight(1f)
                 ) {
                     Text("Nuevo pago", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 }
@@ -441,9 +461,36 @@ fun DebtorListItem(debtor: DeudoresEntity,verPerfilDeudor:(DeudoresEntity)->Unit
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    modifier = Modifier.height(36.dp)
+                    modifier = Modifier.height(36.dp).weight(1f)
                 ) {
                     Text("Nueva venta", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Row(horizontalArrangement =Arrangement.Center, modifier = Modifier.fillMaxWidth() ) {
+                Text(
+                    text = "Ver detalles",
+                    fontSize = 14.sp,
+                    color =  MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.clickable { verPerfilDeudor(debtor) }.padding(8.dp)
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Button(
+                    onClick = { onEditContact() },
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = BluePrimary2),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp), // Reducido para el icono
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Edit, // O usa tu icono vectorial de basura
+                        contentDescription = "Editar",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp) // Tamaño adecuado para el icono
+                    )
                 }
                 Spacer(modifier = Modifier.width(10.dp))
                 Button(
@@ -460,16 +507,6 @@ fun DebtorListItem(debtor: DeudoresEntity,verPerfilDeudor:(DeudoresEntity)->Unit
                         modifier = Modifier.size(20.dp) // Tamaño adecuado para el icono
                     )
                 }
-            }
-            Spacer(modifier = Modifier.height(10.dp))
-            Row(horizontalArrangement =Arrangement.Center, modifier = Modifier.fillMaxWidth() ) {
-                Text(
-                    text = "Ver detalles",
-                    fontSize = 14.sp,
-                    color =  MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.clickable { verPerfilDeudor(debtor) }.padding(8.dp)
-                )
             }
         }
     }

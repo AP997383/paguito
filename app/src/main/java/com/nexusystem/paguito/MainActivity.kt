@@ -166,6 +166,7 @@ class MainActivity : ComponentActivity() {
                             route != Routes.ScreenChangePasswordProfile.route + "/{params}"&&
                             route != Routes.ScreenRegisterSell.route + "/"&&
                             route != Routes.ScreenRegisterSell.route&&
+                            route != Routes.ScreenSettingsSms.route&&
                             route != Routes.ScreenViewAllDeudores.route&&
                             route != Routes.ScreenViewAllPayments.route
 

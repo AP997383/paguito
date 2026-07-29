@@ -74,6 +74,8 @@ fun LoginScreen(
             fullName = successLogin!!.fullName?:"",
             bussinesName = successLogin!!.bussinesName?:"",
             phone = successLogin!!.phone?:"",
+            creditsSms = successLogin!!.creditsSms?:0,
+            creditsSmsTotal = successLogin!!.creditsSmsTotal?:0,
             token =prefs.getString("MyToken","").toString(),
             userSuscription = successLogin!!.userSuscription?: UserSuscriptionData()
         )

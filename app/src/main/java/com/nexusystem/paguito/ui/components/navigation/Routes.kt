@@ -76,6 +76,7 @@ sealed class Routes(val route: String) {
     object ScreenProfile : Routes("profile")
     object ScreenPerfilEditar : Routes("editarPerfil")
     object ScreenIdioms : Routes("idioms")
+    object ScreenSettingsSms : Routes("settingSms")
     object ScreenChangePasswordProfile : Routes("changePasswordProfile")
     object ScreenWebView : Routes("webView")
 

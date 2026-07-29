@@ -118,7 +118,8 @@ fun NavGraphBuilder.clientesGraph(
                                 "/$json"
                     )
                 },
-                viewModel = perfilViewModel
+                viewModel = perfilViewModel,
+                openSettingsSms = {}
             )
         }
 

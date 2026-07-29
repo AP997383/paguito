@@ -7,6 +7,7 @@ import com.nexusystem.paguito.data.models.request.LoginRequest
 import com.nexusystem.paguito.data.models.request.SendOtpRequest
 import com.nexusystem.paguito.data.models.request.SuscripcionPurchaseRequest
 import com.nexusystem.paguito.data.models.request.VerifyOtpRequest
+import com.nexusystem.paguito.data.models.request.recordatoriosRequest
 import com.nexusystem.paguito.data.models.responses.ChangePasswordResponse
 import com.nexusystem.paguito.data.models.responses.DeleteAccountResponse
 import com.nexusystem.paguito.data.models.responses.GetAllMyDataResponse
@@ -51,6 +52,11 @@ interface AuthApi {
     @POST("https://changepassword-2a2qk4zvlq-uc.a.run.app")
     suspend fun changePassword(
         @Body request: ChangePasswordRequest
+    ): Response<ChangePasswordResponse>
+
+    @POST("https://agendarrecordatoriosdeudor-2a2qk4zvlq-uc.a.run.app")
+    suspend fun agendarRecordatorios(
+        @Body request: recordatoriosRequest
     ): Response<ChangePasswordResponse>
 
     @POST("https://register-2a2qk4zvlq-uc.a.run.app")

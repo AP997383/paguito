@@ -6,6 +6,7 @@ import com.nexusystem.paguito.data.models.request.GetAllMyDataRequest
 import com.nexusystem.paguito.data.models.request.LoginRequest
 import com.nexusystem.paguito.data.models.request.SuscripcionPurchaseRequest
 import com.nexusystem.paguito.data.models.request.VerifyOtpRequest
+import com.nexusystem.paguito.data.models.request.recordatoriosRequest
 import com.nexusystem.paguito.data.models.responses.GetAllMyDataResponse
 import com.nexusystem.paguito.data.models.responses.LoginResponse
 import com.nexusystem.paguito.data.models.responses.SuscripcionPurchaseResponse
@@ -43,6 +44,18 @@ class AuthRepository @Inject constructor(
             throw kotlin.Exception(
                 response.errorBody()?.string() ?: "Error al cambiar password"
             )
+        }
+    }
+
+    suspend fun crearRecordatorios(email: String,typeReminderEnableOrDisabel:Int): Boolean {
+        val response = authApi.agendarRecordatorios(
+            recordatoriosRequest(email,typeReminderEnableOrDisabel)
+        )
+
+        if (response.isSuccessful) {
+            return response.body()?.ok == true
+        } else {
+           return  false;
         }
     }
 

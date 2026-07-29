@@ -2,9 +2,13 @@ package com.nexusystem.paguito.ui.screens.login
 
 import android.content.Context
 import android.util.Log
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nexusystem.paguito.data.local.entity.SuscriptionsItems
+import com.nexusystem.paguito.data.local.entity.UserProfileEntity
 import com.nexusystem.paguito.data.models.request.SendOtpRequest
 import com.nexusystem.paguito.data.models.responses.LoginResponse
 import com.nexusystem.paguito.data.models.responses.SuscriptionsResponse
@@ -15,6 +19,7 @@ import com.nexusystem.paguito.domain.usescases.abonos.AbonosUseCase
 import com.nexusystem.paguito.domain.usescases.deudores.DeudoresUseCase
 import com.nexusystem.paguito.domain.usescases.productos.ProductosUseCase
 import com.nexusystem.paguito.utils.PaguitoStore
+import com.nexusystem.paguito.utils.SecureStorageManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,6 +34,7 @@ class AuthViewModel @Inject constructor(
     private val productosUserCase: ProductosUseCase,
     private val pagosUserCase: AbonosUseCase,
     private val deudoresUserCase: DeudoresUseCase,
+    private val secureStorage: SecureStorageManager
 ) : ViewModel() {
     private val _otpSuseccfull= MutableStateFlow<String>("")
     val otpSuseccfull = _otpSuseccfull.asStateFlow()
@@ -44,6 +50,9 @@ class AuthViewModel @Inject constructor(
     private val _changePasswordSucess = MutableStateFlow(false)
     val changePasswordSucess: StateFlow<Boolean> = _changePasswordSucess
 
+    private val _remindersSucess = MutableStateFlow(false)
+    val remindersSucess: StateFlow<Boolean> = _remindersSucess
+
 
     private val _isUserRegistered = MutableStateFlow(false)
     val isUserRegistered: StateFlow<Boolean> = _isUserRegistered
@@ -53,7 +62,8 @@ class AuthViewModel @Inject constructor(
 
     private val _loginSuccessFull = MutableStateFlow<LoginResponse?>(null)
     val loginSuccessFull: StateFlow<LoginResponse?> = _loginSuccessFull
-
+    var profileState by mutableStateOf<UserProfileEntity?>(null)
+        private set
 
 
     private val _errorMessage = MutableStateFlow<String>("")
@@ -87,6 +97,9 @@ class AuthViewModel @Inject constructor(
     fun resetChangePassword(){
         _changePasswordSucess.value  =false
     }
+    fun resetRemindersSuccess(){
+        _remindersSucess.value  =false
+    }
     fun clearError(){
         _userAlreadyExist.value=""
         _errorMessage.value = ""
@@ -96,6 +109,17 @@ class AuthViewModel @Inject constructor(
             PaguitoStore.setVerified(context, false)
         }
     }
+
+    init {
+        loadUserProfile()
+    }
+
+    fun loadUserProfile() {
+        // Recuperamos del Secure Storage
+        val savedProfile = secureStorage.getUserProfile()
+        profileState = savedProfile
+    }
+
     fun verifyOtp(email: String, otp: String) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -124,6 +148,21 @@ class AuthViewModel @Inject constructor(
             try {
                 val result = authRepository.changePassword(email, newPassword)
                 _changePasswordSucess.value = result
+            } catch (e: Exception) {
+                _errorMessage.value = e.message?:""
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun crearRecordatorios(typeReminderEnableOrDisabel:Int) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _errorMessage.value = ""
+            try {
+                val result = authRepository.crearRecordatorios(profileState?.email?:"",typeReminderEnableOrDisabel)
+                _remindersSucess.value = result
             } catch (e: Exception) {
                 _errorMessage.value = e.message?:""
             } finally {
