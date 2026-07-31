@@ -151,16 +151,18 @@ class PerfiViewModel @Inject constructor(
     }
 
     fun updateMyLocalDataProfile(){
+        if(!profileState?.email.isNullOrEmpty()){
 
        usersCollection.document(profileState?.email?:"").addSnapshotListener { snapshot, error ->
-            if (error != null) {
-                Log.e("OBTENEMOS_PERFIL", "-->ERROR", error)
-                return@addSnapshotListener
-            }
-            // Convertir el documento único directamente
-            val profile = snapshot?.toObject(UserProfileEntity::class.java)
-            Log.e("PERFIL_FROM_FIREBASE","-->"+profile)
-            secureStorage.saveUserProfile(profile!!)
+           if (error != null) {
+               Log.e("OBTENEMOS_PERFIL", "-->ERROR", error)
+               return@addSnapshotListener
+           }
+           // Convertir el documento único directamente
+           val profile = snapshot?.toObject(UserProfileEntity::class.java)
+           Log.e("PERFIL_FROM_FIREBASE", "-->" + profile)
+           secureStorage.saveUserProfile(profile!!)
+       }
         }
 
     }
