@@ -28,6 +28,7 @@ import com.nexusystem.paguito.ui.screens.payments.PagosViewModel
 import com.nexusystem.paguito.ui.screens.payments.RegisterPaymentScreen
 import com.nexusystem.paguito.ui.screens.payments.RegisterSellScreen
 import com.nexusystem.paguito.ui.screens.payments.TicketReceiptScreen
+import com.nexusystem.paguito.ui.screens.perfil.PerfiViewModel
 import com.nexusystem.paguito.ui.screens.productos.AddProductScreen
 import com.nexusystem.paguito.ui.screens.productos.ProductosViewModel
 import com.nexusystem.paguito.ui.screens.website.WebsiteScreen
@@ -37,7 +38,8 @@ fun NavGraphBuilder.homeGraph(
     navController: NavHostController,
     deudoresViewModel: DeudoresViewModel,
     pagosViewModel: PagosViewModel,
-    productosViewModel: ProductosViewModel
+    productosViewModel: ProductosViewModel,
+    perfiViewModel: PerfiViewModel
 ) {
     navigation(
         startDestination = Routes.ScreenHome.route,
@@ -119,7 +121,8 @@ fun NavGraphBuilder.homeGraph(
                             ?.isActive
                             ?: false
                     )
-                }
+                },
+                perfilviewmodel = perfiViewModel
             )
         }
 

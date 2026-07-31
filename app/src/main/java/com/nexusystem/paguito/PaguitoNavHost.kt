@@ -87,7 +87,8 @@ fun MediNavHost(
             navController = navController,
             deudoresViewModel = deudoresViewModel,
             pagosViewModel = pagosViewModel,
-            productosViewModel = productosViewModel
+            productosViewModel = productosViewModel,
+            perfiViewModel=perfilViewModel
         )
 
         analisisGraph(

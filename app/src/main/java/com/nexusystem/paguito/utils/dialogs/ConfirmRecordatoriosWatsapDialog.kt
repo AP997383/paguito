@@ -7,6 +7,10 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -17,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.nexusystem.paguito.ui.screens.deudores.RedUrgent
 
 val PrimaryBlue = Color(0xFF4A6FFF)
 val TextDark = Color(0xFF1A1F2C)
@@ -26,8 +31,29 @@ val CardBackground = Color(0xFFEEF2F6)
 @Composable
 fun WhatsappReminderDialog(
     onDismissRequest: () -> Unit,
-    onActivateClick: () -> Unit
+    onActivateClick: () -> Unit,
+    enableOrDisable: Int,
+    typeReminderEnableOrDisabel: Int
 ) {
+    var tipoTitle by remember(typeReminderEnableOrDisabel) {
+        mutableStateOf(
+            when (typeReminderEnableOrDisabel) {
+                1 -> "Recordatorios preventivos"
+                2 -> "Recordatorios de morosidad"
+                3 -> "Avisos de pagos"
+                else -> "Recordatorios"
+            }
+        )
+    }
+    var tipoButton by remember(typeReminderEnableOrDisabel) {
+        mutableStateOf(
+            when (enableOrDisable) {
+                1 -> "Activar"
+                2 -> "Desactivar"
+                else -> "Activar"
+            }
+        )
+    }
     Dialog(
         onDismissRequest = onDismissRequest,
         properties = DialogProperties(
@@ -39,7 +65,7 @@ fun WhatsappReminderDialog(
                 .fillMaxWidth(0.925f) // Ocupa el ancho adecuado dejando márgenes a los lados
                 .wrapContentHeight(),
             shape = RoundedCornerShape(32.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
             Column(
@@ -60,10 +86,10 @@ fun WhatsappReminderDialog(
 
                 // Título
                 Text(
-                    text = "¿Activar recordatorios\nde WhatsApp?",
+                    text =if(enableOrDisable==1) "¿Activar $tipoTitle \nde WhatsApp?" else "¿Desactivar $tipoTitle\nde WhatsApp?",
                     style = MaterialTheme.typography.headlineSmall.copy(
                         fontWeight = FontWeight.Bold,
-                        color = TextDark,
+                        color = MaterialTheme.colorScheme.onSurface,
                         lineHeight = 32.sp
                     ),
                     textAlign = TextAlign.Center
@@ -73,10 +99,14 @@ fun WhatsappReminderDialog(
 
                 // Descripción
                 Text(
-                    text = "Al activar los recordatorios, se enviarán " +
+                    text =if(enableOrDisable==1) "Al activar los recordatorios, se enviarán " +
                             "mensajes automáticos a tus clientes cada " +
                             "vez que se acerque su fecha de pago o " +
-                            "cuando tengan un pago atrasado.",
+                            "cuando tengan un pago atrasado." else
+                                "Al desactivar los recordatorios,ya no se enviarán " +
+                            "mensajes automáticos a tus clientes cada " +
+                            "vez que se acerque su fecha de pago o " +
+                            "cuando tengan un pago atrasado." ,
                     style = MaterialTheme.typography.bodyMedium.copy(
                         color = TextSecondary,
                         lineHeight = 22.sp
@@ -90,7 +120,7 @@ fun WhatsappReminderDialog(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(CardBackground, RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
@@ -107,10 +137,10 @@ fun WhatsappReminderDialog(
                         .fillMaxWidth()
                         .height(54.dp),
                     shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
+                    colors = ButtonDefaults.buttonColors(containerColor =if(enableOrDisable==1) PrimaryBlue else RedUrgent)
                 ) {
                     Text(
-                        text = "Activar ahora",
+                        text = "$tipoButton ahora",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -178,18 +208,5 @@ fun BenefitItemWatsap(text: String) {
                 fontWeight = FontWeight.Medium
             )
         )
-    }
-}
-
-@Preview(showBackground = true, backgroundColor = 0xFF333333)
-@Composable
-fun DialogPreview() {
-    MaterialTheme {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            WhatsappReminderDialog(
-                onDismissRequest = {},
-                onActivateClick = {}
-            )
-        }
     }
 }

@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.firestore.FirebaseFirestore
 import com.nexusystem.paguito.data.local.entity.SuscriptionsItems
 import com.nexusystem.paguito.data.local.entity.UserProfileEntity
 import com.nexusystem.paguito.data.models.request.SendOtpRequest
@@ -34,7 +35,8 @@ class AuthViewModel @Inject constructor(
     private val productosUserCase: ProductosUseCase,
     private val pagosUserCase: AbonosUseCase,
     private val deudoresUserCase: DeudoresUseCase,
-    private val secureStorage: SecureStorageManager
+    private val secureStorage: SecureStorageManager,
+    private val firestore: FirebaseFirestore,
 ) : ViewModel() {
     private val _otpSuseccfull= MutableStateFlow<String>("")
     val otpSuseccfull = _otpSuseccfull.asStateFlow()
@@ -64,14 +66,14 @@ class AuthViewModel @Inject constructor(
     val loginSuccessFull: StateFlow<LoginResponse?> = _loginSuccessFull
     var profileState by mutableStateOf<UserProfileEntity?>(null)
         private set
-
+    private val usersCollection = firestore.collection("users")
 
     private val _errorMessage = MutableStateFlow<String>("")
     val errorMessage: StateFlow<String> = _errorMessage
 
     fun sendOtp(email: String) = viewModelScope.launch {
         _isLoading.value =true
-        val response = authApi.sendOtp(SendOtpRequest(email))
+        val response = authApi.sendOtp(request = SendOtpRequest(email))
 
         if (response.isSuccessful && response.body()?.success == true) {
             _isLoading.value =false
@@ -157,6 +159,7 @@ class AuthViewModel @Inject constructor(
     }
 
     fun crearRecordatorios(typeReminderEnableOrDisabel:Int) {
+
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = ""
@@ -169,6 +172,40 @@ class AuthViewModel @Inject constructor(
                 _isLoading.value = false
             }
         }
+    }
+
+    fun updateMyRemindersStatus(tipo: Int, enableOrDisable: Boolean, allDisable: Boolean) {
+        val email = profileState?.email ?: return
+        if (email.isEmpty()) return
+
+        // Creamos un mapa dinámico para actualizar únicamente los campos necesarios
+        val updates = mutableMapOf<String, Any>()
+
+        if (allDisable) {
+            // Si allDisable es true, apagamos absolutamente todas las banderas
+            updates["isRemindersActive"] = false
+            updates["reminderPreventivo"] = false
+            updates["reminderAtraso"] = false
+            updates["reminderAvisoPago"] = false
+        } else {
+            // Si no, evaluamos qué tipo de recordatorio modificar según el parámetro 'tipo'
+            when (tipo) {
+                1 -> updates["reminderPreventivo"] = enableOrDisable
+                2 -> updates["reminderAtraso"] = enableOrDisable
+                3 -> updates["reminderAvisoPago"] = enableOrDisable
+            }
+        }
+
+        // Ejecutamos el update en Firestore (esto evita sobreescribir o borrar el resto del documento)
+        usersCollection.document(email)
+            .update(updates)
+            .addOnSuccessListener {
+                // Opcional: Actualiza tu estado local o maneja el éxito
+                Log.d("Firestore", "Perfil actualizado correctamente")
+            }
+            .addOnFailureListener { e ->
+                Log.e("Firestore", "Error al actualizar perfil", e)
+            }
     }
 
 

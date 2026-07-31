@@ -76,6 +76,7 @@ class DeudoresViewModel @Inject constructor(
     fun loadUserProfile() {
         // Recuperamos del Secure Storage
         val savedProfile = secureStorage.getUserProfile()
+        Log.e("PROFILE_PHOTO", "-->$savedProfile")
         mail = savedProfile?.email?:""
         profileState = savedProfile
     }

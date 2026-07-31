@@ -120,7 +120,7 @@ fun NavGraphBuilder.profileGraph(
         composable(
             Routes.ScreenSettingsSms.route
         ) {
-            SmsRemindersScreen({},{},{},authViewModel
+            SmsRemindersScreen({navController.popBackStack()},{},{},authViewModel
             )
         }
 

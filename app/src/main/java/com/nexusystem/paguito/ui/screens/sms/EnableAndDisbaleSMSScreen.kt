@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Create
@@ -17,9 +18,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nexusystem.paguito.R
 import com.nexusystem.paguito.ui.screens.deudores.DeudoresViewModel
 import com.nexusystem.paguito.ui.screens.login.AuthViewModel
 import com.nexusystem.paguito.utils.PaguitoStore
@@ -35,7 +38,6 @@ data class SmsTemplate(
     val previewText: String,
     val isEnabled: Boolean
 )
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SmsRemindersScreen(
@@ -45,23 +47,23 @@ fun SmsRemindersScreen(
     perfilViewModel: AuthViewModel,
 ) {
 
+    val profile = perfilViewModel.profileState
+
     var showDialogConfirm by remember { mutableStateOf(false) }
     var typeReminderEnableOrDisabel by remember { mutableStateOf(0) }
+    var enableOrDisable by remember { mutableStateOf(0) }
+
+    // NUEVO: Guardamos temporalmente el ID y el nuevo estado que el usuario quiere aplicar
+    var pendingTemplateId by remember { mutableStateOf<String?>(null) }
+    var pendingNewState by remember { mutableStateOf(false) }
+
     val remindersSucess by perfilViewModel.remindersSucess.collectAsState()
 
     if(remindersSucess){
         SuccessAlertDialog("Recordatorios activados correctamente !",{
-                perfilViewModel.resetRemindersSuccess()
+            perfilViewModel.resetRemindersSuccess()
         },{
-                perfilViewModel.resetRemindersSuccess()
-        })
-    }
-    if(showDialogConfirm){
-        WhatsappReminderDialog({
-            showDialogConfirm =false
-        },{
-            perfilViewModel.crearRecordatorios(typeReminderEnableOrDisabel)
-            showDialogConfirm=false
+            perfilViewModel.resetRemindersSuccess()
         })
     }
     // Estado de las plantillas (activadas/desactivadas)
@@ -73,74 +75,103 @@ fun SmsRemindersScreen(
                     title = "Recordatorio Preventivo",
                     subtitle = "1 día antes del vencimiento",
                     previewText = "Hola [Nombre] , mañana toca tu pago de [Monto] . Te invitamos a tenerlo listo. Saludos.",
-                    isEnabled = true
+                    isEnabled = profile?.reminderPreventivo ?: false
                 ),
                 SmsTemplate(
                     id = "2",
                     title = "Aviso de Atraso",
                     subtitle = "Al día siguiente del vencimiento",
                     previewText = "Hola [Nombre] , notamos que tu pago de [Monto] está vencido. Por favor comunícate con nosotros para regularizarlo.",
-                    isEnabled = false
+                    isEnabled = profile?.reminderAtraso ?: false
                 ),
                 SmsTemplate(
                     id = "3",
                     title = "Confirmación de Pago",
                     subtitle = "Inmediatamente al cobrar",
                     previewText = "¡Gracias [Nombre] ! Hemos recibido tu abono de [Monto] correctamente. Tu nuevo saldo es [Saldo] .",
-                    isEnabled = true
+                    isEnabled = profile?.reminderAvisoPago ?: false
                 )
             )
         )
     }
+    if(showDialogConfirm){
+        WhatsappReminderDialog(
+            onDismissRequest = {
+                // Si cancela, NO cambiamos nada y cerramos el popup
+                pendingTemplateId = null
+                showDialogConfirm = false
+            },
+            onActivateClick = {
+                // Si confirma, ejecutamos la lógica del ViewModel
+                if (profile?.RemindersActive == false) {
+                    perfilViewModel.crearRecordatorios(typeReminderEnableOrDisabel)
+                } else {
+                    perfilViewModel.updateMyRemindersStatus(
+                        typeReminderEnableOrDisabel,
+                        if (enableOrDisable == 1) true else false,
+                        false
+                    )
+                }
+
+                // Y ahora sí, aplicamos el cambio visual a la lista de plantillas
+                pendingTemplateId?.let { targetId ->
+                    templates = templates.map {
+                        if (it.id == targetId) it.copy(isEnabled = pendingNewState) else it
+                    }
+                }
+
+                pendingTemplateId = null
+                showDialogConfirm = false
+            },
+            enableOrDisable = enableOrDisable,
+            typeReminderEnableOrDisabel = typeReminderEnableOrDisabel
+        )
+    }
+
+
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Recordatorios SMS",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
-                        color = Color(0xFF1E232C)
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Regresar",
-                            tint = Color(0xFF1E232C)
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onAddClick) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Agregar plantilla",
-                            tint = Color(0xFF4A6FFF)
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
-            )
-        },
-        containerColor = Color(0xFFF8F9FC)
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Descripción superior
+            item{
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 1.dp, vertical = 1.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onBackClick) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Regresar",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+
+                    // Espacio de separación entre la flecha y el texto
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Text(
+                        text = "Recordatorios clientes",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+            }
             item {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "Automatiza la cobranza enviando mensajes de texto a tus clientes. Ajusta los textos y decide cuándo enviarlos.",
                     fontSize = 14.sp,
-                    color = Color(0xFF838996),
+                    color = MaterialTheme.colorScheme.onSurface,
                     lineHeight = 20.sp
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -151,13 +182,18 @@ fun SmsRemindersScreen(
                 TemplateCard(
                     template = template,
                     onSwitchChanged = { newState ->
-                        if(newState){
-                            showDialogConfirm=true
-                        }
+                        // SOLO guardamos los datos pendientes y abrimos el diálogo.
+                        // NO modificamos la lista 'templates' aquí.
+                        pendingTemplateId = template.id
+                        pendingNewState = newState
                         typeReminderEnableOrDisabel = template.id.toInt()
-                        templates = templates.map {
-                            if (it.id == template.id) it.copy(isEnabled = newState) else it
+
+                        if (newState) {
+                            enableOrDisable = 1
+                        } else {
+                            enableOrDisable = 2
                         }
+                        showDialogConfirm = true
                     },
                     onEditClick = { onEditClick(template.id) }
                 )
@@ -170,6 +206,7 @@ fun SmsRemindersScreen(
     }
 }
 
+
 @Composable
 fun TemplateCard(
     template: SmsTemplate,
@@ -179,7 +216,7 @@ fun TemplateCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
@@ -198,13 +235,13 @@ fun TemplateCard(
                         text = template.title,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1E232C)
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = template.subtitle,
                         fontSize = 13.sp,
-                        color = Color(0xFF838996)
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
 
@@ -213,7 +250,7 @@ fun TemplateCard(
                     Icon(
                         imageVector = Icons.Outlined.Edit,
                         contentDescription = "Editar",
-                        tint = Color(0xFF838996),
+                        tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -258,7 +295,7 @@ fun TemplateCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(
-                        color = Color(0xFFF4F6FB),
+                        color =MaterialTheme.colorScheme.background,
                         shape = RoundedCornerShape(12.dp)
                     )
                     .padding(12.dp)
@@ -286,7 +323,7 @@ fun FormattedSmsText(text: String) {
             append(text)
         },
         fontSize = 13.sp,
-        color = Color(0xFF4E5564),
+        color = MaterialTheme.colorScheme.onSurface,
         lineHeight = 20.sp
     )
 

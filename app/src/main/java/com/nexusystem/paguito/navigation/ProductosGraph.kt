@@ -127,7 +127,11 @@ fun NavGraphBuilder.productosGraph(
                     )
                 },
                 viewModel = perfilViewModel,
-                openSettingsSms = {}
+                openSettingsSms = {
+                    navController.navigate(
+                        Routes.ScreenSettingsSms.route
+                    )
+                }
             )
         }
     }

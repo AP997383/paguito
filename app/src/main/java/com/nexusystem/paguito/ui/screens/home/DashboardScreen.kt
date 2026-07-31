@@ -18,6 +18,7 @@ import com.nexusystem.paguito.domain.data.DeudoresSummary
 import com.nexusystem.paguito.ui.screens.deudores.DeudoresViewModel
 import com.nexusystem.paguito.ui.screens.home.components.*
 import com.nexusystem.paguito.ui.screens.payments.PagosViewModel
+import com.nexusystem.paguito.ui.screens.perfil.PerfiViewModel
 import com.nexusystem.paguito.ui.screens.productos.NativeAdBanner
 import com.nexusystem.paguito.ui.screens.productos.ProductosViewModel
 import com.nexusystem.paguito.utils.dialogs.PremiumLimitReachedDialog
@@ -39,7 +40,8 @@ fun DashboardScreen(
     openNexusPay: () -> Unit,
     deudoresViewModel: DeudoresViewModel,
     pagosViewModel: PagosViewModel,
-    productosViewmodel: ProductosViewModel
+    productosViewmodel: ProductosViewModel,
+    perfilviewmodel: PerfiViewModel
 ) {
     val deudoresHistorial by deudoresViewModel.deudores.collectAsState()
     val sumary1 by deudoresViewModel.sumaryFive.collectAsState()
@@ -82,6 +84,7 @@ fun DashboardScreen(
             Log.e("PROFILE_PHOTO", "-->$profile")
             isSucriptionActive = profile.userSuscription.isActive
             urlPhotoProfile = profile.fotoUrl
+
         }
     }
 

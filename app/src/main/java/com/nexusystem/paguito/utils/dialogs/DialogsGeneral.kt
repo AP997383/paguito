@@ -580,7 +580,7 @@ fun BenefitItem(text: String) {
             modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.width(12.dp))
-        Text(text = text, fontSize = 15.sp, color = TextDark)
+        Text(text = text, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
     }
 }
 

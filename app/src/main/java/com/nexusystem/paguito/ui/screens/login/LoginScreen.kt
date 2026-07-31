@@ -79,7 +79,6 @@ fun LoginScreen(
             token =prefs.getString("MyToken","").toString(),
             userSuscription = successLogin!!.userSuscription?: UserSuscriptionData()
         )
-        Log.e("RESPONSE_LOGIN","-->"+profileToSave)
         secureStorage.saveUserProfile(profileToSave)
         onLoginSuccess(successLogin!!)
         viewModel.resetLogin()

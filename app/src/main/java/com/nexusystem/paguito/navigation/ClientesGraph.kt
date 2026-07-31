@@ -119,7 +119,11 @@ fun NavGraphBuilder.clientesGraph(
                     )
                 },
                 viewModel = perfilViewModel,
-                openSettingsSms = {}
+                openSettingsSms = {
+                    navController.navigate(
+                        Routes.ScreenSettingsSms.route
+                    )
+                }
             )
         }
 

@@ -41,6 +41,7 @@ android {
 
     productFlavors {
         create("dev") {
+            buildConfigField ("String", "CLOUD_RUN_HASH", "\"hmbom6x6sa\"")
             dimension = "environment"
             applicationIdSuffix = ".dev" // Recomendado para que convivan en el mismo dispositivo
             buildConfigField("String", "ENVIRONMENT", "\"DEV\"")
@@ -49,6 +50,7 @@ android {
         }
 
         create("qa") {
+            buildConfigField ("String", "CLOUD_RUN_HASH", "\"hmbom6x6sa\"")
             dimension = "environment"
             applicationIdSuffix = ".qa"
             buildConfigField("String", "ENVIRONMENT", "\"QA\"")
@@ -57,6 +59,7 @@ android {
         }
 
         create("prod") {
+            buildConfigField ("String", "CLOUD_RUN_HASH", "\"2a2qk4zvlq\"")
             dimension = "environment"
             // Prod por lo general no lleva sufijo para mantener el paquete oficial en las tiendas
             buildConfigField("String", "ENVIRONMENT", "\"PROD\"")

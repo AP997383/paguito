@@ -37,9 +37,12 @@ import com.nexusystem.paguito.utils.SecureStorageManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
@@ -97,7 +100,7 @@ class PerfiViewModel @Inject constructor(
 
     var profileState by mutableStateOf<UserProfileEntity?>(null)
         private set
-
+    private val usersCollection = firestore.collection("users")
     private val _currentProductSelected = MutableStateFlow<SuscriptionsItems?>(null)
     val currentProductSelected: StateFlow<SuscriptionsItems?> = _currentProductSelected
 
@@ -120,6 +123,7 @@ class PerfiViewModel @Inject constructor(
         .build()
 
     init {
+
         loadUserProfile()
         startBillingConnection()
     }
@@ -133,6 +137,7 @@ class PerfiViewModel @Inject constructor(
         val savedProfile = secureStorage.getUserProfile()
         _newUrlServer.value = savedProfile?.fotoUrl?:""
         profileState = savedProfile
+        updateMyLocalDataProfile()
     }
 
 
@@ -143,6 +148,21 @@ class PerfiViewModel @Inject constructor(
 
     fun resetDelete(){
         _accountDelete.value =0
+    }
+
+    fun updateMyLocalDataProfile(){
+
+       usersCollection.document(profileState?.email?:"").addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                Log.e("OBTENEMOS_PERFIL", "-->ERROR", error)
+                return@addSnapshotListener
+            }
+            // Convertir el documento único directamente
+            val profile = snapshot?.toObject(UserProfileEntity::class.java)
+            Log.e("PERFIL_FROM_FIREBASE","-->"+profile)
+            secureStorage.saveUserProfile(profile!!)
+        }
+
     }
 
 

@@ -98,13 +98,22 @@ fun ProfileScreen(
     val profile = viewModel.profileState
     var closeSessionDialog by remember { mutableStateOf(false) }
     var showDeleteAccount by remember { mutableStateOf(false) }
-
+    var progreso by remember { mutableStateOf(0f) }
     val currentLangCode = prefs.getString("app_language", "es") ?: "es"
     val prefijo = languajes.filter { it.regionCode == currentLangCode }
     val pref = if (prefijo.isNotEmpty()) prefijo[0].prefij else "es"
     val isLoading by viewModel.isLoading.collectAsState()
     val NeonYellow = Color(0xFFFFFF00)
     val NeonCyan = Color(0xFF00FFE5)
+
+    LaunchedEffect(profile) {
+        progreso = if (profile != null && profile.creditsSmsTotal > 0) {
+            // Se fuerza el cast a Float para evitar la división entera
+            (profile.creditsSms.toFloat() / profile.creditsSmsTotal.toFloat())
+        } else {
+            0f
+        }
+    }
     val currentLangLabel = remember(pref) {
         when (pref) {
             "en" -> "English"
@@ -304,7 +313,7 @@ fun ProfileScreen(
                         onClick = { openSettingsSms() },
                         trailingContent = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(text = currentLangLabel, color = TextSecondary, fontSize = 14.sp)
+                                Text(text = if(profile?.RemindersActive!!) "Activos" else "Inactivos", color = TextSecondary, fontSize = 14.sp)
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null, tint = TextSecondary, modifier = Modifier.size(20.dp))
                             }
@@ -315,9 +324,10 @@ fun ProfileScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(text =  "Créditos recordatorios Watsap" , color = TextGray, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        Text(text = (profile?.creditsSmsTotal!! - profile?.creditsSms!!).toString()  +"/" + profile.creditsSmsTotal.toString(), color = MaterialTheme.colorScheme.primary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Text(text = ( profile?.creditsSms!!).toString()  +"/" + profile.creditsSmsTotal.toString(), color = MaterialTheme.colorScheme.primary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
-                    val progreso: Float = if(profile?.creditsSmsTotal!!>0) ((profile?.creditsSms!! / profile?.creditsSmsTotal!!) * 100).toFloat() else 0F
+
+                    //Log.e("PROGRESO","-->"+ progreso)
                     Column( modifier = Modifier.padding(10.dp)) {
                         Box(
                             modifier = Modifier
