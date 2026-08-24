@@ -17,6 +17,7 @@ import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClientStateListener
 import com.android.billingclient.api.BillingFlowParams
 import com.android.billingclient.api.BillingResult
+import com.android.billingclient.api.PendingPurchasesParams
 import com.android.billingclient.api.ProductDetails
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesUpdatedListener
@@ -116,7 +117,11 @@ class PerfiViewModel @Inject constructor(
     @RequiresApi(Build.VERSION_CODES.O)
     private var billingClient = BillingClient.newBuilder(context)
         .setListener(purchasesUpdatedListener)
-        .enablePendingPurchases()
+        .enablePendingPurchases(
+            PendingPurchasesParams.newBuilder()
+                .enableOneTimeProducts()
+                .build()
+        )
         .build()
 
     init {
@@ -172,10 +177,19 @@ class PerfiViewModel @Inject constructor(
                         .setProductType(BillingClient.ProductType.SUBS)
                         .build()
                 )
-            ).build()
+            )
+            .build()
 
-        billingClient.queryProductDetailsAsync(queryProductDetailsParams) { _, productDetailsList ->
-            _productDetails.value = productDetailsList.firstOrNull()
+        billingClient.queryProductDetailsAsync(queryProductDetailsParams) { billingResult, queryProductDetailsResult ->
+            if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                _productDetails.value = queryProductDetailsResult.productDetailsList.firstOrNull()
+            } else {
+                _productDetails.value = null
+                Log.e(
+                    "BILLING",
+                    "Error consultando producto: ${billingResult.debugMessage}"
+                )
+            }
         }
     }
 
