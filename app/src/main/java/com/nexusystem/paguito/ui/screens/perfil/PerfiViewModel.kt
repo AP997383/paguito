@@ -17,6 +17,7 @@ import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClientStateListener
 import com.android.billingclient.api.BillingFlowParams
 import com.android.billingclient.api.BillingResult
+import com.android.billingclient.api.PendingPurchasesParams
 import com.android.billingclient.api.ProductDetails
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesUpdatedListener
@@ -119,7 +120,11 @@ class PerfiViewModel @Inject constructor(
     @RequiresApi(Build.VERSION_CODES.O)
     private var billingClient = BillingClient.newBuilder(context)
         .setListener(purchasesUpdatedListener)
-        .enablePendingPurchases()
+        .enablePendingPurchases(
+            PendingPurchasesParams.newBuilder()
+                .enableOneTimeProducts()
+                .build()
+        )
         .build()
 
     init {
@@ -197,7 +202,7 @@ class PerfiViewModel @Inject constructor(
             ).build()
 
         billingClient.queryProductDetailsAsync(queryProductDetailsParams) { _, productDetailsList ->
-            _productDetails.value = productDetailsList.firstOrNull()
+            _productDetails.value = productDetailsList?.productDetailsList?.first()
         }
     }
 

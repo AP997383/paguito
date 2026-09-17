@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FirebaseFirestore
 import com.nexusystem.paguito.data.local.entity.SuscriptionsItems
 import com.nexusystem.paguito.data.local.entity.UserProfileEntity
+import com.nexusystem.paguito.data.models.request.ManualWatsapRequest
 import com.nexusystem.paguito.data.models.request.SendOtpRequest
 import com.nexusystem.paguito.data.models.responses.LoginResponse
 import com.nexusystem.paguito.data.models.responses.SuscriptionsResponse
@@ -165,6 +166,22 @@ class AuthViewModel @Inject constructor(
             _errorMessage.value = ""
             try {
                 val result = authRepository.crearRecordatorios(profileState?.email?:"",typeReminderEnableOrDisabel)
+                _remindersSucess.value = result
+            } catch (e: Exception) {
+                _errorMessage.value = e.message?:""
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun manualWatsap(typeReminder:Int,nombreCliente:String,telefonoCliente:String,saldoRestante:String,proximopago:String) {
+
+        viewModelScope.launch {
+            _isLoading.value = true
+            _errorMessage.value = ""
+            try {
+                val result = authRepository.manualWatsap(ManualWatsapRequest(telefonoCliente,profileState?.fullName?:"",nombreCliente,profileState?.email?:"",saldoRestante,typeReminder,profileState?.phone?:"",proximopago = proximopago))
                 _remindersSucess.value = result
             } catch (e: Exception) {
                 _errorMessage.value = e.message?:""

@@ -445,10 +445,10 @@ fun ProductCardItem(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Row(modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.weight(1f)) {
+                       /* Column(modifier = Modifier.weight(1f)) {
                             Text("COSTO", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                            Text(formatAsCurrency(product.precioOriginal), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                        }
+                            Text(if(showCosto) formatAsCurrency(product.precioOriginal) else "$**.**", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                        }*/
                         Column(modifier = Modifier.weight(1f)) {
                             Text("VENTA", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = TextLightGray)
                             Text(formatAsCurrency(product.precioConGanancia), fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)

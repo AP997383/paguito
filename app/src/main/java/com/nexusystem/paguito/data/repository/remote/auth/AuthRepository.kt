@@ -4,6 +4,7 @@ import com.nexusystem.paguito.data.models.request.ChangePasswordRequest
 import com.nexusystem.paguito.data.models.request.DeleteAccountRequest
 import com.nexusystem.paguito.data.models.request.GetAllMyDataRequest
 import com.nexusystem.paguito.data.models.request.LoginRequest
+import com.nexusystem.paguito.data.models.request.ManualWatsapRequest
 import com.nexusystem.paguito.data.models.request.SuscripcionPurchaseRequest
 import com.nexusystem.paguito.data.models.request.VerifyOtpRequest
 import com.nexusystem.paguito.data.models.request.recordatoriosRequest
@@ -56,6 +57,18 @@ class AuthRepository @Inject constructor(
             return response.body()?.ok == true
         } else {
            return  false;
+        }
+    }
+
+    suspend fun manualWatsap(request: ManualWatsapRequest): Boolean {
+        val response = authApi.manualWatsap(
+            request = request
+        )
+
+        if (response.isSuccessful) {
+            return response.body()?.ok == true
+        } else {
+            return  false;
         }
     }
 

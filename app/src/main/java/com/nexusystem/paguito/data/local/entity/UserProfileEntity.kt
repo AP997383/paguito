@@ -9,8 +9,8 @@ data class UserProfileEntity(
     val bussinesName: String="",
     val phone: String="",
     val token: String="",
-    val creditsSms: Int=0,
-    val creditsSmsTotal: Int=0,
+    val watsapSended: Int=0,
+    val watsapsSendedTotal: Int=0,
     val userSuscription:UserSuscriptionData =UserSuscriptionData(),
     var verified: Boolean =true,
     @SerializedName("RemindersActive")

@@ -453,6 +453,209 @@ fun LogoutConfirmationDialog(
 }
 
 @Composable
+fun NoPremiumDialog(
+    onDismiss: () -> Unit,
+    onUpgrade: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = Color.White,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Header (Icono y Badge)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .background(GreenLightBg, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        // Reemplaza con tu icono de corona
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_cown),
+                            contentDescription = null,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+
+                    Surface(
+                        color = GrayBadgeBg,
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Text(
+                            text = "Plan: FREE",
+                            color = TextSecondary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Título y Descripción
+                Text(
+                    text = "Función PREMIUM",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextDark,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Start
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = "Esta opción solo se puede activar con una suscripción, pero aun puedes mandar recordatorio desde el detalle de tu cliente",
+                    fontSize = 15.sp,
+                    color = TextSecondary,
+                    lineHeight = 22.sp,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Start
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                // Botones
+                Button(
+                    onClick = onUpgrade,
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary)
+                ) {
+                    Text("Entendido", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PremiumLimitWatsapsReachedDialog(
+    onDismiss: () -> Unit,
+    onUpgrade: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = Color.White,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Header (Icono y Badge)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .background(GreenLightBg, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        // Reemplaza con tu icono de corona
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_cown),
+                            contentDescription = null,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+
+                    Surface(
+                        color = GrayBadgeBg,
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Text(
+                            text = "Plan: FREE",
+                            color = TextSecondary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Título y Descripción
+                Text(
+                    text = "Límite alcanzado",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextDark,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Start
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = "Agotaste el limite gratis que tenias, vuelvete premium y desbloquea ilimitadamente la gestión de recordatorios a tus clientes.",
+                    fontSize = 15.sp,
+                    color = TextSecondary,
+                    lineHeight = 22.sp,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Start
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Lista de Beneficios
+                Surface(
+                    color = GreenLightBg.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, GreenPrimary.copy(alpha = 0.1f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        BenefitItem("Recordatorios de morosidad automáticos")
+                        BenefitItem("Envios de informacion de pago")
+                        BenefitItem("Recordatorios de próximas fechas de pagos a tus clientes")
+                        BenefitItem("Mandar watsaps personalizados a tus clientes")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                // Botones
+               /* Button(
+                    onClick = onUpgrade,
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary)
+                ) {
+                    Text("Actualizar a Premium", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                }*/
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, GrayBorder)
+                ) {
+                    Text("Entendido", fontSize = 16.sp, color = TextSecondary)
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
 fun PremiumLimitReachedDialog(
     onDismiss: () -> Unit,
     onUpgrade: () -> Unit

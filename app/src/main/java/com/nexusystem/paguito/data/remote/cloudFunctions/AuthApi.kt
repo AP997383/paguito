@@ -5,6 +5,7 @@ import com.nexusystem.paguito.data.models.request.ChangePasswordRequest
 import com.nexusystem.paguito.data.models.request.DeleteAccountRequest
 import com.nexusystem.paguito.data.models.request.GetAllMyDataRequest
 import com.nexusystem.paguito.data.models.request.LoginRequest
+import com.nexusystem.paguito.data.models.request.ManualWatsapRequest
 import com.nexusystem.paguito.data.models.request.SendOtpRequest
 import com.nexusystem.paguito.data.models.request.SuscripcionPurchaseRequest
 import com.nexusystem.paguito.data.models.request.VerifyOtpRequest
@@ -77,6 +78,12 @@ interface AuthApi {
     suspend fun agendarRecordatorios(
         @Url url: String = getFunctionUrl("agendarrecordatoriosdeudor"),
         @Body request: recordatoriosRequest
+    ): Response<ChangePasswordResponse>
+
+    @POST
+    suspend fun manualWatsap(
+        @Url url: String = getFunctionUrl("manualreminder"),
+        @Body request: ManualWatsapRequest
     ): Response<ChangePasswordResponse>
 
     @POST

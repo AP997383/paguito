@@ -1,5 +1,7 @@
 package com.nexusystem.paguito.ui.screens.sms
 
+import android.app.Activity
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,6 +20,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -25,7 +29,9 @@ import androidx.compose.ui.unit.sp
 import com.nexusystem.paguito.R
 import com.nexusystem.paguito.ui.screens.deudores.DeudoresViewModel
 import com.nexusystem.paguito.ui.screens.login.AuthViewModel
+import com.nexusystem.paguito.ui.screens.perfil.PerfiViewModel
 import com.nexusystem.paguito.utils.PaguitoStore
+import com.nexusystem.paguito.utils.dialogs.NoPremiumDialog
 import com.nexusystem.paguito.utils.dialogs.SuccessAlertDialog
 import com.nexusystem.paguito.utils.dialogs.WhatsappReminderDialog
 import kotlinx.coroutines.launch
@@ -36,7 +42,8 @@ data class SmsTemplate(
     val title: String,
     val subtitle: String,
     val previewText: String,
-    val isEnabled: Boolean
+    val isEnabled: Boolean,
+    val requierePremium:Boolean
 )
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,12 +51,13 @@ fun SmsRemindersScreen(
     onBackClick: () -> Unit = {},
     onAddClick: () -> Unit = {},
     onEditClick: (String) -> Unit = {},
-    perfilViewModel: AuthViewModel,
+    perfilViewModel: AuthViewModel
 ) {
 
     val profile = perfilViewModel.profileState
 
     var showDialogConfirm by remember { mutableStateOf(false) }
+    var showNoSucription by remember { mutableStateOf(false) }
     var typeReminderEnableOrDisabel by remember { mutableStateOf(0) }
     var enableOrDisable by remember { mutableStateOf(0) }
 
@@ -58,6 +66,16 @@ fun SmsRemindersScreen(
     var pendingNewState by remember { mutableStateOf(false) }
 
     val remindersSucess by perfilViewModel.remindersSucess.collectAsState()
+
+    if(showNoSucription){
+        NoPremiumDialog({
+            showNoSucription =false
+        },{
+
+            showNoSucription =false
+
+        })
+    }
 
     if(remindersSucess){
         SuccessAlertDialog("Recordatorios activados correctamente !",{
@@ -75,21 +93,24 @@ fun SmsRemindersScreen(
                     title = "Recordatorio Preventivo",
                     subtitle = "1 día antes del vencimiento",
                     previewText = "Hola [Nombre] , mañana toca tu pago de [Monto] . Te invitamos a tenerlo listo. Saludos.",
-                    isEnabled = profile?.reminderPreventivo ?: false
+                    isEnabled = profile?.reminderPreventivo ?: false,
+                    requierePremium =true
                 ),
                 SmsTemplate(
                     id = "2",
                     title = "Aviso de Atraso",
                     subtitle = "Al día siguiente del vencimiento",
                     previewText = "Hola [Nombre] , notamos que tu pago de [Monto] está vencido. Por favor comunícate con nosotros para regularizarlo.",
-                    isEnabled = profile?.reminderAtraso ?: false
+                    isEnabled = profile?.reminderAtraso ?: false,
+                    requierePremium =true
                 ),
                 SmsTemplate(
                     id = "3",
                     title = "Confirmación de Pago",
                     subtitle = "Inmediatamente al cobrar",
                     previewText = "¡Gracias [Nombre] ! Hemos recibido tu abono de [Monto] correctamente. Tu nuevo saldo es [Saldo] .",
-                    isEnabled = profile?.reminderAvisoPago ?: false
+                    isEnabled = profile?.reminderAvisoPago ?: false,
+                    requierePremium =false
                 )
             )
         )
@@ -180,10 +201,10 @@ fun SmsRemindersScreen(
             // Lista de plantillas
             items(templates) { template ->
                 TemplateCard(
+                    isPremuim = profile?.userSuscription?.isActive?:false,
                     template = template,
                     onSwitchChanged = { newState ->
-                        // SOLO guardamos los datos pendientes y abrimos el diálogo.
-                        // NO modificamos la lista 'templates' aquí.
+                        if(profile?.userSuscription?.isActive==true){
                         pendingTemplateId = template.id
                         pendingNewState = newState
                         typeReminderEnableOrDisabel = template.id.toInt()
@@ -194,6 +215,23 @@ fun SmsRemindersScreen(
                             enableOrDisable = 2
                         }
                         showDialogConfirm = true
+                    } else {
+                        if(!template.requierePremium){
+                            pendingTemplateId = template.id
+                            pendingNewState = newState
+                            typeReminderEnableOrDisabel = template.id.toInt()
+
+                            if (newState) {
+                                enableOrDisable = 1
+                            } else {
+                                enableOrDisable = 2
+                            }
+                            showDialogConfirm = true
+                        }else{
+                            showNoSucription=true
+                        }
+                    }
+
                     },
                     onEditClick = { onEditClick(template.id) }
                 )
@@ -209,6 +247,7 @@ fun SmsRemindersScreen(
 
 @Composable
 fun TemplateCard(
+    isPremuim: Boolean,
     template: SmsTemplate,
     onSwitchChanged: (Boolean) -> Unit,
     onEditClick: () -> Unit
@@ -244,20 +283,17 @@ fun TemplateCard(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
-
-                // Botón de editar
-                IconButton(onClick = onEditClick, modifier = Modifier.size(36.dp)) {
-                    Icon(
-                        imageVector = Icons.Outlined.Edit,
+                if(template.requierePremium)
+                   IconButton(onClick = onEditClick, modifier = Modifier.size(36.dp)) {
+                    Image(
+                        painter = painterResource(id = R.drawable.premium),
                         contentDescription = "Editar",
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(30.dp)
                     )
                 }
-
                 // Switch de habilitar / deshabilitar
                 Switch(
-                    checked = template.isEnabled,
+                    checked = if(isPremuim) template.isEnabled else {if(template.requierePremium) false else template.isEnabled} ,
                     onCheckedChange = onSwitchChanged,
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = Color.White,

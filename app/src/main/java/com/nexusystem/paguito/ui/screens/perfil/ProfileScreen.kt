@@ -107,9 +107,9 @@ fun ProfileScreen(
     val NeonCyan = Color(0xFF00FFE5)
 
     LaunchedEffect(profile) {
-        progreso = if (profile != null && profile.creditsSmsTotal > 0) {
+        progreso = if (profile != null && profile.watsapSended > 0) {
             // Se fuerza el cast a Float para evitar la división entera
-            (profile.creditsSms.toFloat() / profile.creditsSmsTotal.toFloat())
+            (profile.watsapSended.toFloat() / 10)
         } else {
             0f
         }
@@ -324,7 +324,7 @@ fun ProfileScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(text =  "Créditos recordatorios Watsap" , color = TextGray, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        Text(text = ( profile?.creditsSms!!).toString()  +"/" + profile.creditsSmsTotal.toString(), color = MaterialTheme.colorScheme.primary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Text(text = if(profile?.userSuscription?.isActive==true){ "Ilimitados"}else{( profile?.watsapSended!!).toString()  +"/10"} , color = MaterialTheme.colorScheme.primary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
 
                     //Log.e("PROGRESO","-->"+ progreso)

@@ -47,11 +47,14 @@ import com.nexus.medi.data.local.entity.DeudoresEntity
 import com.nexus.medi.data.local.entity.PagosEntinty
 import com.nexus.medi.data.local.entity.PagostoPreviewTiket
 import com.nexus.medi.data.local.entity.PorductosEntity
+import com.nexusystem.paguito.R
 import com.nexusystem.paguito.ui.screens.payments.PagosViewModel
 import com.nexusystem.paguito.ui.screens.payments.PeriodItem
 import com.nexusystem.paguito.ui.screens.productos.RedAlert
+import com.nexusystem.paguito.utils.LoadingOverlay
 import com.nexusystem.paguito.utils.bottomsSheets.AbonoBottomSheet
 import com.nexusystem.paguito.utils.calcularSiguienteVencimiento
+import com.nexusystem.paguito.utils.dialogs.PremiumLimitWatsapsReachedDialog
 import com.nexusystem.paguito.utils.dialogs.SuccessAbonoDialog
 import com.nexusystem.paguito.utils.dialogs.SuccessDialog
 import com.nexusystem.paguito.utils.emptyStates.PaymentHistoryEmptyState
@@ -90,8 +93,10 @@ data class Transaction(
 fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntity,viewmodelDeudro: DeudoresViewModel,pagosViewModel: PagosViewModel,
                           openPreviewTicket:(PagostoPreviewTiket)->Unit,openDetailVenta:(PagosEntinty)->Unit,openAcountState:(DeudoresEntity)->Unit) {
     var showFastPayment by remember { mutableStateOf(false) }
+    val isLoading by viewmodelDeudro.isLoading.collectAsState()
     val pagosPorCliente by pagosViewModel.pagos.collectAsState()
     val deleteSuccess by pagosViewModel.deleteSuccess.collectAsState()
+    val reminderSuccess by viewmodelDeudro.reminderSuccess.collectAsState()
     var showSuccessPayment by remember { mutableStateOf(false) }
     var paymentData by remember{ mutableStateOf(PagosEntinty())}
     var paymentDatapreviewTiket by remember{ mutableStateOf(PagostoPreviewTiket())}
@@ -99,9 +104,55 @@ fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntit
     var pagado = 0.0f
     var saldoPendiente = 0.0f
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showReminders by remember { mutableStateOf(false) }
+    var showNOMoreWatsaps by remember { mutableStateOf(false) }
 
     var filtroSeleccionado by remember { mutableStateOf(PagoFiltro.TODOS) }
+    Log.e("DATA_CALCULATE","-->"+pagosPorCliente)
 
+    if(reminderSuccess) {
+        SuccessDialog("!Se envio el recordatorio a tu cliente correctamente!", {
+            viewmodelDeudro.resetreminderSuccess()
+            onBackClick()
+        }, {
+            onBackClick()
+        })
+    }
+
+    val profile = pagosViewModel.profileState
+    val fechasPagosRealizados = remember(pagosPorCliente) {
+        pagosPorCliente.filter { it?.isIngreso!! }.mapNotNull { pago ->
+            pago?.fechaAbono?.let { fechaStr ->
+                try {
+                    // Intentar primero como fecha y hora (yyyy-MM-dd HH:mm:ss)
+                    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                    LocalDateTime.parse(fechaStr, formatter).toLocalDate()
+                } catch (e: Exception) {
+                    try {
+                        // Si falla, intentar como fecha simple (yyyy-MM-dd)
+                        LocalDate.parse(fechaStr)
+                    } catch (e2: Exception) {
+                        Log.e("DATA_CALCULATE", "Error al parsear fecha: $fechaStr", e2)
+                        null
+                    }
+                }
+            }
+        }.sorted() // Ordenamos las fechas ya parseadas
+    }
+    val proximaFecha by remember(deudorData.fechaInicialDeuda, fechasPagosRealizados) {
+        derivedStateOf {
+            try {
+                val fechaInicio = LocalDate.parse(deudorData.fechaInicialDeuda)
+                calcularSiguienteVencimiento(
+                    fechaInicio,
+                    deudorData.periodicidad,
+                    fechasPagosRealizados
+                )
+            } catch (e: Exception) {
+                LocalDate.now() // Fallback seguro
+            }
+        }
+    }
     // 2. Filtrado inteligente de la lista usando derivedStateOf
     val listaFiltrada by remember {
         derivedStateOf {
@@ -134,6 +185,34 @@ fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntit
             }
         )
     }
+    if(showNOMoreWatsaps){
+        PremiumLimitWatsapsReachedDialog({
+            showNOMoreWatsaps =false
+        },{
+            showNOMoreWatsaps =false
+        })
+    }
+
+    if(showReminders){
+        ElegirTipoRecordatorioBottomSheet({
+            showReminders =false
+        },{
+            if(profile?.userSuscription?.isActive==true) {
+                viewmodelDeudro.manualWatsap(
+                    it,
+                    deudorData.nombre,
+                    deudorData.telefono,
+                    saldoPendiente.toString(),
+                    proximaFecha.toString()
+                )
+            }else{
+                if(profile?.watsapSended?:0>=10){
+                    showNOMoreWatsaps =true
+                }
+            }
+            showReminders =false
+        })
+    }
 
     LaunchedEffect(pagosPorCliente) {
         if(pagosPorCliente.size>0) {
@@ -146,41 +225,7 @@ fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntit
     }
 
 
-    val profile = pagosViewModel.profileState
-    val fechasPagosRealizados = remember(pagosPorCliente) {
-        pagosPorCliente.filter { it?.isIngreso!! }.mapNotNull { pago ->
-            pago?.fechaAbono?.let { fechaStr ->
-                try {
-                    // Intentar primero como fecha y hora (yyyy-MM-dd HH:mm:ss)
-                    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-                    LocalDateTime.parse(fechaStr, formatter).toLocalDate()
-                } catch (e: Exception) {
-                    try {
-                        // Si falla, intentar como fecha simple (yyyy-MM-dd)
-                        LocalDate.parse(fechaStr)
-                    } catch (e2: Exception) {
-                        Log.e("DATA_CALCULATE", "Error al parsear fecha: $fechaStr", e2)
-                        null
-                    }
-                }
-            }
-        }.sorted() // Ordenamos las fechas ya parseadas
-    }
-    Log.e("DATA_CALCULATE","-->"+pagosPorCliente)
-    val proximaFecha by remember(deudorData.fechaInicialDeuda, fechasPagosRealizados) {
-        derivedStateOf {
-            try {
-                val fechaInicio = LocalDate.parse(deudorData.fechaInicialDeuda)
-                calcularSiguienteVencimiento(
-                    fechaInicio,
-                    deudorData.periodicidad,
-                    fechasPagosRealizados
-                )
-            } catch (e: Exception) {
-                LocalDate.now() // Fallback seguro
-            }
-        }
-    }
+
 
     val esAtrasado = remember(proximaFecha) { proximaFecha.isBefore(LocalDate.now())}
 
@@ -248,164 +293,174 @@ fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntit
 
         }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Perfil de Cliente", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextDark2) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Atrás", tint = TextDark2)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = CardWhite),
-                windowInsets = WindowInsets(0.dp)
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showFastPayment = true },
-                containerColor = BluePrimary2,
-                contentColor = Color.White,
-                shape = CircleShape,
-                modifier = Modifier.size(56.dp)
-            ) {
-                Text("$", fontSize = 24.sp, fontWeight = FontWeight.Medium)
-            }
-        },
-        containerColor = BgColor
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 80.dp)
-            ) {
-                item {
-                // 1. BANNER DE ALERTA ROJO
-                if (esAtrasado) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(RedAlert)
-                            .padding(vertical = 12.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Outlined.ErrorOutline,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            "Atrasado",
-                            color = Color.White,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+    Box{
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Perfil de Cliente", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextDark2) },
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Atrás", tint = TextDark2)
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = CardWhite),
+                    windowInsets = WindowInsets(0.dp)
+                )
+            },
+            floatingActionButton = {
+                FloatingActionButton(
+                    onClick = { showFastPayment = true },
+                    containerColor = BluePrimary2,
+                    contentColor = Color.White,
+                    shape = CircleShape,
+                    modifier = Modifier.size(56.dp)
+                ) {
+                    Text("$", fontSize = 24.sp, fontWeight = FontWeight.Medium)
                 }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // 2. CABECERA DEL PERFIL (Avatar, Nombre, Botones)
-                ProfileHeaderSection(deudorData.nombre, deudorData.telefono,{
-                    openAcountState(deudorData)
-                })
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                saldoPendiente = deudorData.montoActualAdeudado
-                // 3. TARJETA DE SALDO PENDIENTE
-                BalanceCard(
-                    deudorData.montoAcomulado,
-                    deudorData.montoAcomulado- saldoPendiente,
-                    saldoPendiente,
-                    deudorData.periodicidad,
-                    proximaFecha.toString()
-                )
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                // 4. HISTORIAL DE TRANSACCIONES
-                Text(
-                    text = "Historial de Transacciones",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextDark2,
-                    modifier = Modifier.padding(horizontal = 20.dp)
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 20.dp),
-                        horizontalArrangement = Arrangement.Center, // Centra los elementos horizontalmente
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        PagoFiltro.values().forEach { filtro ->
-                            val isSelected = filtroSeleccionado == filtro
-
-                            Surface(
+            },
+            containerColor = BgColor
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            ) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 80.dp)
+                ) {
+                    item {
+                        // 1. BANNER DE ALERTA ROJO
+                        if (esAtrasado) {
+                            Row(
                                 modifier = Modifier
-                                    .padding(horizontal = 8.dp) // Espaciado entre chips
-                                    .clickable { filtroSeleccionado = filtro },
-                                shape = RoundedCornerShape(20.dp), // Esquinas muy redondeadas tipo píldora
-                                color = if (isSelected) Color(0xFF3283F6) else Color(0xFFF1F3F4) // Color azul o gris de image_14.png
+                                    .fillMaxWidth()
+                                    .background(RedAlert)
+                                    .padding(vertical = 12.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
+                                Icon(
+                                    Icons.Outlined.ErrorOutline,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = filtro.name, // Usar title con capitalización correcta
-                                    color = if (isSelected) Color.White else Color(0xFF5F6368), // Texto blanco o gris oscuro
-                                    fontSize = 12.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp) // Padding interno generoso
+                                    "Atrasado",
+                                    color = Color.White,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
                         }
-                    }
-                    }
 
-                // 3. Barra Horizontal de Chips
+                        Spacer(modifier = Modifier.height(24.dp))
 
-                if (listaFiltrada.isEmpty()) {
-                    item {   PaymentHistoryEmptyState(modifier = Modifier, {}) }
-                } else {
-                    items(listaFiltrada) { tx ->
-                        if (tx != null) {
-                            val contactText = listOfNotNull(profile?.email, profile?.phone).joinToString(" / ")
-                            TransactionItem(transaction = tx, isLast = tx == listaFiltrada.last(),{
-                                openDetailVenta(tx)
-                            },{
-                                paymentDatapreviewTiket =PagostoPreviewTiket(
-                                    contactText,
-                                    deudorData.nombre,profile?.bussinesName.toString(),tx.montoAbonado,
-                                    saldoAntesDeAbono =  (tx.saldoAntesDeAbono).toInt(),
-                                    getTodayDateString(),
-                                    deudorData.montoActualAdeudado.toInt() - tx.montoAbonado,
-                                    1,
-                                    tx.jsonAbonoPorProducto,
-                                    isIngreso = tx.isIngreso
+                        // 2. CABECERA DEL PERFIL (Avatar, Nombre, Botones)
+                        ProfileHeaderSection(deudorData.nombre, deudorData.telefono,{
+                            openAcountState(deudorData)
+                        },{
+                            showReminders =true
+                        })
 
-                                )
-                                openPreviewTicket(paymentDatapreviewTiket)
-                            },{
-                                currentpaymentSelected = tx
-                                showDeleteDialog =true
-                            })
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        saldoPendiente = deudorData.montoActualAdeudado
+                        // 3. TARJETA DE SALDO PENDIENTE
+                        BalanceCard(
+                            deudorData.montoAcomulado,
+                            deudorData.montoAcomulado- saldoPendiente,
+                            saldoPendiente,
+                            deudorData.periodicidad,
+                            proximaFecha.toString()
+                        )
+
+                        Spacer(modifier = Modifier.height(32.dp))
+
+                        // 4. HISTORIAL DE TRANSACCIONES
+                        Text(
+                            text = "Historial de Transacciones",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextDark2,
+                            modifier = Modifier.padding(horizontal = 20.dp)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 20.dp),
+                            horizontalArrangement = Arrangement.Center, // Centra los elementos horizontalmente
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            PagoFiltro.values().forEach { filtro ->
+                                val isSelected = filtroSeleccionado == filtro
+
+                                Surface(
+                                    modifier = Modifier
+                                        .padding(horizontal = 8.dp) // Espaciado entre chips
+                                        .clickable { filtroSeleccionado = filtro },
+                                    shape = RoundedCornerShape(20.dp), // Esquinas muy redondeadas tipo píldora
+                                    color = if (isSelected) Color(0xFF3283F6) else Color(0xFFF1F3F4) // Color azul o gris de image_14.png
+                                ) {
+                                    Text(
+                                        text = filtro.name, // Usar title con capitalización correcta
+                                        color = if (isSelected) Color.White else Color(0xFF5F6368), // Texto blanco o gris oscuro
+                                        fontSize = 12.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp) // Padding interno generoso
+                                    )
+                                }
+                            }
                         }
                     }
-                }
-                item{
-                    Spacer(modifier = Modifier.height(80.dp)) // Espacio para que el FAB no tape el contenido
-                }
 
+                    // 3. Barra Horizontal de Chips
+
+                    if (listaFiltrada.isEmpty()) {
+                        item {   PaymentHistoryEmptyState(modifier = Modifier, {}) }
+                    } else {
+                        items(listaFiltrada) { tx ->
+                            if (tx != null) {
+                                val contactText = listOfNotNull(profile?.email, profile?.phone).joinToString(" / ")
+                                TransactionItem(transaction = tx, isLast = tx == listaFiltrada.last(),{
+                                    openDetailVenta(tx)
+                                },{
+                                    paymentDatapreviewTiket =PagostoPreviewTiket(
+                                        contactText,
+                                        deudorData.nombre,profile?.bussinesName.toString(),tx.montoAbonado,
+                                        saldoAntesDeAbono =  (tx.saldoAntesDeAbono).toInt(),
+                                        getTodayDateString(),
+                                        deudorData.montoActualAdeudado.toInt() - tx.montoAbonado,
+                                        1,
+                                        tx.jsonAbonoPorProducto,
+                                        isIngreso = tx.isIngreso
+
+                                    )
+                                    openPreviewTicket(paymentDatapreviewTiket)
+                                },{
+                                    currentpaymentSelected = tx
+                                    showDeleteDialog =true
+                                })
+                            }
+                        }
+                    }
+                    item{
+                        Spacer(modifier = Modifier.height(80.dp)) // Espacio para que el FAB no tape el contenido
+                    }
+
+                }
             }
         }
+        LoadingOverlay(
+            isLoading = isLoading,
+            lottieRes = R.raw.loadings
+        )
     }
+
+
 }
 enum class PagoFiltro {
     TODOS,
@@ -415,7 +470,7 @@ enum class PagoFiltro {
 // --- COMPONENTES SECUNDARIOS ---
 
 @Composable
-fun ProfileHeaderSection(name:String,phone: String,openAcountState:()->Unit) {
+fun ProfileHeaderSection(name:String,phone: String,openAcountState:()->Unit, OpenEndRangeeminders:()->Unit) {
     val context = LocalContext.current
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -453,10 +508,16 @@ fun ProfileHeaderSection(name:String,phone: String,openAcountState:()->Unit) {
                 }
                 context.startActivity(intent)
             }
-
-            // --- BOTÓN WHATSAPP ---
-            // --- BOTÓN WHATSAPP ---
             ActionIconButton(
+                icon = Icons.Outlined.AdsClick,
+                tint = BluePrimary2,
+                label = "Notificar a cliente"
+            ) {
+                OpenEndRangeeminders()
+            }
+            // --- BOTÓN WHATSAPP ---
+            // --- BOTÓN WHATSAPP ---
+          /*  ActionIconButton(
                 icon = Icons.Outlined.ChatBubbleOutline,
                 tint = TextDark2,
                 label = "WhatsApp"
@@ -479,7 +540,7 @@ fun ProfileHeaderSection(name:String,phone: String,openAcountState:()->Unit) {
                     val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(waUrl))
                     context.startActivity(browserIntent)
                 }
-            }
+            }*/
             ActionIconButton(
                 icon = Icons.Outlined.AccountBalance,
                 tint = BluePrimary2,
@@ -487,6 +548,9 @@ fun ProfileHeaderSection(name:String,phone: String,openAcountState:()->Unit) {
             ) {
                 openAcountState()
             }
+        }
+        Row() {
+
         }
     }
 }
