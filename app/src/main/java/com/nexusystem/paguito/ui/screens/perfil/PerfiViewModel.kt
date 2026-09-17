@@ -199,10 +199,19 @@ class PerfiViewModel @Inject constructor(
                         .setProductType(BillingClient.ProductType.SUBS)
                         .build()
                 )
-            ).build()
+            )
+            .build()
 
-        billingClient.queryProductDetailsAsync(queryProductDetailsParams) { _, productDetailsList ->
-            _productDetails.value = productDetailsList?.productDetailsList?.first()
+        billingClient.queryProductDetailsAsync(queryProductDetailsParams) { billingResult, queryProductDetailsResult ->
+            if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                _productDetails.value = queryProductDetailsResult.productDetailsList.firstOrNull()
+            } else {
+                _productDetails.value = null
+                Log.e(
+                    "BILLING",
+                    "Error consultando producto: ${billingResult.debugMessage}"
+                )
+            }
         }
     }
 
