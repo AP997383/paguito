@@ -39,9 +39,9 @@ import com.nexusystem.paguito.utils.dialogs.SuccessDialog
 @Composable
 fun EditProfileScreen(onBackClick: () -> Unit = {},viewModel:PerfiViewModel) {
     val context = LocalContext.current
-    var businessName by remember { mutableStateOf("") }
-    var myName by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
+    var businessName by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
+    var myName by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
+    var phone by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var imageUri by remember { mutableStateOf<Uri?>(null) }
     val secureStorage = SecureStorageManager(context)
@@ -75,175 +75,20 @@ if(updateSucess) {
     })
 }
 
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        "Editar Perfil",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "Atrás")
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor =MaterialTheme.colorScheme.background
-                ),
-                windowInsets = WindowInsets(0.dp)
-            )
-        },
-        bottomBar = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp, bottom = 50.dp, end = 16.dp, top = 5.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                /*TextButton(onClick = { /* Acción eliminar */ }) {
-                    Text("Eliminar cuenta", color = Color.Red)
-                }*/
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(
-                    onClick = {
-                        val currentProfile = secureStorage.getUserProfile()
-
-                        if (currentProfile != null) {
-                            // 2. Usamos .copy() para cambiar solo los datos del perfil
-                            // Esto mantiene intacto 'userSuscription' y cualquier otro campo no mencionado
-                            val profileToSave = currentProfile.copy(
-                                email = email,
-                                fotoUrl = newUrlFromServer,
-                                fullName = myName,
-                                bussinesName = businessName,
-                                phone = phone
-                                // No mencionamos 'token' ni 'userSuscription', así que conservan sus valores previos
-                            )
-
-                            // 3. Guardamos el objeto actualizado
-                            secureStorage.saveUserProfile(profileToSave)
-                            viewModel.updateAllInfo(email,profileToSave)
-                        }
-
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF10CE81) // Verde esmeralda del diseño
-                    )
-                ) {
-                    Text("Guardar cambios", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+    Box {
+        EditProfileContent(businessName, myName, phone, email,
+            imageUri?.toString() ?: newUrlFromServer.ifBlank { profile?.fotoUrl.orEmpty() }, isLoading,
+            { businessName = it }, { myName = it }, { phone = it }, onBackClick,
+            onSave = {
+                secureStorage.getUserProfile()?.let { current ->
+                    val updated = current.copy(email = email, fotoUrl = newUrlFromServer.ifBlank { current.fotoUrl },
+                        fullName = myName, bussinesName = businessName, phone = phone)
+                    secureStorage.saveUserProfile(updated)
+                    viewModel.updateAllInfo(email, updated)
                 }
-            }
-        },
-        containerColor = MaterialTheme.colorScheme.background // Fondo gris muy claro
-    ) { paddingValues ->
-        Box{
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Sección de Foto de Perfil
-                Box(contentAlignment = Alignment.BottomEnd) {
-                    AsyncImage(
-                        model = newUrlFromServer, // Reemplazar con URL real
-                        contentDescription = "Foto de perfil",
-                        modifier = Modifier
-                            .size(120.dp)
-                            .clip(CircleShape)
-                            .background(Color.LightGray),
-                        contentScale = ContentScale.Crop
-                    )
-                    // Botón flotante de cámara
-                    Surface(
-                        shape = CircleShape,
-                        color = Color(0xFF10CE81),
-                        modifier = Modifier
-                            .size(36.dp)
-                            .padding(2.dp),
-                        border = androidx.compose.foundation.BorderStroke(2.dp, Color.White)
-                    ) {
-                        PhotoPickerSection({
-                            imageUri = it
-                            viewModel.updateProfile(email,it)
-                        },imageUri)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                // Card de Información del Perfil
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    shape = RoundedCornerShape(24.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                ) {
-                    Column(modifier = Modifier.padding(20.dp)) {
-                        // Campo Nombre del Negocio
-                        CustomInputField(
-                            label = "Nombre del negocio",
-                            optional = true,
-                            value = businessName,
-                            onValueChange = { businessName = it },
-                            placeholder = "Ej. Mi Tienda Increíble",
-                            leadingIcon = Icons.Outlined.Store
-                        )
-
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        // Campo Mi Nombre
-                        CustomInputField(
-                            label = "Mi nombre",
-                            required = true,
-                            value = myName,
-                            onValueChange = { myName = it },
-                            leadingIcon = Icons.Outlined.Person
-                        )
-
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        // Campo Teléfono
-                        CustomInputField(
-                            label = "Teléfono",
-                            required = true,
-                            value = phone,
-                            onValueChange = { phone = it },
-                            leadingIcon = Icons.Outlined.Phone
-                        )
-
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        // Campo Correo (Deshabilitado según diseño)
-                        CustomInputField(
-                            label = "Correo electrónico",
-                            value = email,
-                            onValueChange = { },
-                            leadingIcon = Icons.Outlined.Email,
-                            enabled = false,
-                            footerText = "El correo no se puede cambiar desde aquí."
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(40.dp))
-            }
-            LoadingOverlay(
-                isLoading = isLoading,
-                lottieRes = R.raw.loadings
-            )
-        }
-
+            },
+            photoPicker = { PhotoPickerSection({ imageUri = it; viewModel.updateProfile(email, it) }, imageUri) })
+        LoadingOverlay(isLoading = isLoading, lottieRes = R.raw.loadings)
     }
 }
 
@@ -273,7 +118,7 @@ fun PhotoPickerSection(onImagePicked: (Uri) -> Unit, imageUriparam: Uri?) {
         // Aquí podrías mostrar un pequeño BottomSheet para elegir entre Cámara o Galería
         galleryLauncher.launch("image/*")
     }) {
-        Icon(Icons.Default.PhotoCamera, contentDescription = null)
+        Icon(Icons.Default.PhotoCamera, contentDescription = "Cambiar foto de perfil")
     }
 }
 

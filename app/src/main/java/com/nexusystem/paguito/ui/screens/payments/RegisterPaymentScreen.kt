@@ -1,5 +1,6 @@
 package com.nexusystem.paguito.ui.screens.payments
 
+import com.nexusystem.paguito.ui.components.*
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -46,13 +47,20 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 
 // --- COLORES PRINCIPALES ---
-val BluePrimary = Color(0xFF3B82F6)
-val BlueLightBg = Color(0xFFEFF6FF)
-val BlueDisabled = Color(0xFF93C5FD)
-val TextDark = Color(0xFF1F2937)
-val TextGray = Color(0xFF6B7280)
-val TextLightGray = Color(0xFF9CA3AF)
-val BorderColor = Color(0xFFE5E7EB)
+val BluePrimary: Color
+    @Composable get() = MaterialTheme.colorScheme.primary
+val BlueLightBg: Color
+    @Composable get() = MaterialTheme.colorScheme.primaryContainer
+val BlueDisabled: Color
+    @Composable get() = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+val TextDark: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurface
+val TextGray: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+val TextLightGray: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+val BorderColor: Color
+    @Composable get() = MaterialTheme.colorScheme.outlineVariant
 val RedDebt = Color(0xFFEF4444)
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -64,7 +72,7 @@ fun RegisterPaymentScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit
     var showSuccessPayment by remember { mutableStateOf(false) }
     var showListDeudoresBottomSheeet by remember { mutableStateOf(false) }
     val listaBusquedaDeudores by deudoresViewModel.deudores.collectAsState()
-    var selectedMethod by remember { mutableStateOf("Transfer") }
+    var selectedMethod by remember { mutableStateOf("Efectivo") }
     var selectedMethodId by remember { mutableStateOf(1) }
     var nameInCard by remember { mutableStateOf(deudorPrecarga.nombre?:"Selecciona un deudor") }
     var ammountInCard by remember { mutableStateOf(deudorPrecarga.montoActualAdeudado.toString()?:"0.0") }
@@ -172,34 +180,23 @@ fun RegisterPaymentScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit
     }
 
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Registrar Pago", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Atrás", tint = MaterialTheme.colorScheme.onSurface)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
-                windowInsets = WindowInsets(0.dp)
-            )
-        },
+    Scaffold(modifier = Modifier.imePadding(),
+        topBar = { ScreenHeader("Registrar pago", "Cada abono cuenta", onBackClick) },
         bottomBar = {
             // Botón inferior
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background)
-                    .padding(bottom = 50.dp, end = 16.dp, start = 16.dp)
+                    .paguitoBackground()
+                    .navigationBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp)
             ) {
-                val isButtonEnabled =(amount.isNotEmpty() && amount.toInt()>0) && (!nameInCard.equals("Selecciona un deudor") && !nameInCard.isNullOrEmpty())
+                val isButtonEnabled =((amount.toIntOrNull() ?: 0)>0) && (!nameInCard.equals("Selecciona un deudor") && !nameInCard.isNullOrEmpty())
 
                 Button(
                     onClick = {
                         if(isButtonEnabled) {
 
-                            if(deudorPrecarga.montoActualAdeudado < amount.toInt() ){
+                            if((currentDeudorSelected?.montoActualAdeudado ?: 0f) < amount.toInt() ){
                                 showAlertFreeLimited = true
                             }else{
                                 paymentData = PagosEntinty(
@@ -226,17 +223,18 @@ fun RegisterPaymentScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(12.dp),
+                        .heightIn(min = 56.dp),
+                    enabled = isButtonEnabled && !showSuccessPayment,
+                    shape = MaterialTheme.shapes.large,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isButtonEnabled) BluePrimary else BlueDisabled
+                        containerColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
                     Text(
                         "Guardar pago",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
                 }
             }
@@ -247,19 +245,24 @@ fun RegisterPaymentScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .paguitoBackground()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
         ) {
             Spacer(modifier = Modifier.height(20.dp))
 
             // 1. DEUDOR SELECCIONADO
-            SectionLabel("Deudor seleccionado")
+            SoftCard {
+            Text("Cliente", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(12.dp))
             DebtorCard({
                 showListDeudoresBottomSheeet =true
             },nameInCard,ammountInCard)
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            SoftCard {
             // 2. MONTO A REGISTRAR
             SectionLabel("Monto a registrar")
             AmountInput(amount = amount, onAmountChange = { amount = it })
@@ -285,6 +288,8 @@ fun RegisterPaymentScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            }
+            SoftCard {
             // 5. NOTAS ADICIONALES
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Outlined.Description, contentDescription = null, tint = TextGray, modifier = Modifier.size(16.dp))
@@ -293,6 +298,7 @@ fun RegisterPaymentScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit
             }
             Spacer(modifier = Modifier.height(8.dp))
             NotesInput(notes = notes, onNotesChange = { notes = it })
+            }
 
             Spacer(modifier = Modifier.height(40.dp)) // Espacio extra para el scroll sobre el botón
         }
@@ -315,7 +321,7 @@ fun SectionLabel(text: String, trailingText: String? = null, modifier: Modifier 
 @Composable
 fun DebtorCard(onnclcikCard:()-> Unit,nameInCard: String,ammountInCard: String) {
     Surface(
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.surface),
         color = MaterialTheme.colorScheme.surface,
         modifier = Modifier.fillMaxWidth().clickable{
@@ -372,7 +378,7 @@ fun AmountInput(amount: String, onAmountChange: (String) -> Unit) {
             }
         },
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         singleLine = true,
         // Cambiamos a NumberPassword o solo Number para evitar puntos/comas en algunos teclados
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
@@ -395,7 +401,7 @@ fun AmountInput(amount: String, onAmountChange: (String) -> Unit) {
 @Composable
 fun DateSelectorCard(openCalendar:()->Unit,startDate: String) {
     Surface(
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.surface),
         color = MaterialTheme.colorScheme.surface,
         modifier = Modifier
@@ -445,7 +451,7 @@ fun MethodItem(text: String, icon: ImageVector, isSelected: Boolean, modifier: M
     val contentColor = if (isSelected) BluePrimary else TextGray
 
     Surface(
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         border = BorderStroke(if (isSelected) 1.5.dp else 1.dp, borderColor),
         color = bgColor,
         modifier = modifier
@@ -473,7 +479,7 @@ fun NotesInput(notes: String, onNotesChange: (String) -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .height(120.dp),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         placeholder = { Text("Añadir número de referencia, detalles del depósito...", color = TextLightGray, fontSize = 14.sp) },
         colors = OutlinedTextFieldDefaults.colors(
             unfocusedBorderColor = BorderColor,
@@ -519,7 +525,7 @@ fun PeriodItem(text: String, icon: ImageVector, isSelected: Boolean, modifier: M
     val contentColor = if (isSelected) BluePrimary else TextGray
 
     Surface(
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         border = BorderStroke(if (isSelected) 1.5.dp else 1.dp, borderColor),
         color = bgColor,
         modifier = modifier

@@ -1,5 +1,6 @@
 package com.nexusystem.paguito.ui.screens.sms
 
+import com.nexusystem.paguito.ui.components.*
 import android.app.Activity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -157,46 +158,17 @@ fun SmsRemindersScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp),
+                .padding(paddingValues).paguitoBackground(),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 40.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item{
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 1.dp, vertical = 1.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Regresar",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-
-                    // Espacio de separación entre la flecha y el texto
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Text(
-                        text = "Recordatorios clientes",
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-            }
-            item {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Automatiza la cobranza enviando mensajes de texto a tus clientes. Ajusta los textos y decide cuándo enviarlos.",
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    lineHeight = 20.sp
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-            }
+            item { ScreenHeader("Recordatorios", "Acompaña a tus clientes a tiempo", onBackClick, horizontalPadding = 0.dp) }
+            item { SoftCard {
+                Icon(Icons.Outlined.Sms, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
+                Spacer(Modifier.height(12.dp)); Text("Una cobranza más cercana", style = MaterialTheme.typography.titleLarge)
+                Spacer(Modifier.height(8.dp)); Text("Decide en qué momentos acompañar a tus clientes con un recordatorio automático.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(12.dp)); Text("${templates.count { it.isEnabled }} recordatorios activos", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+            } }
 
             // Lista de plantillas
             items(templates) { template ->
@@ -252,97 +224,25 @@ fun TemplateCard(
     onSwitchChanged: (Boolean) -> Unit,
     onEditClick: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            // Cabecera de la tarjeta: Título, Subtítulo, Icono Editar y Switch
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = template.title,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = template.subtitle,
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                if(template.requierePremium)
-                   IconButton(onClick = onEditClick, modifier = Modifier.size(36.dp)) {
-                    Image(
-                        painter = painterResource(id = R.drawable.premium),
-                        contentDescription = "Editar",
-                        modifier = Modifier.size(30.dp)
-                    )
-                }
-                // Switch de habilitar / deshabilitar
-                Switch(
-                    checked = if(isPremuim) template.isEnabled else {if(template.requierePremium) false else template.isEnabled} ,
-                    onCheckedChange = onSwitchChanged,
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.White,
-                        checkedTrackColor = Color(0xFF4A6FFF),
-                        uncheckedThumbColor = Color.White,
-                        uncheckedTrackColor = Color(0xFFE5E9F0)
-                    )
-                )
+    SoftCard {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.weight(1f)) {
+                Text(template.title, style = MaterialTheme.typography.titleMedium)
+                Text(template.subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Etiqueta: VISTA PREVIA DEL SMS
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Outlined.Sms,
-                    contentDescription = null,
-                    tint = Color(0xFF838996),
-                    modifier = Modifier.size(14.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "VISTA PREVIA DEL MENSAJE",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF838996),
-                    letterSpacing = 0.5.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Caja interna con el texto simulando las "píldoras" de variables
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        color =MaterialTheme.colorScheme.background,
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    .padding(12.dp)
-            ) {
-                // Aquí simulamos el formateo de las etiquetas clave (como [Nombre], [Monto], [Saldo])
-                // Renderizado simple de texto con acento en azul para las variables
-                FormattedSmsText(text = template.previewText)
-            }
+            Switch(checked = template.isEnabled && (isPremuim || !template.requierePremium), onCheckedChange = onSwitchChanged)
+        }
+        Spacer(Modifier.height(12.dp))
+        Text(if (template.requierePremium) "Incluido en Premium" else "Disponible en tu cuenta", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.height(18.dp)); HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        Spacer(Modifier.height(16.dp)); Text("VISTA PREVIA DEL MENSAJE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(10.dp))
+        Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)) {
+            Box(Modifier.padding(16.dp)) { FormattedSmsText(template.previewText) }
         }
     }
 }
+
 
 @Composable
 fun FormattedSmsText(text: String) {

@@ -1,5 +1,10 @@
 package com.nexusystem.paguito.ui.screens.website
 
+import com.nexusystem.paguito.ui.components.paguitoBackground
+import com.nexusystem.paguito.ui.components.SoftCard
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
@@ -63,8 +68,12 @@ fun WebsiteScreen(
     var showCopiedToast by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        viewModel.refresh()
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle, viewModel) {
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) viewModel.refresh() }
+        lifecycle.addObserver(observer)
+        if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) viewModel.refresh()
+        onDispose { lifecycle.removeObserver(observer) }
     }
 
     val websiteUrl = uiState.publishedWebsite?.subdomain?.let { subdomain ->
@@ -102,7 +111,7 @@ fun WebsiteScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .paguitoBackground()
     ) {
         Column(
             modifier = Modifier
@@ -124,7 +133,8 @@ fun WebsiteScreen(
                 text = if (uiState.isWebsiteActive) {
                     "Administra el enlace público de tu catálogo y compártelo con tus clientes."
                 } else {
-                    "Crea un sitio público para que tus clientes vean tus productos y te contacten por WhatsApp."
+                    if (uiState.canCreateWebsite) "Crea un sitio público para que tus clientes vean tus productos y te contacten por WhatsApp."
+                    else "Consulta y administra el sitio asociado a tu cuenta."
                 },
                 fontSize = 15.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -132,6 +142,21 @@ fun WebsiteScreen(
             )
 
             Spacer(modifier = Modifier.height(20.dp))
+
+            if (uiState.isRefreshing) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                Spacer(Modifier.height(12.dp))
+            }
+            uiState.errorMessage?.let { message ->
+                SoftCard {
+                    Text("No pudimos completar la consulta", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(8.dp))
+                    Text(message, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedButton(onClick = viewModel::refresh, enabled = !uiState.isLoading && !uiState.isRefreshing) { Text("Reintentar consulta") }
+                }
+                Spacer(Modifier.height(18.dp))
+            }
 
             if (uiState.isWebsiteActive) {
                 WebsiteStatusCard(
@@ -181,7 +206,7 @@ fun WebsiteScreen(
                         showDeleteDialog = true
                     }
                 )
-            } else {
+            } else if (uiState.canCreateWebsite) {
                 WebsitePreviewCard()
 
                 Spacer(modifier = Modifier.height(18.dp))
@@ -196,6 +221,7 @@ fun WebsiteScreen(
 
                 Button(
                     onClick = onCreateWebsite,
+                    enabled = uiState.canCreateWebsite && !uiState.isLoading,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),

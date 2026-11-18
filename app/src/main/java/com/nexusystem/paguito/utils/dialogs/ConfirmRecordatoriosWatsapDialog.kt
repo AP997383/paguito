@@ -24,8 +24,10 @@ import androidx.compose.ui.window.DialogProperties
 import com.nexusystem.paguito.ui.screens.deudores.RedUrgent
 
 val PrimaryBlue = Color(0xFF4A6FFF)
-val TextDark = Color(0xFF1A1F2C)
-val TextSecondary = Color(0xFF8D95A6)
+val TextDark: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurface
+val TextSecondary: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
 val CardBackground = Color(0xFFEEF2F6)
 
 @Composable

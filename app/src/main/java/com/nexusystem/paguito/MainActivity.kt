@@ -57,8 +57,6 @@ class MainActivity : ComponentActivity() {
         requestNotificationPermission()
         clearNotifications()
 
-        val prefs = getSharedPreferences("settings", Context.MODE_PRIVATE)
-        val isDark = prefs.getBoolean("dark_mode", false)
         //MobileAds.initialize(this)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -71,7 +69,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             val context = LocalContext.current
             PaguitoTheme(
-                darkTheme = isDark,
                 dynamicColor = false
             ) {
                 val navController = rememberNavController()
@@ -171,9 +168,7 @@ class MainActivity : ComponentActivity() {
                             route != Routes.ScreenViewAllPayments.route
 
                         ) {
-                            RoundedBottomBar(navController) {
-                                navController.navigate(it)
-                            }
+                            RoundedBottomBar(navController)
                         }
                     },
                     modifier = Modifier

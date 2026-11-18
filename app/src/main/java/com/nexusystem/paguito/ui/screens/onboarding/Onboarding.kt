@@ -1,5 +1,6 @@
 package com.nexusystem.paguito.ui.screens.onboarding
 
+import com.nexusystem.paguito.ui.components.paguitoBackground
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -61,7 +62,7 @@ fun OnboardingScreen(onFinish: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .paguitoBackground()
             .padding(24.dp)
     ) {
         // Pager con el contenido
@@ -87,7 +88,7 @@ fun OnboardingScreen(onFinish: () -> Unit) {
             ) {
                 Text(
                     text = if (pagerState.currentPage < pages.size - 1) "Saltar" else "",
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 16.sp
                 )
             }
@@ -142,7 +143,7 @@ fun OnboardingPagerItem(data: OnboardingData) {
             modifier = Modifier
                 .size(320.dp)
                 .clip(CircleShape)
-                .background(Color(0xFFF5F5F5)),
+                .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {
             Image(
@@ -160,7 +161,7 @@ fun OnboardingPagerItem(data: OnboardingData) {
             fontSize = 24.sp,
             fontWeight = FontWeight.ExtraBold,
             textAlign = TextAlign.Center,
-            color = Color(0xFF1A1A1A)
+            color = MaterialTheme.colorScheme.onSurface
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -169,7 +170,7 @@ fun OnboardingPagerItem(data: OnboardingData) {
             text = data.description,
             fontSize = 16.sp,
             textAlign = TextAlign.Center,
-            color = Color.Gray,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 20.dp),
             lineHeight = 24.sp
         )

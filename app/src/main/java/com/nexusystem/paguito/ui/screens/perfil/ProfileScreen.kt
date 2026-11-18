@@ -1,5 +1,6 @@
 package com.nexusystem.paguito.ui.screens.perfil
 
+import com.nexusystem.paguito.ui.components.paguitoBackground
 import android.app.Activity
 import android.content.Context
 import android.os.Build
@@ -63,8 +64,10 @@ import kotlinx.coroutines.launch
 // --- COLORES ---
 val RedLogout = Color(0xFFEF4444)
 val BluePrimary = Color(0xFF3B82F6)
-val TextSecondary = Color(0xFF9CA3AF)
-val BorderColor = Color(0xFFE5E7EB)
+val TextSecondary: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+val BorderColor: Color
+    @Composable get() = MaterialTheme.colorScheme.outlineVariant
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -75,7 +78,8 @@ fun ProfileScreen(
     openChangePassword:(String)->Unit,
     viewModel: PerfiViewModel,
     openIdiomas: () -> Unit,
-    openSettingsSms:()->Unit
+    openSettingsSms:()->Unit,
+    showBack: Boolean = true
 ) {
     val scope = rememberCoroutineScope()
     var businessName by remember { mutableStateOf("") }
@@ -94,7 +98,6 @@ fun ProfileScreen(
     val isSuscribedError by viewModel.isSubscribedError.collectAsState()
     val accountDelete by viewModel.accountDelete.collectAsState()
 
-    var isDarkMode by remember { mutableStateOf(prefs.getBoolean("dark_mode", false)) }
     val profile = viewModel.profileState
     var closeSessionDialog by remember { mutableStateOf(false) }
     var showDeleteAccount by remember { mutableStateOf(false) }
@@ -103,8 +106,8 @@ fun ProfileScreen(
     val prefijo = languajes.filter { it.regionCode == currentLangCode }
     val pref = if (prefijo.isNotEmpty()) prefijo[0].prefij else "es"
     val isLoading by viewModel.isLoading.collectAsState()
-    val NeonYellow = Color(0xFFFFFF00)
-    val NeonCyan = Color(0xFF00FFE5)
+    val NeonYellow = MaterialTheme.colorScheme.primary
+    val NeonCyan = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
 
     LaunchedEffect(profile) {
         progreso = if (profile != null && profile.watsapSended > 0) {
@@ -190,43 +193,24 @@ fun ProfileScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
+                .paguitoBackground()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 10.dp)
+                .padding(horizontal = 20.dp)
         ) {
             Spacer(modifier = Modifier.height(10.dp))
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 1.dp, vertical = 1.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Regresar",
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                // Espacio de separación entre la flecha y el texto
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Text(
-                    text = stringResource(R.string.profile_settings_title),
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-
+            ProfileScreenHeader(showBack, onBack)
             Spacer(modifier = Modifier.height(16.dp))
 
             if (isInvited) {
                 GuestModeScreen(onLoginClick = { logout() })
             } else {
                 ProfileHeaderCard(editProfile, myName, businessName, phone, fotoUrl,isSucriptionActive,isVerified)
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+            SectionTitle("Apariencia")
+            com.nexusystem.paguito.ui.screens.perfil.components.AppearanceSettingsCard()
+            if (!isInvited) {
 
                 Spacer(modifier = Modifier.height(24.dp))
                 if(isSucriptionActive==false) {
@@ -241,8 +225,8 @@ fun ProfileScreen(
 
                         Box(
                             modifier = Modifier
-                                .size(200.dp)
-                                .clip(RoundedCornerShape(16.dp))
+                                .fillMaxWidth().height(120.dp)
+                                .clip(MaterialTheme.shapes.extraLarge)
                                 .background(Color.LightGray.copy(alpha = 0.3f))
                                 .shimmerEffect()
                         )
@@ -272,24 +256,6 @@ fun ProfileScreen(
                     )
                     HorizontalDivider(color = BorderColor, modifier = Modifier.padding(start = 56.dp))
 
-                    SettingsItem(
-                        icon = Icons.Outlined.DarkMode,
-                        title = stringResource(R.string.item_dark_mode),
-                        onClick = { isDarkMode = !isDarkMode },
-                        trailingContent = {
-                            Switch(
-                                checked = isDarkMode,
-                                onCheckedChange = {
-                                    isDarkMode = it
-                                    prefs.edit().putBoolean("dark_mode", it).apply()
-                                    activity?.recreate()
-                                },
-                                colors = SwitchDefaults.colors(checkedTrackColor = BluePrimary)
-                            )
-                        }
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(start = 56.dp))
-
                     /*   SettingsItem(
                            icon = Icons.Outlined.Lock,
                            title = stringResource(R.string.item_biometric),
@@ -313,7 +279,7 @@ fun ProfileScreen(
                         onClick = { openSettingsSms() },
                         trailingContent = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(text = if(profile?.RemindersActive!!) "Activos" else "Inactivos", color = TextSecondary, fontSize = 14.sp)
+                                Text(text = if(profile?.RemindersActive == true) "Activos" else "Inactivos", color = TextSecondary, fontSize = 14.sp)
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null, tint = TextSecondary, modifier = Modifier.size(20.dp))
                             }
@@ -323,8 +289,8 @@ fun ProfileScreen(
                         modifier = Modifier.fillMaxWidth().padding(end = 10.dp, start = 10.dp),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(text =  "Créditos recordatorios Watsap" , color = TextGray, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        Text(text = if(profile?.userSuscription?.isActive==true){ "Ilimitados"}else{( profile?.watsapSended!!).toString()  +"/10"} , color = MaterialTheme.colorScheme.primary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Text(text =  "Recordatorios por WhatsApp" , color = TextGray, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Text(text = if(profile?.userSuscription?.isActive==true){ "Ilimitados"}else{(profile?.watsapSended ?: 0).toString()  +"/10"} , color = MaterialTheme.colorScheme.primary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
 
                     //Log.e("PROGRESO","-->"+ progreso)
@@ -440,6 +406,7 @@ fun ProfileScreen(
                 PoweredByNexus()
                 Spacer(modifier = Modifier.height(150.dp))
             }
+            if (isInvited) Spacer(modifier = Modifier.height(150.dp))
         }
         LoadingOverlay(
             isLoading = isLoading,
@@ -539,7 +506,7 @@ fun ProfileHeaderCard(
             ) {
                 // Foto de perfil
                 Box(
-                    modifier = Modifier.size(70.dp).clip(CircleShape).background(Color(0xFFFCE7F3)),
+                    modifier = Modifier.size(70.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
                     contentAlignment = Alignment.Center
                 ) {
                     if (fotoUrl.isEmpty()) {
@@ -619,7 +586,8 @@ fun SectionTitle(title: String) {
 fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
     Surface(
         color = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.extraLarge,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column { content() }
@@ -640,7 +608,9 @@ fun SettingsItem(
         modifier = Modifier.fillMaxWidth().clickable { onClick() }.padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, null, tint = TextSecondary, modifier = Modifier.size(24.dp))
+        Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)) {
+            Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(10.dp).size(22.dp))
+        }
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(text = title, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
@@ -753,4 +723,10 @@ fun GuestModeScreen(onLoginClick: () -> Unit) {
             Text(stringResource(R.string.btn_later), color = Color.Gray)
         }
     }
+}
+@Composable
+fun ProfileScreenHeader(showBack: Boolean, onBack: () -> Unit) {
+    com.nexusystem.paguito.ui.components.ScreenHeader(
+        stringResource(R.string.profile_settings_title),
+        onBack = if (showBack) onBack else null, horizontalPadding = 0.dp)
 }

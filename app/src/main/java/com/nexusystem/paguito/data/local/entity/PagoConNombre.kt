@@ -10,7 +10,8 @@ data class PagoConNombre(
     val tipoPago: Int=0,
     val isIngreso: Boolean=false,
     val notas: String="",
-    val jsonAbonoPorProducto: String=""
+    val jsonAbonoPorProducto: String="",
+    val idDeudorRemoteDatabase: String=""
 )
 
 data class AbonosDelMes(

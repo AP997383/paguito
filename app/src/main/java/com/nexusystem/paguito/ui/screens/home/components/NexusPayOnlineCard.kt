@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -132,7 +133,7 @@ fun NexusPayOnlineCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(166.dp)
+                .heightIn(min = 166.dp)
                 .padding(
                     start = 24.dp,
                     end = 14.dp,
@@ -148,7 +149,7 @@ fun NexusPayOnlineCard(
                 Text(
                     text = "Cobra en línea",
                     color = titleColor,
-                    fontSize = 24.sp,
+                    fontSize = 22.sp,
                     lineHeight = 29.sp,
                     fontWeight = FontWeight.ExtraBold
                 )
@@ -158,7 +159,7 @@ fun NexusPayOnlineCard(
                 Text(
                     text = "Recibe pagos al instante",
                     color = subtitleColor,
-                    fontSize = 16.sp,
+                    fontSize = 14.sp,
                     lineHeight = 21.sp,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -171,14 +172,14 @@ fun NexusPayOnlineCard(
                 ) {
                     NexusPayBadge(
                         text = "RÁPIDO",
-                        background = WebsiteGreen.copy(
+                        background = MaterialTheme.colorScheme.primary.copy(
                             alpha = if (isDark) {
                                 0.18f
                             } else {
                                 0.12f
                             }
                         ),
-                        contentColor = WebsiteGreen
+                        contentColor = MaterialTheme.colorScheme.primary
                     )
 
                     NexusPayBadge(
@@ -190,8 +191,8 @@ fun NexusPayOnlineCard(
             }
 
             NexusPayRippleGraphic(
-                modifier = Modifier.size(132.dp),
-                rippleColor = WebsitePrimary,
+                modifier = Modifier.size(88.dp),
+                rippleColor = MaterialTheme.colorScheme.primary,
                 outerBackground = centerOuterBackground,
                 innerBackground = centerInnerBackground,
                 floatingBackground = floatingIconBackground
@@ -336,7 +337,7 @@ private fun NexusPayRippleGraphic(
                 Icon(
                     imageVector = Icons.Rounded.Link,
                     contentDescription = null,
-                    tint = WebsiteGreen,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(29.dp)
                 )
             }

@@ -1,5 +1,6 @@
 package com.nexusystem.paguito.ui.screens.payments
 
+import com.nexusystem.paguito.ui.components.paguitoBackground
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -209,7 +210,7 @@ fun EmptyStateRelatedProductsCard() {
                 modifier = Modifier
                     .size(64.dp) // Tamaño del círculo de fondo
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.background),
+                    .paguitoBackground(),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(

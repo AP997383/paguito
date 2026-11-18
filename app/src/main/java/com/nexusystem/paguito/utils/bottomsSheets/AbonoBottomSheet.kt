@@ -33,9 +33,12 @@ import com.nexusystem.paguito.utils.formatAsCurrency
 // --- COLORES ---
 val BluePrimary = Color(0xFF4064F6)       // Azul vibrante de los botones
 val BlueLight = Color(0xFFEEF2FF)         // Fondo circular del ícono
-val TextDark = Color(0xFF111827)          // Texto principal
-val TextGray = Color(0xFF6B7280)          // Textos secundarios
-val TextLightGray = Color(0xFF9CA3AF)     // Textos más tenues
+val TextDark: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurface
+val TextGray: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+val TextLightGray: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
 val BgBottomSheet = Color(0xFFF9FAFB)     // Fondo del bottom sheet (gris muy tenue)
 val CardWhite = Color(0xFFFFFFFF)         // Blanco puro para tarjetas
 

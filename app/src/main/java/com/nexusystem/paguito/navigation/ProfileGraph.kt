@@ -32,7 +32,8 @@ fun NavGraphBuilder.profileGraph(
         startDestination = Routes.ScreenProfile.route,
         route = Routes.ProfileGraph.route
     ) {
-        composable(Routes.ScreenProfile.route) {
+        for (profileRoute in listOf(Routes.ScreenProfile.route, Routes.ScreenProfileTab.route)) {
+        composable(profileRoute) {
             ProfileScreen(
                 {
                     navController.navigate(
@@ -51,6 +52,7 @@ fun NavGraphBuilder.profileGraph(
                     )
                 },
                 onBack = navController::popBackStack,
+                showBack = profileRoute != Routes.ScreenProfileTab.route,
                 openIdiomas = {
                     navController.navigate(
                         Routes.ScreenIdioms.route
@@ -73,6 +75,8 @@ fun NavGraphBuilder.profileGraph(
                     )
                 }
             )
+        }
+
         }
 
         composable(

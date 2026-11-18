@@ -5,6 +5,7 @@ import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.android.builtin.kotlin)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.legacy.kapt)
@@ -32,8 +33,8 @@ android {
         applicationId = "com.nexusystem.paguito"
         minSdk = 26
         targetSdk = 37
-        versionCode = 16
-        versionName = "1.4.1"
+        versionCode = 17
+        versionName = "1.4.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -154,6 +155,10 @@ dependencies {
     implementation(libs.play.services.ads)
 
     implementation(libs.nexus.payments.android)
+
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    androidTestImplementation("androidx.test.ext:junit:1.3.0")
 
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)

@@ -1,5 +1,6 @@
 package com.nexusystem.paguito.ui.screens.productos
 
+import com.nexusystem.paguito.ui.components.paguitoBackground
 import android.Manifest
 import android.content.Context
 import android.graphics.Bitmap
@@ -206,7 +207,7 @@ fun FlashBottomSheet(
                     keyboardType = KeyboardType.Number
                 )
                 Spacer(modifier = Modifier.height(15.dp))
-                Box(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background).padding( bottom = 60.dp)) {
+                Box(modifier = Modifier.fillMaxWidth().paguitoBackground().padding( bottom = 60.dp)) {
                     Button(
                         onClick = {
                             val symbol ="x"

@@ -64,7 +64,6 @@ import com.nexus.medi.data.local.entity.PagostoPreviewTiket
 import com.nexusystem.paguito.R
 import com.nexusystem.paguito.ui.screens.deudores.BluePrimary2
 import com.nexusystem.paguito.ui.screens.deudores.GrayBackground
-import com.nexusystem.paguito.ui.screens.deudores.TextGray1
 import com.nexusystem.paguito.utils.dialogs.GrayBorder
 import com.nexusystem.paguito.utils.formatAsCurrency
 import com.nexusystem.paguito.utils.formatFecha
@@ -167,7 +166,7 @@ fun AccountClientStateScreen(
                         // --- SECCIÓN 1: HEADER ---
                         TicketAccountStateHeaderSection( nextNumberTiket.toString())
 
-                        HorizontalDivider(color = BorderColor, modifier = Modifier.padding(vertical = 10.dp))
+                        HorizontalDivider(color = Color(0xFFE5E7EB), modifier = Modifier.padding(vertical = 10.dp))
 
                         // --- SECCIÓN 2: BILL TO / DATE ---
                         TicketBillToDateSectionAcountState(false, "", fecha, nombreCliente)
@@ -179,7 +178,7 @@ fun AccountClientStateScreen(
 
                         Spacer(modifier = Modifier.height(32.dp))
 
-                        HorizontalDivider(color = BorderColor, modifier = Modifier.padding(vertical = 24.dp))
+                        HorizontalDivider(color = Color(0xFFE5E7EB), modifier = Modifier.padding(vertical = 24.dp))
 
                         // --- SECCIÓN 5: TOTALES ---
                         TicketTotalsSectionAcoountState(totalPagos.toString(), total,inicial.toString())
@@ -213,15 +212,15 @@ fun AccountClientStateScreen(
 fun TicketBillToDateSectionAcountState(isIngreso:Boolean,accountNum: String, transDate: String,nombreCliente:String) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = "Cliente: (" + nombreCliente+")", fontSize = 13.sp, color = TextGray)
+            Text(text = "Cliente: (" + nombreCliente+")", fontSize = 13.sp, color = Color(0xFF6B7280))
         }
         Column(horizontalAlignment = Alignment.End) {
-            Text(text = "Fecha de Impresión", fontSize = 12.sp, color = TextLightGray, fontWeight = FontWeight.SemiBold)
+            Text(text = "Fecha de Impresión", fontSize = 12.sp, color = Color(0xFF9CA3AF), fontWeight = FontWeight.SemiBold)
             Text(
                 text = transDate,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextDark,
+                color = Color(0xFF1F2937),
                 modifier = Modifier.padding(vertical = 4.dp)
             )
         }
@@ -240,12 +239,12 @@ fun TicketTotalsSectionAcoountState( abonado:String,total: Int,restante:String) 
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = "Saldo Final", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextDark)
+            Text(text = "Saldo Final", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1F2937))
             Text(
                 text = formatAsCurrency(restante),
                 fontSize = 24.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = TextDark,
+                color = Color(0xFF1F2937),
                 textAlign = TextAlign.End
             )
         }
@@ -265,7 +264,7 @@ fun TicketAccountStateTableSection(items: List<PagosEntinty?>) {
             TableHeadText(text = "CONCEPTO", modifier = Modifier.weight(1.5f))
             TableHeadText(text = "MONTO", modifier = Modifier.weight(2f), textAlign = TextAlign.End)
         }
-        HorizontalDivider(color = TextDark, thickness = 1.dp)
+        HorizontalDivider(color = Color(0xFF1F2937), thickness = 1.dp)
 
         // Filas de la tabla
         items.forEach { item ->
@@ -288,7 +287,7 @@ fun TicketAccountStateTableSection(items: List<PagosEntinty?>) {
                 Text(
                     text = formatFecha(item?.fechaAbono!!),
                     fontSize = 12.sp,
-                    color = TextGray,
+                    color = Color(0xFF6B7280),
                     modifier = Modifier.weight(1.3f)
                 )
                 val concepto = if (item.isIngreso) "ABONO" else "VENTA"
@@ -296,7 +295,7 @@ fun TicketAccountStateTableSection(items: List<PagosEntinty?>) {
                     text = concepto,
                     fontSize = 12.sp,
                     fontWeight = fontWeight,
-                    color = TextDark, // Concepto suele ser más oscuro
+                    color = Color(0xFF1F2937), // Concepto suele ser más oscuro
                     modifier = Modifier.weight(1.5f).padding(horizontal = 4.dp)
                 )
                 Column(modifier = Modifier.weight(2f)) {
@@ -304,7 +303,7 @@ fun TicketAccountStateTableSection(items: List<PagosEntinty?>) {
                         text = "Anterior : " +  formatAsCurrency(item.saldoAntesDeAbono.toString()),
                         fontSize = 12.sp,
                         fontWeight = fontWeight,
-                        color = TextGray1,
+                        color = Color(0xFF6B7280),
                         textAlign = TextAlign.End
                     )
                     Text(
@@ -318,7 +317,7 @@ fun TicketAccountStateTableSection(items: List<PagosEntinty?>) {
                         text = "Nuevo:" + formatAsCurrency(if(item.isIngreso)(item.saldoAntesDeAbono - item.montoAbonado)else (item.saldoAntesDeAbono + item.montoAbonado) ),
                         fontSize = 12.sp,
                         fontWeight = fontWeight,
-                        color = TextGray1,
+                        color = Color(0xFF6B7280),
                         textAlign = TextAlign.End
                     )
                 }
@@ -339,15 +338,15 @@ fun TicketAccountStateHeaderSection(nextNumberTiket: String) {
         verticalAlignment = Alignment.Top
     ) {
         Column {
-            Text(text = "Estado de cuenta" , fontSize = 12.sp, color = TextDark, fontWeight = FontWeight.Bold)
-            Text(text = "TICKET NO. "+ formatTicketNumber(nextNumberTiket.toInt()), fontSize = 10.sp, color = TextLightGray)
+            Text(text = "Estado de cuenta" , fontSize = 12.sp, color = Color(0xFF1F2937), fontWeight = FontWeight.Bold)
+            Text(text = "TICKET NO. "+ formatTicketNumber(nextNumberTiket.toInt()), fontSize = 10.sp, color = Color(0xFF9CA3AF))
         }
         Column(horizontalAlignment = Alignment.End) {
             Text(
                 text = "",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = TextDark,
+                color = Color(0xFF1F2937),
                 textAlign = TextAlign.End
             )
         }

@@ -54,12 +54,17 @@ import java.util.Locale
 // --- COLORES ---
 val GreenPrimary = Color(0xFF15956F)
 val GreenLight = Color(0xFFE6F9F3)
-val BgColor = Color(0xFFF9FAFB)
+val BgColor: Color
+    @Composable get() = MaterialTheme.colorScheme.background
 val CardWhite = Color(0xFFFFFFFF)
-val TextDark = Color(0xFF1F2937)
-val TextGray = Color(0xFF6B7280)
-val TextLightGray = Color(0xFF9CA3AF)
-val BorderColor = Color(0xFFE5E7EB)
+val TextDark: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurface
+val TextGray: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+val TextLightGray: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+val BorderColor: Color
+    @Composable get() = MaterialTheme.colorScheme.outlineVariant
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -106,9 +111,7 @@ fun AddProductScreen(
     var showSuccessPayment by remember { mutableStateOf(false) }
 
     LaunchedEffect(currentProduct.urlFoto) {
-        if (currentProduct.urlFoto.isNotBlank()) {
-            viewmodel.setUriLocal(currentProduct.urlFoto)
-        }
+        viewmodel.setUriLocal(currentProduct.urlFoto)
     }
 
     fun Context.createImageUri(): Uri {
@@ -122,7 +125,7 @@ fun AddProductScreen(
     ) { uri ->
         if (uri != null) {
             if (!email.isNullOrEmpty()) viewmodel.savePhotoProduct(email, uri)
-            else viewmodel.setUriLocal(uri.toFile().absolutePath)
+            else viewmodel.setUriLocal(uri.toString())
 
             imageUri = uri
         }
@@ -213,152 +216,23 @@ fun AddProductScreen(
     }
 
     Box {
-        Scaffold(
-            topBar = {
-                CenterAlignedTopAppBar(
-                    title = {
-                        Text(
-                            text = if (isEditingProduct) "Editar producto" else stringResource(R.string.title_new_product),
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onBackClick) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                                stringResource(R.string.content_desc_back)
-                            )
-                        }
-                    },
-                    actions = {
-                        TextButton(
-                            onClick = { saveProduct() },
-                            enabled = isFormValid()
-                        ) {
-                            Text(
-                                text = "Guardar",
-                                fontWeight = FontWeight.Bold,
-                                color = if (isFormValid()) GreenPrimary else TextLightGray
-                            )
-                        }
-                    },
-                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background
-                    ),
-                    windowInsets = WindowInsets(0.dp)
-                )
-            },
-            containerColor = MaterialTheme.colorScheme.background
-        ) { paddingValues ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp)
-                    .imePadding()
-            ) {
-                Spacer(modifier = Modifier.height(16.dp))
-
-                ImageUploadSection(
-                    imageBitmap = newUrlFromServer,
-                    onGalleryClick = { galleryLauncher.launch("image/*") },
-                    onCameraClick = { permissionLauncher.launch(Manifest.permission.CAMERA) }
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                CustomFieldLabel(stringResource(R.string.label_product_name))
-                CustomOutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    placeholder = stringResource(R.string.placeholder_product_name)
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                CustomFieldLabel(stringResource(R.string.label_cost_price))
-                CustomOutlinedTextField(
-                    value = costPrice,
-                    onValueChange = { costPrice = it },
-                    placeholder = stringResource(R.string.placeholder_zero),
-                    icon = Icons.Outlined.AttachMoney,
-                    keyboardType = KeyboardType.Number
-                )
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                ProfitCalculatorCard(
-                    costPrice = costPrice,
-                    finalPrice = finalPrice,
-                    profitAmount = profitAmount,
-                    isMultiplierMode = isMultiplierMode,
-                    sliderMultiplier = sliderMultiplier,
-                    sliderPercentage = sliderPercentage,
-                    onModeChange = { isMultiplierMode = it },
-                    onSliderMultiplierChange = { sliderMultiplier = it },
-                    onSliderPercentageChange = { sliderPercentage = it },
-                    onFinalPriceManualChange = {
-                        finalPrice = it
-                        val cost = costPrice.toDoubleOrNull() ?: 0.0
-                        val finalP = it.toDoubleOrNull() ?: 0.0
-                        profitAmount = String.format(Locale.US, "%.2f", finalP - cost)
-                    }
-                )
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                Text(
-                    text = stringResource(R.string.label_optionals),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                CustomFieldLabel(stringResource(R.string.label_stock))
-                CustomOutlinedTextField(
-                    value = stock,
-                    onValueChange = { stock = it },
-                    placeholder = stringResource(R.string.placeholder_stock),
-                    keyboardType = KeyboardType.Number
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                CustomFieldLabel(stringResource(R.string.label_additional_notes))
-                CustomOutlinedTextField(
-                    value = notes,
-                    onValueChange = { notes = it },
-                    placeholder = stringResource(R.string.placeholder_notes),
-                    singleLine = false,
-                    modifier = Modifier.height(100.dp)
-                )
-
-                Spacer(modifier = Modifier.height(15.dp))
-
-                Button(
-                    onClick = { saveProduct() },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary),
-                    enabled = isFormValid()
-                ) {
-                    Text(
-                        text = stringResource(R.string.btn_save_product),
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(100.dp))
-            }
-        }
-
+        com.nexusystem.paguito.ui.screens.productos.components.ProductEditorContent(
+            state = com.nexusystem.paguito.ui.screens.productos.components.ProductEditorState(
+                name = name, cost = costPrice, stock = stock, notes = notes, photo = newUrlFromServer,
+                finalPrice = finalPrice, profit = profitAmount, multiplierMode = isMultiplierMode,
+                multiplier = sliderMultiplier, percentage = sliderPercentage, editing = isEditingProduct,
+                saving = isLoading, canSave = isFormValid()
+            ),
+            actions = com.nexusystem.paguito.ui.screens.productos.components.ProductEditorActions(
+                onName = { name = it }, onCost = { costPrice = it }, onStock = { stock = it }, onNotes = { notes = it },
+                onPrice = {
+                    finalPrice = it
+                    profitAmount = String.format(Locale.US, "%.2f", (it.toDoubleOrNull() ?: 0.0) - (costPrice.toDoubleOrNull() ?: 0.0))
+                }, onMode = { isMultiplierMode = it }, onMultiplier = { sliderMultiplier = it }, onPercentage = { sliderPercentage = it },
+                onGallery = { galleryLauncher.launch("image/*") }, onCamera = { permissionLauncher.launch(Manifest.permission.CAMERA) },
+                onSave = { saveProduct() }, onBack = onBackClick
+            )
+        )
         LoadingOverlay(
             isLoading = isLoading,
             lottieRes = R.raw.loadings
@@ -369,51 +243,9 @@ fun AddProductScreen(
 // ================= COMPONENTES SECUNDARIOS =================
 
 @Composable
-fun ImageUploadSection(
-    imageBitmap: String?,
-    onGalleryClick: () -> Unit,
-    onCameraClick: () -> Unit
-) {
-    Log.e("UURLPAINT","-->"+imageBitmap)
-    val dashPathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 20f), 0f)
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(180.dp)
-            .drawBehind {
-                drawRoundRect(
-                    color = GreenPrimary.copy(alpha = 0.4f),
-                    style = Stroke(width = 4f, pathEffect = dashPathEffect),
-                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(16.dp.toPx())
-                )
-            }
-            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp)),
-        contentAlignment = Alignment.Center
-    ) {
-        if (!imageBitmap.isNullOrEmpty()) {
-            AsyncImage(
-                model = imageBitmap,
-                contentDescription = stringResource(R.string.content_desc_profile_photo),
-                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp)),
-                contentScale = ContentScale.Crop
-            )
-        } else {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(Icons.Outlined.CameraAlt, contentDescription = null, tint = GreenPrimary, modifier = Modifier.size(32.dp))
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(stringResource(R.string.upload_product_image), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                Text(stringResource(R.string.optional_label), color = TextLightGray, fontSize = 12.sp)
-
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    IconButtonBox(icon = Icons.Outlined.PhotoCamera, onClick = onCameraClick)
-                    IconButtonBox(icon = Icons.Outlined.PhotoLibrary, onClick = onGalleryClick)
-                }
-            }
-        }
+fun ImageUploadSection(imageBitmap: String?, onGalleryClick: () -> Unit, onCameraClick: () -> Unit) {
+        com.nexusystem.paguito.ui.screens.productos.components.ProductPhotoCard(imageBitmap, onGalleryClick, onCameraClick)
     }
-}
 
 @Composable
 fun IconButtonBox(icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
@@ -429,106 +261,13 @@ fun IconButtonBox(icon: androidx.compose.ui.graphics.vector.ImageVector, onClick
 
 @Composable
 fun ProfitCalculatorCard(
-    costPrice: String, finalPrice: String, profitAmount: String,
-    isMultiplierMode: Boolean, sliderMultiplier: Float, sliderPercentage: Float,
-    onModeChange: (Boolean) -> Unit, onSliderMultiplierChange: (Float) -> Unit,
-    onSliderPercentageChange: (Float) -> Unit, onFinalPriceManualChange: (String) -> Unit
-) {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, BorderColor),
-        color = MaterialTheme.colorScheme.surface,
-        modifier = Modifier.fillMaxWidth()
+        costPrice: String, finalPrice: String, profitAmount: String, isMultiplierMode: Boolean,
+        sliderMultiplier: Float, sliderPercentage: Float, onModeChange: (Boolean) -> Unit,
+        onSliderMultiplierChange: (Float) -> Unit, onSliderPercentageChange: (Float) -> Unit, onFinalPriceManualChange: (String) -> Unit
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.label_define_profit), fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Spacer(modifier = Modifier.weight(1f))
-                Icon(Icons.Default.Info, contentDescription = null, tint = TextLightGray, modifier = Modifier.size(16.dp))
-            }
-            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = BorderColor)
-
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                PriceBox(
-                    label = stringResource(R.string.label_original_cost),
-                    price = "$${if(costPrice.isEmpty()) "0" else costPrice}",
-                    borderColor = BorderColor,
-                    modifier = Modifier.weight(1f)
-                )
-
-                Box(modifier = Modifier.weight(1f)) {
-                    PriceBox(
-                        label = stringResource(R.string.label_final_price),
-                        price = finalPrice,
-                        isEditable = true,
-                        onPriceChange = onFinalPriceManualChange,
-                        borderColor = GreenPrimary,
-                        textColor = GreenPrimary,
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-                    )
-                    Surface(
-                        color = GreenPrimary,
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.align(Alignment.TopCenter).offset(y = (-2).dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.profit_badge_format, profitAmount),
-                            color = Color.White,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-            SegmentedControl(isMultiplierMode = isMultiplierMode, onModeChange = onModeChange)
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = if (isMultiplierMode) stringResource(R.string.adjust_multiplier) else stringResource(R.string.adjust_percentage),
-                    fontSize = 13.sp
-                )
-                Surface(color = GreenLight, shape = RoundedCornerShape(6.dp), border = BorderStroke(1.dp, GreenPrimary.copy(alpha = 0.3f))) {
-                    Text(
-                        text = if (isMultiplierMode) String.format(Locale.US, "%.2fx", sliderMultiplier) else "${sliderPercentage.toInt()}%",
-                        color = GreenPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-            }
-
-            if (isMultiplierMode) {
-                Slider(
-                    value = sliderMultiplier,
-                    onValueChange = onSliderMultiplierChange,
-                    valueRange = 1.5f..3.0f,
-                    steps = 2, // Permite 4 paradas exactas
-                    colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = GreenPrimary)
-                )
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    listOf("1.5x", "2.0x", "2.5x", "3.0x").forEach {
-                        Text(it, fontSize = 10.sp, color = TextLightGray)
-                    }
-                }
-            } else {
-                Slider(
-                    value = sliderPercentage,
-                    onValueChange = onSliderPercentageChange,
-                    valueRange = 50f..250f,
-                    steps = 3, // Permite 5 paradas exactas
-                    colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = GreenPrimary)
-                )
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    listOf("50%", "100%", "150%", "200%", "250%").forEach {
-                        Text(it, fontSize = 10.sp, color = TextLightGray)
-                    }
-                }
-            }
-        }
+        com.nexusystem.paguito.ui.screens.productos.components.ProductPricingCard(costPrice, finalPrice, profitAmount,
+            isMultiplierMode, sliderMultiplier, sliderPercentage, onFinalPriceManualChange, onModeChange, onSliderMultiplierChange, onSliderPercentageChange)
     }
-}
 
 @Composable
 fun SegmentedControl(isMultiplierMode: Boolean, onModeChange: (Boolean) -> Unit) {

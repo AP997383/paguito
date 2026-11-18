@@ -22,8 +22,9 @@ interface  AbonosDao {
     @Query("""
         SELECT 
             p.id, 
-            p.idDeudor, 
-            d.nombre AS nameDeudor, 
+            p.idDeudor,
+            p.idDeudorRemoteDatabase, 
+            COALESCE(d.nombre, 'Cliente no disponible') AS nameDeudor, 
             p.montoAbonado, 
             p.fechaAbono, 
             p.pagoATiempo, 
@@ -32,7 +33,7 @@ interface  AbonosDao {
             p.notas, 
             p.jsonAbonoPorProducto
         FROM PagosTable AS p
-        LEFT JOIN DeudoresTable AS d ON p.idDeudorRemoteDatabase = CAST(d.idRemoteDatabase AS TEXT)
+        LEFT JOIN DeudoresTable AS d ON (p.idDeudorRemoteDatabase != '' AND p.idDeudorRemoteDatabase = CAST(d.idRemoteDatabase AS TEXT)) OR (p.idDeudorRemoteDatabase = '' AND p.idDeudor = CAST(d.id AS TEXT))
            ORDER BY p.fechaAbono DESC
     """)
     fun getPagosConNombre(): Flow<List<PagoConNombre>>
@@ -40,8 +41,9 @@ interface  AbonosDao {
     @Query("""
     SELECT 
         p.id, 
-        p.idDeudor, 
-        d.nombre AS nameDeudor, 
+        p.idDeudor,
+            p.idDeudorRemoteDatabase, 
+        COALESCE(d.nombre, 'Cliente no disponible') AS nameDeudor, 
         p.montoAbonado, 
         p.fechaAbono, 
         p.pagoATiempo, 
@@ -50,7 +52,7 @@ interface  AbonosDao {
         p.notas, 
         p.jsonAbonoPorProducto
     FROM PagosTable AS p
-    LEFT JOIN DeudoresTable AS d ON p.idDeudorRemoteDatabase = CAST(d.idRemoteDatabase AS TEXT)
+    LEFT JOIN DeudoresTable AS d ON (p.idDeudorRemoteDatabase != '' AND p.idDeudorRemoteDatabase = CAST(d.idRemoteDatabase AS TEXT)) OR (p.idDeudorRemoteDatabase = '' AND p.idDeudor = CAST(d.id AS TEXT))
     ORDER BY p.fechaAbono DESC
     LIMIT 5
 """)

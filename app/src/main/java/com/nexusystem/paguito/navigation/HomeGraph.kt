@@ -122,6 +122,7 @@ fun NavGraphBuilder.homeGraph(
                             ?: false
                     )
                 },
+                openAnalysis = { navController.navigate(Routes.AnalisisGraph.route) { launchSingleTop = true } },
                 perfilviewmodel = perfiViewModel
             )
         }
@@ -333,7 +334,8 @@ fun NavGraphBuilder.homeGraph(
         ) {
             ListaClientesDeudaScreen(
                 deudoresViewModel,
-                navController::popBackStack
+                navController::popBackStack,
+                onClient = { client -> navController.navigate(Routes.ScreenPerfilDeudor.route + "/" + Uri.encode(Gson().toJson(client))) }
             )
         }
 

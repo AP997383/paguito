@@ -40,7 +40,8 @@ import kotlinx.coroutines.launch
 
 val BgLightGreen = Color(0xFFE8F5E9)
 
-val BorderColor = Color(0xFFE5E7EB)
+val BorderColor: Color
+    @Composable get() = MaterialTheme.colorScheme.outlineVariant
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

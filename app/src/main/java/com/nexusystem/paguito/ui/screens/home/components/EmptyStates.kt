@@ -1,5 +1,6 @@
 package com.nexusystem.paguito.ui.screens.home.components
 
+import com.nexusystem.paguito.ui.components.paguitoBackground
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -25,131 +26,26 @@ private object PaguitoThemeColors {
 }
 
 @Composable
-fun PaymentHistoryVerticalEmptyState(
-    dynamicDescription: String,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            horizontalAlignment = Alignment.Start
-        ) {
-            Spacer(modifier = Modifier.height(10.dp))
-            HorizontalDivider(color = BorderColor, modifier = Modifier.padding(start = 5.dp))
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Text(
-                text = "Historial de pagos",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Start,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp)
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            repeat(2) {
-                DummyVerticalPaymentItem()
+fun PaymentHistoryVerticalEmptyState(dynamicDescription: String, modifier: Modifier = Modifier) {
+            com.nexusystem.paguito.ui.components.SoftCard(modifier.padding(vertical = 12.dp)) {
+                Icon(Icons.Default.Person, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
+                Spacer(Modifier.height(12.dp))
+                Text("Tu actividad, aquí", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(6.dp))
+                Text(dynamicDescription, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Text(
-            text = "No hay historial de pagos",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = dynamicDescription,
-            style = MaterialTheme.typography.bodyLarge,
-            color = PaguitoThemeColors.textSecondary,
-            textAlign = TextAlign.Center,
-            lineHeight = 24.sp,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-        )
-    }
-}
 
 @Composable
-fun PaymentHistoryEmptyState(
-    dynamicDescription: String,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "Próximos cobros",
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Start,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp)
-        )
-
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            items(2) {
-                DummyPaymentItem()
+fun PaymentHistoryEmptyState(dynamicDescription: String, modifier: Modifier = Modifier) {
+            com.nexusystem.paguito.ui.components.SoftCard(modifier.padding(vertical = 12.dp)) {
+                Icon(Icons.Default.DateRange, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
+                Spacer(Modifier.height(12.dp))
+                Text("Tus próximos cobros", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(6.dp))
+                Text(dynamicDescription, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-
-        Spacer(modifier = Modifier.height(40.dp))
-
-        Text(
-            text = "No hay deudores registrados",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = dynamicDescription,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center,
-            lineHeight = 24.sp,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-        )
-    }
-}
 
 @Composable
 fun DummyPaymentItem(modifier: Modifier = Modifier) {
@@ -175,7 +71,7 @@ fun DummyPaymentItem(modifier: Modifier = Modifier) {
                 modifier = Modifier
                     .size(30.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.background)
+                    .paguitoBackground()
                     .padding(8.dp)
             )
 

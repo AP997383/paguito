@@ -1,5 +1,8 @@
 package com.nexusystem.paguito.ui.screens.deudores
 
+import com.nexusystem.paguito.ui.components.ScreenHeader
+import com.nexusystem.paguito.ui.components.SoftCard
+import com.nexusystem.paguito.ui.components.paguitoBackground
 import android.Manifest
 import android.app.Activity
 import android.content.Context
@@ -64,7 +67,7 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 
 // --- COLORES ---
-val GreenPrimary = Color(0xFF15956F)
+val GreenPrimary: Color @Composable get() = MaterialTheme.colorScheme.primary
 
 
 
@@ -223,13 +226,7 @@ fun AddDebtorScreen(
     // --- UI ---
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("Nuevo Cliente", fontSize = 18.sp, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Atrás")
-                    }
-                },
+            ScreenHeader("Nuevo cliente", "Datos personales y crédito", onBackClick,
                 actions = {
                     IconButton(onClick = {
                         if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
@@ -240,13 +237,11 @@ fun AddDebtorScreen(
                     }) {
                         Icon(Icons.Outlined.ContactPage, contentDescription = "Contactos", tint = GreenPrimary)
                     }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = MaterialTheme.colorScheme.background),
-                windowInsets = WindowInsets(0.dp)
+                }
             )
         },
         bottomBar = {
-            Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 24.dp)) {
+            Box(modifier = Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(horizontal = 20.dp, vertical = 12.dp)) {
                 Button(
                     onClick = {
                         val jsonProducts = Gson().toJson(if(selectedProducts.size>0) selectedProducts else "")
@@ -268,19 +263,19 @@ fun AddDebtorScreen(
                                 0,
                                 0,
                                 jsonProducts,
-                                ""
+                                notes
 
                             )
                         )
 
                         onBackClick()
                     },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+                    shape = MaterialTheme.shapes.medium,
                     colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary),
                     enabled = isFormValid
                 ) {
-                    Text("Guardar y Crear Deuda", fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("Crear cliente y crédito", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
                 }
             }
         }
@@ -292,12 +287,26 @@ fun AddDebtorScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .paguitoBackground()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
                 .imePadding()
         ) {
             Spacer(modifier = Modifier.height(16.dp))
-            Text("Información Personal", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            SoftCard {
+                Text("Una nueva relación empieza aquí", style = MaterialTheme.typography.titleLarge)
+                Spacer(Modifier.height(8.dp))
+                Text("Añade sus datos, define el crédito y elige cuándo cobrar.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(16.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("1 · Datos", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium)
+                    Text("2 · Crédito", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium)
+                    Text("3 · Detalles", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium)
+                }
+            }
+            Spacer(Modifier.height(20.dp))
+            SoftCard {
+            Text("Información personal", style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(16.dp))
 
             LabelledTextField(
@@ -328,7 +337,10 @@ fun AddDebtorScreen(
             )
 
             Spacer(modifier = Modifier.height(24.dp))
-            Text("Detalles del Crédito", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            }
+            Spacer(Modifier.height(18.dp))
+            SoftCard {
+            Text("Detalles del crédito", style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(16.dp))
 
             AmountCard(amount = amount, onAmountChange = { amount = it })
@@ -342,7 +354,10 @@ fun AddDebtorScreen(
             PeriodicitySelectorRow(selectedPeriod = selectedPeriod, onPeriodSelected = { selectedPeriod = it })
 
             Spacer(modifier = Modifier.height(24.dp))
-            FieldLabel(title = "Productos Relacionados", isOptional = true)
+            }
+            Spacer(Modifier.height(18.dp))
+            SoftCard {
+            FieldLabel(title = "Productos relacionados", isOptional = true)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 CustomOutlinedTextField(
                     value = productSearch,
@@ -355,7 +370,7 @@ fun AddDebtorScreen(
                 OutlinedButton(
                     onClick = { showListProducts = true },
                     modifier = Modifier.height(52.dp),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = MaterialTheme.shapes.medium,
                     border = BorderStroke(1.dp, BorderColor)
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null)
@@ -386,6 +401,7 @@ fun AddDebtorScreen(
                 singleLine = false,
                 modifier = Modifier.height(100.dp)
             )
+            }
             Spacer(modifier = Modifier.height(40.dp))
         }
     }
@@ -442,7 +458,7 @@ fun AddDebtorScreen(
                             showWizard = false
                         },
                         modifier = Modifier.fillMaxWidth().height(48.dp),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = MaterialTheme.shapes.medium,
                         colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary)
                     ) {
                         Text("¡Entendido!", fontWeight = FontWeight.Bold)
@@ -503,7 +519,7 @@ fun CustomOutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier.defaultMinSize(minHeight = 52.dp),
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.medium,
         singleLine = singleLine,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         placeholder = { Text(placeholder, color = TextLightGray) },
@@ -518,30 +534,9 @@ fun CustomOutlinedTextField(
 
 @Composable
 fun AmountCard(amount: String, onAmountChange: (String) -> Unit) {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
-        modifier = Modifier.fillMaxWidth().border(1.dp, BorderColor, RoundedCornerShape(16.dp))
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(vertical = 24.dp)
-        ) {
-            Text("MONTO DE DEUDA INICIAL *", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextLightGray)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("$", fontSize = 48.sp, fontWeight = FontWeight.Bold, color = if (amount.isEmpty()) TextLightGray else Color.Black)
-                BasicTextField(
-                    value = amount,
-                    onValueChange = onAmountChange,
-                    textStyle = TextStyle(fontSize = 48.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Start),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.width(IntrinsicSize.Min),
-                    decorationBox = { inner ->
-                        if (amount.isEmpty()) Text("0.00", fontSize = 48.sp, fontWeight = FontWeight.Bold, color = TextLightGray)
-                        inner()
-                    }
-                )
-            }
-        }
+        OutlinedTextField(amount, onAmountChange, label = { Text("Monto inicial *") }, prefix = { Text("$") },
+            placeholder = { Text("0.00") }, singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium,
+            textStyle = MaterialTheme.typography.headlineSmall)
     }
-}
