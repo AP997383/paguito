@@ -33,9 +33,18 @@ android {
         applicationId = "com.nexusystem.paguito"
         minSdk = 26
         targetSdk = 37
-        versionCode = 17
+        versionCode = 18
         versionName = "1.4.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        create("productionRelease") {
+            storeFile = rootProject.file(localProperty("PROD_SIGNING_STORE_FILE"))
+            storePassword = localProperty("PROD_SIGNING_STORE_PASSWORD")
+            keyAlias = localProperty("PROD_SIGNING_KEY_ALIAS")
+            keyPassword = localProperty("PROD_SIGNING_KEY_PASSWORD")
+        }
     }
 
     flavorDimensions += "environment"
@@ -60,6 +69,7 @@ android {
         }
 
         create("prod") {
+            signingConfig = signingConfigs.getByName("productionRelease")
             buildConfigField ("String", "CLOUD_RUN_HASH", "\"2a2qk4zvlq\"")
             dimension = "environment"
             // Prod por lo general no lleva sufijo para mantener el paquete oficial en las tiendas

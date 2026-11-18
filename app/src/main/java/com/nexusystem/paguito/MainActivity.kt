@@ -32,6 +32,7 @@ import android.content.pm.PackageManager
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.google.firebase.messaging.FirebaseMessaging
+import com.nexusystem.paguito.ui.components.CompactPortraitPolicy
 import com.nexusystem.paguito.ui.components.navigation.RoundedBottomBar
 import com.nexusystem.paguito.ui.components.navigation.Routes
 import com.nexusystem.paguito.ui.screens.analisis.AnalisisViewModel
@@ -71,6 +72,7 @@ class MainActivity : ComponentActivity() {
             PaguitoTheme(
                 dynamicColor = false
             ) {
+                CompactPortraitPolicy()
                 val navController = rememberNavController()
                 var startDestination by remember { mutableStateOf<String?>(null) }
                 var showDialog by remember { mutableStateOf(false) }
