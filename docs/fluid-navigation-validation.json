@@ -1,0 +1,23 @@
+{
+  "navigation": "Canvas contour and a single moving circle without hardware shadows; one 280 ms position animation drives the curve, circle, icon lift and tint.",
+  "builds": {
+    "prodDebug": "passed",
+    "devDebug": "passed",
+    "prodDebugAndroidTest": "passed",
+    "devDebugAndroidTest": "passed"
+  },
+  "deviceTests": {
+    "device": "Moto g56 5G / Android 16",
+    "passed": 3,
+    "checks": [
+      "held selected tab does not change pixels",
+      "animation frames have no external shadow",
+      "rapid tab changes preserve selection and final route"
+    ]
+  },
+  "testCleanupIncident": {
+    "description": "Default Gradle connected-test cleanup uninstalled the production package. The app was reinstalled; local session/data recovery was not verified.",
+    "prevention": "leaveApksInstalledAfterRun=true and future visual tests on a dedicated DEV installation."
+  },
+  "publishedReleaseTag": "v2.0.0 is preserved; this correction is developed separately."
+}

@@ -25,3 +25,17 @@ python3 tools/test_codeartifact_auth.py
 ```
 
 Referencia: [autenticación de Gradle con CodeArtifact](https://docs.aws.amazon.com/codeartifact/latest/ug/maven-gradle.html).
+
+## Revisión de la barra de navegación
+
+`RoundedBottomBar` dibuja el contorno y un único indicador en Canvas, sin elevación ni sombras. Una posición animada de 280 ms sincroniza curva, círculo e iconos; los cambios de selección mantienen métricas de texto estables y los tabs conservan sus roles de accesibilidad.
+
+`FluidBottomBarTest` comprueba que mantener pulsado no modifica los píxeles, que los frames de transición no proyectan halos fuera del contorno y que los cambios rápidos llegan a la ruta seleccionada. Usa rutas vacías y no modifica perfiles ni datos de negocio.
+
+Ejecutar las pruebas visuales en la variante **DEV** y en un emulador o dispositivo de pruebas dedicado:
+
+```sh
+bash gradlew :app:connectedDevDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.nexusystem.paguito.ui.FluidBottomBarTest
+```
+
+`android.injected.androidTest.leaveApksInstalledAfterRun=true` conserva los APK al finalizar la instrumentación. El valor predeterminado de AGP es false y su limpieza puede desinstalar la app y borrar sus datos; por eso estas pruebas deben mantenerse separadas de la instalación de uso diario.
