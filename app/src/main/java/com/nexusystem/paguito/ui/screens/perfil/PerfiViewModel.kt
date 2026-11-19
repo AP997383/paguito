@@ -28,6 +28,8 @@ import com.nexus.medi.data.local.entity.DeudoresEntity
 import com.nexusystem.paguito.data.local.entity.SuscriptionsItems
 import com.nexusystem.paguito.data.local.entity.UserProfileEntity
 import com.nexusystem.paguito.data.local.entity.UserSuscriptionData
+import com.nexusystem.paguito.BuildConfig
+import com.nexusystem.paguito.data.models.firestore.FirestoreUserProfile
 import com.nexusystem.paguito.data.models.request.SuscripcionPurchaseRequest
 import com.nexusystem.paguito.data.repository.remote.auth.AuthRepository
 import com.nexusystem.paguito.data.repository.remote.auth.StorageRepository
@@ -155,25 +157,28 @@ class PerfiViewModel @Inject constructor(
         _accountDelete.value =0
     }
 
-    fun updateMyLocalDataProfile(){
-        if(!profileState?.email.isNullOrEmpty()){
+    /** Actualiza la sesión desde Firestore normalizando precios numéricos y conservando la caché si el documento falla. */
+    fun updateMyLocalDataProfile() {
+        val email = profileState?.email?.takeIf { it.isNotBlank() } ?: return
+        usersCollection.document(email).addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                if (BuildConfig.DEBUG) Log.w("PROFILE_SYNC", "No se pudo consultar el perfil")
+                return@addSnapshotListener
+            }
+            if (snapshot == null || !snapshot.exists()) return@addSnapshotListener
 
-       usersCollection.document(profileState?.email?:"").addSnapshotListener { snapshot, error ->
-           if (error != null) {
-               Log.e("OBTENEMOS_PERFIL", "-->ERROR", error)
-               return@addSnapshotListener
-           }
-           // Convertir el documento único directamente
-           val profile = snapshot?.toObject(UserProfileEntity::class.java)
-           Log.e("PERFIL_FROM_FIREBASE", "-->" + profile)
-           secureStorage.saveUserProfile(profile!!)
-       }
+            try {
+                val profile = snapshot.toObject(FirestoreUserProfile::class.java)?.toEntity()
+                    ?: return@addSnapshotListener
+                secureStorage.saveUserProfile(profile)
+                profileState = profile
+            } catch (exception: RuntimeException) {
+                // Una respuesta incompatible no debe cerrar la app ni reemplazar el perfil guardado.
+                _errorMessage.value = "No se pudo actualizar el perfil. Intenta nuevamente."
+                if (BuildConfig.DEBUG) Log.w("PROFILE_SYNC", "Formato de perfil no compatible")
+            }
         }
-
     }
-
-
-
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun startBillingConnection() {

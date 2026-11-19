@@ -1,0 +1,34 @@
+{
+  "failure": "Firestore Long-to-String deserialization in userSuscription.price",
+  "fix": "Read FirestoreUserProfile and normalize String/Number/null prices into the existing String-valued local profile. Preserve isActive explicitly with PropertyName.",
+  "regressionCases": [
+    "original Long-to-String crash reproduced with the old model",
+    "Long price and premium status",
+    "decimal price",
+    "formatted text price",
+    "missing price",
+    "null price",
+    "zero price and inactive subscription",
+    "profile fields and reminder flags",
+    "unsupported price type rejected",
+    "local Gson session round trip"
+  ],
+  "tests": {
+    "ProdDebug": {
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "DevDebug": {
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "prodDebugBuild": "passed",
+  "apk": "app/build/outputs/apk/prod/debug/app-prod-debug.apk",
+  "firebaseWritesDuringValidation": false,
+  "deviceRuntimeValidation": false
+}
