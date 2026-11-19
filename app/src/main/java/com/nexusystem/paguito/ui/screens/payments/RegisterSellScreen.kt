@@ -1,5 +1,6 @@
 package com.nexusystem.paguito.ui.screens.payments
 
+import com.nexusystem.paguito.ui.components.*
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -95,7 +96,7 @@ fun RegisterSellScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit = 
             if(amount.isNullOrEmpty())
                 amount =  it.precioConGanancia.toString()
             else
-                amount = (amount.toFloat() + it.precioConGanancia).toString()
+                amount = ((amount.toFloatOrNull() ?: 0f) + it.precioConGanancia).toString()
                                                            },listaBusquedaProductos,productosViewModel)
     }
     if(showListDeudoresBottomSheeet){
@@ -144,28 +145,17 @@ fun RegisterSellScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit = 
     }
 
     var notes by remember { mutableStateOf("") }
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Nueva venta", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Atrás", tint = MaterialTheme.colorScheme.onSurface)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
-                windowInsets = WindowInsets(0.dp)
-            )
-        },
+    Scaffold(modifier = Modifier.imePadding(),
+        topBar = { ScreenHeader("Nueva venta", "Una venta más, todo bajo control", onBackClick) },
         bottomBar = {
             // Botón inferior
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background)
-                    .padding(bottom = 50.dp, end = 16.dp, start = 16.dp)
+                    .paguitoBackground()
+                    .navigationBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp)
             ) {
-                val isButtonEnabled =(amount.isNotEmpty() && amount.toFloat()>0) && (!nameInCard.equals("Selecciona un deudor") && !nameInCard.isNullOrEmpty())
+                val isButtonEnabled =((amount.toFloatOrNull() ?: 0f)>0f) && (!nameInCard.equals("Selecciona un deudor") && !nameInCard.isNullOrEmpty())
                 Button(
                     onClick = {
                         if(isButtonEnabled) {
@@ -174,7 +164,7 @@ fun RegisterSellScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit = 
                                 contactText,
                                 currentDeudorSelected!!.nombre, "", amount.toFloat().toInt(),
                                 saldoAntesDeAbono = currentDeudorSelected!!.montoActualAdeudado.toInt(),
-                                getTodayDateString(),
+                                startDate.toString(),
                                 currentDeudorSelected!!.montoActualAdeudado.toInt() + amount.toFloat()
                                     .toInt(),
                                 1,
@@ -189,7 +179,7 @@ fun RegisterSellScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit = 
                                 currentDeudorSelected!!.id.toString(),
                                 amount.toFloat().toInt(),
                                 saldoAntesDeAbono = currentDeudorSelected!!.montoActualAdeudado.toInt(),
-                                getTodayDateString(),
+                                startDate.toString(),
                                 true,
                                 selectedMethodId,
                                 false,
@@ -220,17 +210,18 @@ fun RegisterSellScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit = 
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(12.dp),
+                        .heightIn(min = 56.dp),
+                    enabled = isButtonEnabled && !showSuccessPayment,
+                    shape = MaterialTheme.shapes.large,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isButtonEnabled) BluePrimary else BlueDisabled
+                        containerColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
                     Text(
                         "Guardar venta",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
                 }
             }
@@ -241,21 +232,26 @@ fun RegisterSellScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit = 
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .paguitoBackground()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
         ) {
             Spacer(modifier = Modifier.height(20.dp))
 
             // 1. DEUDOR SELECCIONADO
-            SectionLabel("Deudor seleccionado")
+            SoftCard {
+            Text("Cliente", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(12.dp))
             DebtorCard({
                 showListDeudoresBottomSheeet =true
             },nameInCard,ammountInCard)
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            SoftCard {
             // 2. MONTO A REGISTRAR
-            SectionLabel("Costo de producto")
+            SectionLabel("Total de la venta")
             AmountInput(amount = amount, onAmountChange = { amount = it })
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -281,8 +277,8 @@ fun RegisterSellScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit = 
                 Spacer(modifier = Modifier.width(12.dp))
                 OutlinedButton(
                     onClick = { showListProducts =true },
-                    modifier = Modifier.height(52.dp),
-                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.heightIn(min = 56.dp),
+                    shape = MaterialTheme.shapes.large,
                     border = BorderStroke(1.dp, BorderColor),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor =  MaterialTheme.colorScheme.onSurface)
                 ) {
@@ -312,6 +308,8 @@ fun RegisterSellScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit = 
                 }
             }
             Spacer(modifier = Modifier.height(24.dp))
+            }
+            SoftCard {
             // 5. NOTAS ADICIONALES
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Outlined.Description, contentDescription = null, tint = TextGray, modifier = Modifier.size(16.dp))
@@ -320,6 +318,7 @@ fun RegisterSellScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit = 
             }
             Spacer(modifier = Modifier.height(8.dp))
             NotesInput(notes = notes, onNotesChange = { notes = it })
+            }
 
             Spacer(modifier = Modifier.height(40.dp)) // Espacio extra para el scroll sobre el botón
         }
@@ -334,7 +333,7 @@ fun SelectedProductItem(
     Card(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-        shape = RoundedCornerShape(8.dp)
+        shape = MaterialTheme.shapes.medium
     ) {
         Row(
             modifier = Modifier.padding(12.dp),

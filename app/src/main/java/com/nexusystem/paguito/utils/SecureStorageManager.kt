@@ -1,7 +1,6 @@
 package com.nexusystem.paguito.utils
 
 import android.content.Context
-import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
 import com.google.gson.Gson
@@ -23,7 +22,6 @@ class SecureStorageManager(context: Context) {
 
     // Guardar el perfil completo
     fun saveUserProfile(user: UserProfileEntity) {
-        Log.e("SAVE_STORAGE","--<"+user)
         val json = gson.toJson(user)
         sharedPreferences.edit().putString("user_profile", json).apply()
     }

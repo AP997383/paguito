@@ -35,7 +35,8 @@ fun NavGraphBuilder.analisisGraph(
                 deudoresViewModel,
                 pagosViewModel,
                 productosViewModel,
-                analisisViewModel
+                analisisViewModel,
+                onBack = { navController.popBackStack() }
             )
         }
     }

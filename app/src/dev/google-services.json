@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "630090084482",
+    "project_id": "paguito-dev-f0d30",
+    "storage_bucket": "paguito-dev-f0d30.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:630090084482:android:b00a236c52b54c997bc49b",
+        "android_client_info": {
+          "package_name": "com.nexusystem.paguito.dev"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCsqBuSmLtIWJ2EM1iUCqFvSyyf1D9myDU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

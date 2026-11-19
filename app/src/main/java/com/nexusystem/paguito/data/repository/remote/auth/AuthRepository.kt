@@ -4,8 +4,10 @@ import com.nexusystem.paguito.data.models.request.ChangePasswordRequest
 import com.nexusystem.paguito.data.models.request.DeleteAccountRequest
 import com.nexusystem.paguito.data.models.request.GetAllMyDataRequest
 import com.nexusystem.paguito.data.models.request.LoginRequest
+import com.nexusystem.paguito.data.models.request.ManualWatsapRequest
 import com.nexusystem.paguito.data.models.request.SuscripcionPurchaseRequest
 import com.nexusystem.paguito.data.models.request.VerifyOtpRequest
+import com.nexusystem.paguito.data.models.request.recordatoriosRequest
 import com.nexusystem.paguito.data.models.responses.GetAllMyDataResponse
 import com.nexusystem.paguito.data.models.responses.LoginResponse
 import com.nexusystem.paguito.data.models.responses.SuscripcionPurchaseResponse
@@ -20,7 +22,7 @@ class AuthRepository @Inject constructor(
 
     suspend fun verifyOtp(email: String, otp: String): Boolean {
         val response = authApi.verifyOtp(
-            VerifyOtpRequest(email, otp)
+            request = VerifyOtpRequest(email, otp)
         )
 
         if (response.isSuccessful) {
@@ -34,7 +36,7 @@ class AuthRepository @Inject constructor(
 
     suspend fun changePassword(email: String, newPassword: String): Boolean {
         val response = authApi.changePassword(
-            ChangePasswordRequest(email, newPassword)
+            request = ChangePasswordRequest(email, newPassword)
         )
 
         if (response.isSuccessful) {
@@ -46,10 +48,34 @@ class AuthRepository @Inject constructor(
         }
     }
 
+    suspend fun crearRecordatorios(email: String,typeReminderEnableOrDisabel:Int): Boolean {
+        val response = authApi.agendarRecordatorios(
+            request = recordatoriosRequest(email,typeReminderEnableOrDisabel)
+        )
+
+        if (response.isSuccessful) {
+            return response.body()?.ok == true
+        } else {
+           return  false;
+        }
+    }
+
+    suspend fun manualWatsap(request: ManualWatsapRequest): Boolean {
+        val response = authApi.manualWatsap(
+            request = request
+        )
+
+        if (response.isSuccessful) {
+            return response.body()?.ok == true
+        } else {
+            return  false;
+        }
+    }
+
 
 
     suspend fun completeRegister(dataUser : UserDataModelAuth): String {
-        val response = authApi.register(dataUser)
+        val response = authApi.register(request = dataUser)
         if (response.isSuccessful) {
             if(!response.body()?.error.isNullOrEmpty()){
                 return "El usuario ya existe, intenta iniciar session con tus accesos."
@@ -62,7 +88,7 @@ class AuthRepository @Inject constructor(
     }
 
     suspend fun loginUser(email:String,password: String,token:String): LoginResponse {
-        val response = authApi.loginUser(LoginRequest(email, password,token))
+        val response = authApi.loginUser(request = LoginRequest(email, password,token))
         if (response.isSuccessful) {
             return response.body()!!
         } else {
@@ -73,7 +99,7 @@ class AuthRepository @Inject constructor(
     }
 
     suspend fun getAllMyData(email:String): GetAllMyDataResponse {
-        val response = authApi.getAllMyData(GetAllMyDataRequest(email))
+        val response = authApi.getAllMyData(request = GetAllMyDataRequest(email))
         if (response.isSuccessful) {
             return response.body()!!
         } else {
@@ -95,7 +121,7 @@ class AuthRepository @Inject constructor(
     }
 
     suspend fun deleteMyAccount(email: String): Boolean {
-        val response = authApi.deleteMyAccount(DeleteAccountRequest(email))
+        val response = authApi.deleteMyAccount(request = DeleteAccountRequest(email))
         if (response.isSuccessful) {
             return response.body()!!.success
         } else {
@@ -106,7 +132,7 @@ class AuthRepository @Inject constructor(
     }
 
     suspend fun confirmarSuscripcion(request:SuscripcionPurchaseRequest): SuscripcionPurchaseResponse {
-        val response = authApi.confirmarSuscripcion(request)
+        val response = authApi.confirmarSuscripcion(request = request)
         if (response.isSuccessful) {
             return response.body()!!
         } else {

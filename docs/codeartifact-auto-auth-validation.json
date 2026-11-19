@@ -1,0 +1,18 @@
+{
+  "automaticRefresh": "A fresh CodeArtifact token is requested with AWS CLI for each online Gradle configuration. Stored nexusCodeArtifactToken is ignored online.",
+  "verification": {
+    "prodDebugBuild": "passed with deliberately obsolete nexusCodeArtifactToken property",
+    "privateSdkArtifact": "verified with --refresh-dependencies and a restricted PATH without /usr/local/bin",
+    "authenticationIntegrationTests": {
+      "passed": 4,
+      "cases": [
+        "ignore obsolete stored token and honor repository/profile",
+        "explain expired AWS SSO session without logging diagnostics",
+        "reject empty AWS token",
+        "avoid AWS CLI in offline mode"
+      ]
+    }
+  },
+  "awsCredentials": "Uses the existing AWS credential chain; interactive account authentication may still be required when the AWS session expires.",
+  "ideFollowUp": "Sync Project with Gradle Files to load the changed settings. The earlier 401 did not reproduce in the current CLI validations."
+}

@@ -1,5 +1,6 @@
 package com.nexusystem.paguito.ui.screens.website.components
 
+import com.nexusystem.paguito.ui.components.paguitoBackground
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -89,7 +90,7 @@ fun WebsitePublishedPreviewCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(22.dp))
-                    .background(MaterialTheme.colorScheme.background)
+                    .paguitoBackground()
                     .border(
                         1.dp,
                         MaterialTheme.colorScheme.outline.copy(alpha = 0.20f),

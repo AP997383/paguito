@@ -118,7 +118,12 @@ fun NavGraphBuilder.clientesGraph(
                                 "/$json"
                     )
                 },
-                viewModel = perfilViewModel
+                viewModel = perfilViewModel,
+                openSettingsSms = {
+                    navController.navigate(
+                        Routes.ScreenSettingsSms.route
+                    )
+                }
             )
         }
 

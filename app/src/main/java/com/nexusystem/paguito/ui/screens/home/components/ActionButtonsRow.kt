@@ -14,6 +14,7 @@ import androidx.compose.material.icons.outlined.AttachMoney
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.LocalGroceryStore
 import androidx.compose.material.icons.outlined.PersonAdd
+import androidx.compose.material.icons.outlined.PeopleAlt
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -32,6 +33,7 @@ import com.nexusystem.paguito.domain.data.DeudoresSummary
 
 private val BluePrimary = Color(0xFF1AAF83)
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ActionButtonsRow(
     openWebsite: () -> Unit,
@@ -43,32 +45,36 @@ fun ActionButtonsRow(
     sumary1: DeudoresSummary?,
     isSucriptionActive: Boolean,
     showDialogLimitFree: () -> Unit,
-    numeroProductos: Int
+    numeroProductos: Int,
+    seeAllClients: (() -> Unit)? = null
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        maxItemsInEachRow = 3,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         ActionButton(
+            modifier = Modifier.weight(1f),
             icon = Icons.Outlined.Language,
             text = "Sitio\nWeb",
-            iconTint = Color(0xFF2196F3),
+            iconTint = MaterialTheme.colorScheme.tertiary,
             onClick = openWebsite
         )
 
         ActionButton(
+            modifier = Modifier.weight(1f),
             icon = Icons.Outlined.AccountBalanceWallet,
             text = "Registrar\nPago",
-            iconTint = MaterialTheme.colorScheme.onSurface,
+            iconTint = MaterialTheme.colorScheme.primary,
             onClick = registerPayment
         )
 
         ActionButton(
+            modifier = Modifier.weight(1f),
             icon = Icons.Outlined.PersonAdd,
             text = "Nuevo\nDeudor",
-            iconTint = BluePrimary,
+            iconTint = MaterialTheme.colorScheme.primary,
             onClick = {
                 if ((sumary1?.totalDeudores ?: 0) >= 10 && !isSucriptionActive) {
                     showDialogLimitFree()
@@ -79,9 +85,10 @@ fun ActionButtonsRow(
         )
 
         ActionButton(
+            modifier = Modifier.weight(1f),
             icon = Icons.Outlined.LocalGroceryStore,
             text = "Nuevo\nProducto",
-            iconTint = Color(0xFF40C4FF),
+            iconTint = MaterialTheme.colorScheme.tertiary,
             onClick = {
                 if (numeroProductos >= 10 && !isSucriptionActive) {
                     showDialogLimitFree()
@@ -92,10 +99,15 @@ fun ActionButtonsRow(
         )
 
         ActionButton(
+            modifier = Modifier.weight(1f),
             icon = Icons.Outlined.AttachMoney,
             text = "Agregar\nVenta",
-            iconTint = Color(0xFF10B981),
+            iconTint = MaterialTheme.colorScheme.primary,
             onClick = registerNewSell
+        )
+        if (seeAllClients != null) ActionButton(
+            modifier = Modifier.weight(1f), icon = Icons.Outlined.PeopleAlt,
+            text = "Mis\nClientes", iconTint = MaterialTheme.colorScheme.primary, onClick = seeAllClients
         )
     }
 }
@@ -105,26 +117,25 @@ fun ActionButton(
     icon: ImageVector,
     text: String,
     iconTint: Color,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = Modifier
-            .width(96.dp)
-            .height(122.dp)
-            .clickable { onClick() },
+        modifier = modifier.heightIn(min = 116.dp),
+        onClick = onClick,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
         border = BorderStroke(
             1.dp,
-            MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
         ),
-        shape = RoundedCornerShape(26.dp),
+        shape = MaterialTheme.shapes.large,
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .padding(horizontal = 8.dp, vertical = 14.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center

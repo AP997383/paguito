@@ -1,177 +1,62 @@
 package com.nexusystem.paguito.ui.screens.home.components
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.*
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.*
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import com.nexus.medi.data.local.entity.DeudoresEntity
-import com.nexusystem.paguito.ui.screens.analisis.BluePrimary
 import com.nexusystem.paguito.utils.formatAsCurrency
 import com.nexusystem.paguito.utils.getDaysUntilNextPayment
 
-val TextGray = Color(0xFF6B7280)
-val BorderLight = Color(0xFFF3F4F6)
+val TextGray: Color @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+val BorderLight: Color @Composable get() = MaterialTheme.colorScheme.outlineVariant
 val RedUrgent = Color(0xFFEF4444)
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun UpcomingDeadlinesSection(
-    deudores: List<DeudoresEntity?>,
-    seeAllDeudores: () -> Unit,
-    openDetailDeudor: (DeudoresEntity) -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            "Próximos Vencimientos",
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Text(
-            "Ver todos",
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = BluePrimary,
-            modifier = Modifier.clickable { seeAllDeudores() }
-        )
+fun UpcomingDeadlinesSection(deudores: List<DeudoresEntity?>, seeAllDeudores: () -> Unit, openDetailDeudor: (DeudoresEntity) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text("Próximos cobros", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+        TextButton(onClick = seeAllDeudores) { Text("Ver todos", style = MaterialTheme.typography.labelMedium) }
     }
-
-    Spacer(modifier = Modifier.height(12.dp))
-
+    Spacer(Modifier.height(8.dp))
     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        deudores.forEach { deudor ->
-            item {
-                if (deudor != null) {
-                    UpcomingCard(
-                        openDetailDeudor = { openDetailDeudor(deudor) },
-                        name = deudor.nombre,
-                        amount = deudor.montoActualAdeudado.toString(),
-                        date = deudor.fechaInicialDeuda,
-                        isUrgent = true,
-                        periodisity = deudor.periodicidad
-                    )
-                }
-            }
+        items(deudores.filterNotNull().filter { it.montoActualAdeudado > 0f }) { client ->
+            UpcomingCard({ openDetailDeudor(client) }, client.nombre, client.montoActualAdeudado.toString(),
+                client.fechaInicialDeuda, false, client.periodicidad)
         }
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun UpcomingCard(
-    openDetailDeudor: () -> Unit,
-    name: String,
-    amount: String,
-    date: String,
-    isUrgent: Boolean,
-    periodisity: String
-) {
-    Card(
-        modifier = Modifier
-            .width(150.dp)
-            .clickable { openDetailDeudor() },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(0.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(BorderLight),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.Person, null, tint = TextGray)
-                }
-
-                if (isUrgent) {
-                    Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .clip(CircleShape)
-                            .background(RedUrgent)
-                    )
-                }
+fun UpcomingCard(openDetailDeudor: () -> Unit, name: String, amount: String, date: String, isUrgent: Boolean, periodisity: String) {
+    val colors = MaterialTheme.colorScheme
+    val days = runCatching { getDaysUntilNextPayment(date, periodisity) }.getOrNull()
+    Card(onClick = openDetailDeudor, modifier = Modifier.width(194.dp), shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
+        border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.4f))) {
+        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Box(Modifier.size(42.dp).background(colors.primary.copy(alpha = 0.08f), MaterialTheme.shapes.medium), contentAlignment = Alignment.Center) {
+                Text(name.trim().take(1).uppercase().ifBlank { "?" }, style = MaterialTheme.typography.titleMedium, color = colors.primary)
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Text(
-                name,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                "Saldo restante: ",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Text(
-                formatAsCurrency(amount),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = if (isUrgent) RedUrgent else MaterialTheme.colorScheme.onSurface
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-            HorizontalDivider(color = BorderLight)
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Text(
-                "Siguiente pago en: ",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.SemiBold
-            )
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Outlined.CalendarToday,
-                    null,
-                    tint = if (isUrgent) RedUrgent else MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(14.dp)
-                )
-
-                Spacer(modifier = Modifier.width(6.dp))
-
-                Text(
-                    "${getDaysUntilNextPayment(date, periodisity)} días",
-                    fontSize = 12.sp,
-                    color = if (isUrgent) RedUrgent else MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.SemiBold
-                )
+            Text(name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Column {
+                Text("Saldo por cobrar", style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+                Text(formatAsCurrency(amount), style = MaterialTheme.typography.titleLarge)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Icon(Icons.Outlined.CalendarToday, null, tint = colors.primary, modifier = Modifier.size(16.dp))
+                Text(when { days == null || periodisity == "A" -> "Fecha por definir"; days == 0L -> "Hoy"; days == 1L -> "Mañana"; else -> "En $days días" },
+                    style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
             }
         }
     }

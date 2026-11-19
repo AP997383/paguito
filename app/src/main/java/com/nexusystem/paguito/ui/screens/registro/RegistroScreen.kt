@@ -49,11 +49,16 @@ import com.nexusystem.paguito.utils.dialogs.ErrorAlertDialog
 
 // --- COLORES ---
 val GreenPrimary = Color( 0xFF15956F)
-val BgColor = Color(0xFFFFFFFF)
-val InputBgColor = Color(0xFFF9FAFB)
-val TextDark = Color(0xFF1F2937)
-val TextGray = Color(0xFF6B7280)
-val TextLightGray = Color(0xFF9CA3AF)
+val BgColor: Color
+    @Composable get() = MaterialTheme.colorScheme.background
+val InputBgColor: Color
+    @Composable get() = MaterialTheme.colorScheme.surfaceVariant
+val TextDark: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurface
+val TextGray: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+val TextLightGray: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
 
 // Colores de fuerza de contraseña
 val StrengthWeak = Color(0xFFEF4444)   // Rojo
@@ -117,33 +122,11 @@ fun RegisterScreen(
     val isFormValid = name.isNotBlank() && isIdentifierValid && conditionsMetCount == 4 && password == confirmPassword && termsAccepted
     Log.e("TERMS","->"+ name +"/"+isIdentifierValid+"/"+conditionsMetCount+"/"+(password == confirmPassword)+"/"+termsAccepted)
     Box(){
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Atrás", tint = TextDark)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BgColor),
-                windowInsets = WindowInsets(0.dp)
-            )
-        },
-        containerColor = BgColor
-    ) { paddingValues ->
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp)
-        ) {
+    com.nexusystem.paguito.ui.components.AuthSheetScaffold(registering = true, onBack = onBackClick) {
             // Títulos
-            Text("Crear Cuenta", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = TextDark)
+            Text("Crea tu cuenta", style = MaterialTheme.typography.headlineMedium, color = TextDark)
             Spacer(modifier = Modifier.height(8.dp))
-            Text("Únete en Paguito y comienza a tomar el control de tus finanzas hoy mismo.", fontSize = 14.sp, color = TextGray)
+            Text("Completa tus datos para comenzar.", fontSize = 14.sp, color = TextGray)
 
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -170,7 +153,7 @@ fun RegisterScreen(
             )
 
             // Panel de Seguridad (Se despliega solo cuando empiezan a escribir)
-            AnimatedVisibility(visible = password.isNotEmpty()) {
+            Column {
                 PasswordStrengthPanel(
                     progress = strengthProgress,
                     color = strengthColor,
@@ -185,7 +168,7 @@ fun RegisterScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Confirmar Contraseña (Solo aparece si la primera ya cumple los requisitos)
-            AnimatedVisibility(visible = conditionsMetCount == 4) {
+            Column {
                 Column {
                     CustomFieldLabel("Confirmar Contraseña")
                     CustomAuthTextField(
@@ -222,12 +205,12 @@ fun RegisterScreen(
                         registerwModel.sendOtp(identifier)
                     } else showError = true
                 },
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor =  MaterialTheme.colorScheme.primary, disabledContainerColor = GreenPrimary.copy(alpha = 0.5f)),
                 enabled = true // Lo dejamos enabled siempre para mostrar el error si hacen clic incompleto, o ponlo en 'isFormValid' si prefieres que se bloquee.
             ) {
-                Text("Registrarse", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text("Registrarse", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -241,8 +224,6 @@ fun RegisterScreen(
             }
 
             Spacer(modifier = Modifier.height(32.dp))
-        }
-
     }
         LoadingOverlay(
             isLoading = isLoading,
@@ -340,14 +321,14 @@ fun PasswordStrengthPanel(
     hasUppercase: Boolean, hasNumber: Boolean, hasSpecial: Boolean, hasMinLength: Boolean
 ) {
     Surface(
-        color = InputBgColor,
-        shape = RoundedCornerShape(12.dp),
+        color = Color.Transparent,
+        shape = RoundedCornerShape(16.dp),
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(vertical = 12.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("SEGURIDAD DE LA CONTRASEÑA", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextLightGray, letterSpacing = 1.sp)
-                Text("$conditionsMetCount/4", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextLightGray)
+                Text("Seguridad de la contraseña", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextLightGray, letterSpacing = 0.sp)
+                Text("$conditionsMetCount/4", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextLightGray)
             }
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -360,7 +341,7 @@ fun PasswordStrengthPanel(
                 strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             // Requisitos
             Row(modifier = Modifier.fillMaxWidth()) {
@@ -395,7 +376,7 @@ fun ConditionItem(text: String, isMet: Boolean) {
 
 @Composable
 fun CustomFieldLabel(text: String) {
-    Text(text, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextDark, modifier = Modifier.padding(bottom = 6.dp))
+    Text(text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextDark, modifier = Modifier.padding(bottom = 6.dp))
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -407,7 +388,7 @@ fun CustomAuthTextField(
 ) {
     OutlinedTextField(
         value = value, onValueChange = onValueChange,
-        modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true,
+        modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = if (isPassword) KeyboardType.Password else keyboardType),
         visualTransformation = if (isPassword && !passwordVisible) PasswordVisualTransformation() else VisualTransformation.None,
         placeholder = { Text(placeholder, color = TextLightGray, fontSize = 14.sp) },
@@ -415,13 +396,13 @@ fun CustomAuthTextField(
         trailingIcon = {
             if (isPassword) {
                 IconButton(onClick = { onPasswordVisibilityChange(!passwordVisible) }) {
-                    Icon(if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff, contentDescription = null, tint = TextLightGray, modifier = Modifier.size(20.dp))
+                    Icon(if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff, contentDescription = if (passwordVisible) "Ocultar contraseña" else "Mostrar contraseña", tint = TextLightGray, modifier = Modifier.size(20.dp))
                 }
             }
         },
         colors = OutlinedTextFieldDefaults.colors(
-            unfocusedBorderColor = Color(0xFFE5E7EB), focusedBorderColor =  MaterialTheme.colorScheme.primary,
-            unfocusedContainerColor = Color.White, focusedContainerColor = Color.White,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant, focusedBorderColor =  MaterialTheme.colorScheme.primary,
+            unfocusedContainerColor = MaterialTheme.colorScheme.background, focusedContainerColor = MaterialTheme.colorScheme.background,
             focusedTextColor = TextDark, unfocusedTextColor = TextDark
         )
     )

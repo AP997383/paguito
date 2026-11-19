@@ -16,6 +16,9 @@ import com.nexus.medi.data.local.entity.DeudoresEntity
 import com.nexus.medi.data.local.entity.PagosEntinty
 import com.nexus.medi.data.local.entity.PorductosEntity
 import com.nexusystem.paguito.data.local.entity.UserProfileEntity
+import com.nexusystem.paguito.data.models.request.ManualWatsapRequest
+import com.nexusystem.paguito.data.remote.cloudFunctions.AuthApi
+import com.nexusystem.paguito.data.repository.remote.auth.AuthRepository
 import com.nexusystem.paguito.domain.data.DeudoresSummary
 import com.nexusystem.paguito.domain.usescases.abonos.AbonosUseCase
 import com.nexusystem.paguito.domain.usescases.deudores.DeudoresUseCase
@@ -23,6 +26,7 @@ import com.nexusystem.paguito.utils.SecureStorageManager
 import com.nexusystem.paguito.utils.getTodayDateString
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -34,12 +38,17 @@ import javax.inject.Inject
 
 @HiltViewModel
 class DeudoresViewModel @Inject constructor(
+    private val authRepository: AuthRepository,
     private val deudoresUseCase: DeudoresUseCase,
     private val abonosUseCase: AbonosUseCase,
     private val firestore: FirebaseFirestore,
     private val secureStorage: SecureStorageManager
 ) : ViewModel() {
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
 
+    private val _reminderSuccess= MutableStateFlow(false)
+    val reminderSuccess: StateFlow<Boolean> = _reminderSuccess
     private val _deudor = MutableStateFlow<DeudoresEntity?>(null)
     val deudor = _deudor.asStateFlow()
 
@@ -63,6 +72,24 @@ class DeudoresViewModel @Inject constructor(
     val settings = firestoreSettings {
         isPersistenceEnabled = true
     }
+    fun resetreminderSuccess(){
+        _reminderSuccess.value=false
+    }
+    fun manualWatsap(typeReminder:Int,nombreCliente:String,telefonoCliente:String,saldoRestante:String,proximoPago:String) {
+
+        viewModelScope.launch {
+            _isLoading.value = true
+            _reminderSuccess.value = true
+            try {
+                val result = authRepository.manualWatsap(ManualWatsapRequest(telefonoCliente,profileState?.fullName?:"",nombreCliente,profileState?.email?:"",saldoRestante,typeReminder,profileState?.phone?:"",proximoPago))
+                _reminderSuccess.value = true
+            } catch (e: Exception) {
+                _reminderSuccess.value = true
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
 
 
     var mail by mutableStateOf<String?>("")
@@ -76,6 +103,7 @@ class DeudoresViewModel @Inject constructor(
     fun loadUserProfile() {
         // Recuperamos del Secure Storage
         val savedProfile = secureStorage.getUserProfile()
+        Log.e("PROFILE_PHOTO", "-->$savedProfile")
         mail = savedProfile?.email?:""
         profileState = savedProfile
     }
@@ -145,6 +173,36 @@ class DeudoresViewModel @Inject constructor(
     fun guardarDeudores(recipe: ArrayList<DeudoresEntity>) {
         viewModelScope.launch {
             deudoresUseCase.agregarDeudores(recipe)
+        }
+    }
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun updateDeudor( producto: DeudoresEntity?) {
+        viewModelScope.launch {
+            producto?.let { product ->
+                try {
+
+                        // 1. Preparamos los datos
+                        val newDocRef = firestore.collection("deudores")
+                            .document(profileState?.email?:"")
+                            .collection("deudores")
+                            .document(producto.idRemoteDatabase)
+                        product.inRemote =true
+                        newDocRef.set(product, SetOptions.merge())
+                            .addOnSuccessListener {
+                                viewModelScope.launch {
+                                    deudoresUseCase.agregarDeudor(product)
+                                    Log.d("SAVEDEUDOE", "Sincronizado con la nube exitosamente")
+                                }
+                            }
+                            .addOnFailureListener { e ->
+                                Log.e("SAVEDEUDOE", "Error en cola de sincronización: ${e.message}")
+                            }
+
+                } catch (e: Exception) {
+                    deudoresUseCase.agregarDeudor(product)
+                    e.printStackTrace()
+                }
+            }
         }
     }
 

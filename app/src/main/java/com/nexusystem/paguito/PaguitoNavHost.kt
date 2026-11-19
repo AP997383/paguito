@@ -18,6 +18,7 @@ import androidx.navigation.compose.composable
 import com.google.android.play.core.review.ReviewManagerFactory
 import com.nexusystem.paguito.navigation.analisisGraph
 import com.nexusystem.paguito.navigation.clientesGraph
+import com.nexusystem.paguito.navigation.salesGraph
 import com.nexusystem.paguito.navigation.homeGraph
 import com.nexusystem.paguito.navigation.loginGraph
 import com.nexusystem.paguito.navigation.productosGraph
@@ -87,8 +88,11 @@ fun MediNavHost(
             navController = navController,
             deudoresViewModel = deudoresViewModel,
             pagosViewModel = pagosViewModel,
-            productosViewModel = productosViewModel
+            productosViewModel = productosViewModel,
+            perfiViewModel=perfilViewModel
         )
+
+        salesGraph(navController, pagosViewModel, deudoresViewModel)
 
         analisisGraph(
             navController = navController,

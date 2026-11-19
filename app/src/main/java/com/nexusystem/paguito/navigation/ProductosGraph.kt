@@ -126,7 +126,12 @@ fun NavGraphBuilder.productosGraph(
                                 "/$json"
                     )
                 },
-                viewModel = perfilViewModel
+                viewModel = perfilViewModel,
+                openSettingsSms = {
+                    navController.navigate(
+                        Routes.ScreenSettingsSms.route
+                    )
+                }
             )
         }
     }

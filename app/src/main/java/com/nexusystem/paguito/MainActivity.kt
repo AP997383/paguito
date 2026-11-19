@@ -32,6 +32,7 @@ import android.content.pm.PackageManager
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.google.firebase.messaging.FirebaseMessaging
+import com.nexusystem.paguito.ui.components.CompactPortraitPolicy
 import com.nexusystem.paguito.ui.components.navigation.RoundedBottomBar
 import com.nexusystem.paguito.ui.components.navigation.Routes
 import com.nexusystem.paguito.ui.screens.analisis.AnalisisViewModel
@@ -57,8 +58,6 @@ class MainActivity : ComponentActivity() {
         requestNotificationPermission()
         clearNotifications()
 
-        val prefs = getSharedPreferences("settings", Context.MODE_PRIVATE)
-        val isDark = prefs.getBoolean("dark_mode", false)
         //MobileAds.initialize(this)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -71,9 +70,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             val context = LocalContext.current
             PaguitoTheme(
-                darkTheme = isDark,
                 dynamicColor = false
             ) {
+                CompactPortraitPolicy()
                 val navController = rememberNavController()
                 var startDestination by remember { mutableStateOf<String?>(null) }
                 var showDialog by remember { mutableStateOf(false) }
@@ -166,13 +165,12 @@ class MainActivity : ComponentActivity() {
                             route != Routes.ScreenChangePasswordProfile.route + "/{params}"&&
                             route != Routes.ScreenRegisterSell.route + "/"&&
                             route != Routes.ScreenRegisterSell.route&&
+                            route != Routes.ScreenSettingsSms.route&&
                             route != Routes.ScreenViewAllDeudores.route&&
                             route != Routes.ScreenViewAllPayments.route
 
                         ) {
-                            RoundedBottomBar(navController) {
-                                navController.navigate(it)
-                            }
+                            RoundedBottomBar(navController)
                         }
                     },
                     modifier = Modifier

@@ -1,197 +1,57 @@
 package com.nexusystem.paguito.ui.screens.home
 
-import android.os.Build
-import androidx.annotation.RequiresApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.nexus.medi.data.local.entity.DeudoresEntity
+import com.nexusystem.paguito.ui.components.*
 import com.nexusystem.paguito.ui.screens.deudores.DeudoresViewModel
 import com.nexusystem.paguito.utils.getDaysUntilNextPayment
-import java.util.Locale
+import com.nexusystem.paguito.utils.formatAsCurrency
 
-// Paleta de colores basada en la imagen de referencia
-val GrisFondoCard = Color(0xFFF2F2F2) // O Color(0xFFE0E0E0)
-val RojoAlerta = Color(0xFFEB5757) // Color aproximado del punto y monto
-val GrisTextoSecundario = Color(0xFF757575)
-val GrisIcono = Color(0xFF616161)
+fun daysToClientPayment(client: DeudoresEntity): Long? = if (client.periodicidad !in listOf("S", "Q", "M")) null else runCatching { getDaysUntilNextPayment(client.fechaInicialDeuda, client.periodicidad) }.getOrNull()
 
-@RequiresApi(Build.VERSION_CODES.O)
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ListaClientesDeudaScreen(deudoresViewModel: DeudoresViewModel,onBackClick:()->Unit) {
-    // Datos de ejemplo basados en tu imagen
-    val listaOriginal by deudoresViewModel.deudores.collectAsState()
+fun ListaClientesDeudaScreen(deudoresViewModel: DeudoresViewModel, onBackClick: () -> Unit, onClient: (DeudoresEntity) -> Unit = {}) {
+    val clients by deudoresViewModel.deudores.collectAsState()
+    LaunchedEffect(Unit) { deudoresViewModel.obtenerDeudores() }
+    UpcomingClientsContent(clients.filterNotNull(), onBackClick, onClient)
+}
 
-
-    var textoBusqueda by remember { mutableStateOf("") }
-
-    // Filtrar la lista basada en la búsqueda
-    val listaFiltrada = remember(textoBusqueda, listaOriginal) {
-        if (textoBusqueda.isEmpty()) {
-            listaOriginal
-        } else {
-            listaOriginal.filter {
-                it!!.nombre.contains(textoBusqueda, ignoreCase = true)
-            }
-        }
+@Composable
+fun UpcomingClientsContent(clients: List<DeudoresEntity>, onBack: () -> Unit, onClient: (DeudoresEntity) -> Unit) {
+    var query by rememberSaveable { mutableStateOf("") }
+    var onlyBalance by rememberSaveable { mutableStateOf(true) }
+    val visible = clients.filter { (!onlyBalance || it.montoActualAdeudado > 0f) && (query.isBlank() || it.nombre.contains(query, true) || it.telefono.contains(query)) }.sortedBy { daysToClientPayment(it) ?: Long.MAX_VALUE }
+    LazyColumn(Modifier.fillMaxSize().paguitoBackground(), contentPadding = PaddingValues(20.dp, 8.dp, 20.dp, 40.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        item { ScreenHeader("Próximos cobros", "Organiza tu día, cliente a cliente", onBack, horizontalPadding = 0.dp) }
+        item { SoftCard { Text("Tu agenda de cobranza", style = MaterialTheme.typography.titleLarge)
+            Text("${clients.count { it.montoActualAdeudado > 0f }} clientes con saldo pendiente", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(14.dp)); Text(formatAsCurrency(clients.sumOf { it.montoActualAdeudado.coerceAtLeast(0f).toDouble() }), style = MaterialTheme.typography.headlineLarge) } }
+        item { OutlinedTextField(query, { query = it }, label = { Text("Buscar cliente") }, leadingIcon = { Icon(Icons.Outlined.Search, null) }, singleLine = true, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large)
+            FilterChip(selected = onlyBalance, onClick = { onlyBalance = !onlyBalance }, label = { Text("Solo con saldo pendiente") }) }
+        if (visible.isEmpty()) item { SoftCard { Text("No hay clientes para mostrar", style = MaterialTheme.typography.titleMedium); Text("Cambia la búsqueda o el filtro de saldo.") } }
+        items(visible) { client -> ClientDueCard(client) { onClient(client) } }
     }
+}
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White) // Fondo principal
-            .padding(16.dp)
-    ) {
-        Column(modifier = Modifier.background(MaterialTheme.colorScheme.background)) {
-            // Header con Flecha Back
-            TopAppBar(
-                title = { Text("Proximos Cliente", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Regresar")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
-           ,    windowInsets = WindowInsets(0.dp) )
-        }
-        // --- BUSCADOR ---
-        OutlinedTextField(
-            value = textoBusqueda,
-            onValueChange = { textoBusqueda = it },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            placeholder = { Text("Buscar cliente...", color = GrisTextoSecundario) },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = GrisIcono) },
-            singleLine = true,
-            shape = RoundedCornerShape(24.dp), // Bordes muy redondeados para estilo moderno
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color.LightGray,
-                unfocusedBorderColor = Color.LightGray,
-                focusedContainerColor = Color.White,
-                unfocusedContainerColor = Color.White,
-                cursorColor = Color.Black
-            )
-        )
-
-        // --- LISTA VERTICAL ---
-        LazyColumn(
-            contentPadding = PaddingValues(vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp) // Espacio entre elementos
-        ) {
-            items(listaFiltrada) { cliente ->
-                ClienteDeudaListItem(cliente = cliente!!)
-            }
+@Composable
+fun ClientDueCard(client: DeudoresEntity, onOpen: () -> Unit) {
+    Card(onClick = onOpen, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.extraLarge, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(client.nombre, style = MaterialTheme.typography.titleMedium)
+            Text(formatAsCurrency(client.montoActualAdeudado), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+            val days = daysToClientPayment(client)
+            Text(when { days == null -> "Sin fecha programada"; days < 0 -> "Pago pendiente de regularizar"; days == 0L -> "Próximo pago: hoy"; else -> "Próximo pago en $days días" }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
-@Composable
-fun ClienteDeudaListItem(cliente: DeudoresEntity) {
-    // Contenedor principal del ítem (reemplaza la Card grande)
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = GrisFondoCard,
-        shape = RoundedCornerShape(16.dp),
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // --- Columna 1: Icono de Persona ---
-            Box(contentAlignment = Alignment.TopEnd) {
-                // Icono principal gris
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = null,
-                    tint = GrisIcono,
-                    modifier = Modifier.size(40.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            // --- Columna 2: Info del Cliente (Información Horizontal) ---
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                // Nombre
-                Text(
-                    text = cliente.nombre,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    color = Color.Black
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // Fila de Info Económica y Fecha
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    // Saldo Restante
-                    Column {
-                        Text(
-                            text = "Saldo restante:",
-                            fontSize = 12.sp,
-                            color = GrisTextoSecundario
-                        )
-                        Text(
-                            text = String.format(Locale.US, "$%.2f", cliente.montoActualAdeudado),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp,
-                            color = Color.Black
-                        )
-                    }
-
-                    // Siguiente Pago (con icono)
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            text = "Siguiente pago en:",
-                            fontSize = 12.sp,
-                            color = GrisTextoSecundario
-                        )
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.CalendarToday,
-                                contentDescription = null,
-                                tint = RojoAlerta,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "${getDaysUntilNextPayment(cliente.fechaInicialDeuda,cliente.periodicidad).toString()+" dìas"}",
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 14.sp,
-                                color = RojoAlerta
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
+@Composable fun ClienteDeudaListItem(cliente: DeudoresEntity) { ClientDueCard(cliente) {} }

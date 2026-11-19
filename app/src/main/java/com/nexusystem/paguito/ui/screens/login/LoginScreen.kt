@@ -3,6 +3,8 @@ package com.nexusystem.paguito.ui.screens.login
 import android.content.Context
 import android.util.Log
 import android.util.Patterns
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -43,9 +45,12 @@ import com.nexusystem.paguito.utils.dialogs.ErrorAlertDialog
 val GreenPrimary =Color( 0xFF15956F)
 
 
-val TextDark = Color(0xFF1F2937)
-val TextGray = Color(0xFF6B7280)
-val TextLightGray = Color(0xFF9CA3AF)
+val TextDark: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurface
+val TextGray: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+val TextLightGray: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
 
 @Composable
 fun LoginScreen(
@@ -74,10 +79,11 @@ fun LoginScreen(
             fullName = successLogin!!.fullName?:"",
             bussinesName = successLogin!!.bussinesName?:"",
             phone = successLogin!!.phone?:"",
+            watsapSended = successLogin!!.watsapSended?:0,
+            watsapsSendedTotal = successLogin!!.watsapsSendedTotal?:0,
             token =prefs.getString("MyToken","").toString(),
             userSuscription = successLogin!!.userSuscription?: UserSuscriptionData()
         )
-        Log.e("RESPONSE_LOGIN","-->"+profileToSave)
         secureStorage.saveUserProfile(profileToSave)
         onLoginSuccess(successLogin!!)
         viewModel.resetLogin()
@@ -125,27 +131,15 @@ fun LoginScreen(
 
         return isValid
     }
-    Box{
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Transparent)
-            .padding(horizontal = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(modifier = Modifier.height(60.dp))
-            Box(contentAlignment = Alignment.Center) {
-                Image(
-                    painter = painterResource(id = com.nexusystem.paguito.R.drawable.abonia_a),
-                    contentDescription = null,
-                    modifier = Modifier.size(90.dp)
-                )
-            }
-
-
-        Spacer(modifier = Modifier.height(48.dp))
-
+    Box(modifier = Modifier.fillMaxSize()) {
+    com.nexusystem.paguito.ui.components.AuthSheetScaffold(registering = false) {
+        Text("Inicia sesión", style = MaterialTheme.typography.headlineMedium)
+        Spacer(Modifier.height(8.dp))
+        Text("Usa tu cuenta Paguito para continuar.", style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(28.dp))
+        Text("Correo electrónico", style = MaterialTheme.typography.labelLarge)
+        Spacer(Modifier.height(8.dp))
         // --- 2. FORMULARIO ---
         // Campo: Correo o Teléfono
         CustomLoginTextField(
@@ -162,6 +156,8 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        Text("Contraseña", style = MaterialTheme.typography.labelLarge)
+        Spacer(Modifier.height(8.dp))
         // Campo: Contraseña
         CustomLoginTextField(
             value = password,
@@ -203,15 +199,15 @@ fun LoginScreen(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp),
-            shape = RoundedCornerShape(26.dp),
+                .heightIn(min = 56.dp),
+            shape = MaterialTheme.shapes.medium,
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
         ) {
             Text(
                 "Iniciar Sesión",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onPrimary
             )
         }
 
@@ -227,11 +223,12 @@ fun LoginScreen(
                 .padding(8.dp)
         )*/
 
-        Spacer(modifier = Modifier.weight(1f)) // Empuja el texto inferior hasta abajo
+        Spacer(modifier = Modifier.height(24.dp)) // Empuja el texto inferior hasta abajo
 
         // --- 4. TEXTO INFERIOR (Registro) ---
         Row(
-            modifier = Modifier.padding(bottom = 32.dp),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
+            horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(text = "¿No tienes cuenta? ", color = TextLightGray, fontSize = 14.sp)
@@ -243,7 +240,9 @@ fun LoginScreen(
                 modifier = Modifier.clickable { onRegisterClick() }
             )
         }
-        Spacer(modifier = Modifier.height(50.dp)) // Empuja el texto inferior hasta abajo
+        Text("Tu negocio siempre contigo", style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.align(Alignment.CenterHorizontally))
+        Spacer(modifier = Modifier.height(16.dp)) // Empuja el texto inferior hasta abajo
     }
 
     LoadingOverlay(
@@ -269,7 +268,7 @@ fun CustomLoginTextField(
     keyboardType: KeyboardType = KeyboardType.Text
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        TextField(
+        OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
             modifier = Modifier.fillMaxWidth(),
@@ -283,17 +282,17 @@ fun CustomLoginTextField(
                 if (isPassword) {
                     val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
                     IconButton(onClick = { onPasswordVisibilityChange(!passwordVisible) }) {
-                        Icon(imageVector = image, contentDescription = "Toggle password visibility", tint = TextLightGray, modifier = Modifier.size(20.dp))
+                        Icon(imageVector = image, contentDescription = if (passwordVisible) "Ocultar contraseña" else "Mostrar contraseña", tint = TextLightGray, modifier = Modifier.size(20.dp))
                     }
                 }
             },
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                errorContainerColor = MaterialTheme.colorScheme.surface,
-                focusedIndicatorColor = Color.Transparent, // Quita la línea de abajo
-                unfocusedIndicatorColor = Color.Transparent,
-                errorIndicatorColor = Color.Transparent,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.background,
+                unfocusedContainerColor = MaterialTheme.colorScheme.background,
+                errorContainerColor = MaterialTheme.colorScheme.background,
+                focusedBorderColor = MaterialTheme.colorScheme.primary, 
+                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                errorBorderColor = MaterialTheme.colorScheme.error,
                 focusedTextColor = MaterialTheme.colorScheme.onSurface,
                 unfocusedTextColor =  MaterialTheme.colorScheme.onSurface
             ),

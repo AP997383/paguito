@@ -45,7 +45,7 @@ class RegisterViewModel @Inject constructor(
 
     fun sendOtp(email: String) = viewModelScope.launch {
         _isLoading.value =true
-        val response = authApi.sendOtp(SendOtpRequest(email))
+        val response = authApi.sendOtp(request = SendOtpRequest(email))
 
         if (response.isSuccessful && response.body()?.success == true) {
             _isLoading.value =false

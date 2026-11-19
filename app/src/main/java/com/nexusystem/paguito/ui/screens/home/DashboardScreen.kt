@@ -1,5 +1,6 @@
 package com.nexusystem.paguito.ui.screens.home
 
+import com.nexusystem.paguito.ui.components.*
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -18,6 +19,7 @@ import com.nexusystem.paguito.domain.data.DeudoresSummary
 import com.nexusystem.paguito.ui.screens.deudores.DeudoresViewModel
 import com.nexusystem.paguito.ui.screens.home.components.*
 import com.nexusystem.paguito.ui.screens.payments.PagosViewModel
+import com.nexusystem.paguito.ui.screens.perfil.PerfiViewModel
 import com.nexusystem.paguito.ui.screens.productos.NativeAdBanner
 import com.nexusystem.paguito.ui.screens.productos.ProductosViewModel
 import com.nexusystem.paguito.utils.dialogs.PremiumLimitReachedDialog
@@ -39,7 +41,9 @@ fun DashboardScreen(
     openNexusPay: () -> Unit,
     deudoresViewModel: DeudoresViewModel,
     pagosViewModel: PagosViewModel,
-    productosViewmodel: ProductosViewModel
+    productosViewmodel: ProductosViewModel,
+    openAnalysis: () -> Unit = {},
+    perfilviewmodel: PerfiViewModel
 ) {
     val deudoresHistorial by deudoresViewModel.deudores.collectAsState()
     val sumary1 by deudoresViewModel.sumaryFive.collectAsState()
@@ -58,10 +62,9 @@ fun DashboardScreen(
         deudoresHistorial
             .filterNotNull()
             .map { deudor ->
-                val daysRemaining = getDaysUntilNextPayment(
-                    deudor.fechaInicialDeuda,
-                    deudor.periodicidad
-                )
+                val daysRemaining = runCatching { getDaysUntilNextPayment(
+                    deudor.fechaInicialDeuda, deudor.periodicidad
+                ) }.getOrDefault(Long.MAX_VALUE)
                 deudor to daysRemaining
             }
             .sortedBy { it.second }
@@ -82,6 +85,7 @@ fun DashboardScreen(
             Log.e("PROFILE_PHOTO", "-->$profile")
             isSucriptionActive = profile.userSuscription.isActive
             urlPhotoProfile = profile.fotoUrl
+
         }
     }
 
@@ -92,95 +96,131 @@ fun DashboardScreen(
         )
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .verticalScroll(rememberScrollState())
-    ) {
-        TopBar(
-            imageUser = urlPhotoProfile,
-            goToMyProfile = goToMyProfile
-        )
-
-        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-            Spacer(modifier = Modifier.height(16.dp))
-
-            BalanceCarousel(
-                pagosList = pagosPormes,
-                sumary1 = sumary1 ?: DeudoresSummary(0, 0f),
-                showBalance = isBalanceVisible,
-                onToggleBalance = { isBalanceVisible = !isBalanceVisible }
+    val dashboardScroll = rememberScrollState()
+    ScreenGuideHost(HOME_GUIDE_ID, "Guía de Inicio", HomeGuideSteps, scrollState = dashboardScroll) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .guideViewport()
+                .paguitoBackground()
+                .verticalScroll(dashboardScroll)
+        ) {
+            TopBar(
+                imageUser = urlPhotoProfile,
+                goToMyProfile = goToMyProfile
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+                val greeting = when (java.time.LocalTime.now().hour) {
+                    in 5..11 -> "Buenos días"
+                    in 12..18 -> "Buenas tardes"
+                    else -> "Buenas noches"
+                }
+                Text(greeting, style = MaterialTheme.typography.headlineSmall)
+                Text("Todo lo importante, a un toque.", style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(20.dp))
 
-            ActionButtonsRow(
-                openWebsite = openWebsite,
-                registerPayment = registerPayment,
-                registerProduct = registerProduct,
-                registerDebtor = registerDebtor,
-                registerCampaing = registerCampaing,
-                registerNewSell = registerNewSell,
-                sumary1 = sumary1,
-                isSucriptionActive = isSucriptionActive,
-                showDialogLimitFree = { showAlertFreeLimited = true },
-                numeroProductos = numeroProductos
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            NexusPayOnlineCard(
-                onClick = openNexusPay
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            if (!isSucriptionActive) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(10.dp),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(1.dp)
-                ) {
-                    NativeAdBanner(
-                        adUnitId = if (BuildConfig.DEBUG) {
-                            "ca-app-pub-3940256099942544/2247696110"
-                        } else {
-                            "ca-app-pub-1155673544372892/6066860296"
+                Column(Modifier.fillMaxWidth().guideTarget("home-overview")) {
+                    BalanceCarousel(
+                        pagosList = pagosPormes,
+                        productCount = numeroProductos,
+                        sumary1 = sumary1 ?: DeudoresSummary(0, 0f),
+                        showBalance = isBalanceVisible,
+                        onToggleBalance = { isBalanceVisible = !isBalanceVisible },
+                        onAddPaymentClick ={
+                            registerPayment()
                         }
                     )
+
+                }
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Column(Modifier.fillMaxWidth().guideTarget("home-actions")) {
+                    Text("Acciones rápidas", style = MaterialTheme.typography.titleMedium)
+                    Text("Todo lo que usas seguido", style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    ActionButtonsRow(
+                        openWebsite = openWebsite,
+                        registerPayment = registerPayment,
+                        registerProduct = registerProduct,
+                        registerDebtor = registerDebtor,
+                        registerCampaing = registerCampaing,
+                        registerNewSell = registerNewSell,
+                        sumary1 = sumary1,
+                        isSucriptionActive = isSucriptionActive,
+                        showDialogLimitFree = { showAlertFreeLimited = true },
+                        numeroProductos = numeroProductos,
+                        seeAllClients = seeAllDeudores
+                    )
+
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Column(Modifier.fillMaxWidth().guideTarget("home-online")) {
+                    NexusPayOnlineCard(
+                        onClick = openNexusPay
+                    )
+
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+
+                AnalysisShortcutCard(openAnalysis)
+                Spacer(Modifier.height(24.dp))
+                if (!isSucriptionActive && !LocalScreenGuideVisible.current) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(10.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(1.dp)
+                    ) {
+                        NativeAdBanner(
+                            adUnitId = if (BuildConfig.DEBUG) {
+                                "ca-app-pub-3940256099942544/2247696110"
+                            } else {
+                                "ca-app-pub-1155673544372892/6066860296"
+                            }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
-            }
+                Column(Modifier.fillMaxWidth().guideTarget("home-upcoming")) {
+                    if (deudoresOrdenados.isNotEmpty()) {
+                        UpcomingDeadlinesSection(
+                            deudores = deudoresOrdenados,
+                            seeAllDeudores = seeAllDeudores,
+                            openDetailDeudor = seeDeudorProfile
+                        )
+                    } else {
+                        Text("Próximos cobros", style = MaterialTheme.typography.titleMedium)
+                        PaymentHistoryEmptyState(
+                            "Cuando registres tu primer deudor, podrás ver los próximos a vencer en esta sección"
+                        )
+                }
 
-            if (deudoresOrdenados.isNotEmpty()) {
-                UpcomingDeadlinesSection(
-                    deudores = deudoresOrdenados,
-                    seeAllDeudores = seeAllDeudores,
-                    openDetailDeudor = seeDeudorProfile
-                )
-            } else {
-                PaymentHistoryEmptyState(
-                    "Cuando registres tu primer deudor, podrás ver los próximos a vencer en esta sección"
-                )
-            }
+                }
+                Column(Modifier.fillMaxWidth().guideTarget("home-recent")) {
+                    if (pagosHistorial.isNotEmpty()) {
+                        RecentPaymentsSection(
+                            pagos = pagosHistorial,
+                            seeAllPayments = seeAllPayments
+                        )
+                    } else {
+                        Spacer(Modifier.height(20.dp))
+                        Text("Actividad reciente", style = MaterialTheme.typography.titleMedium)
+                        PaymentHistoryVerticalEmptyState(
+                            "Cuando registres tu primer pago, podrás consultar tus últimos pagos o ventas"
+                        )
+                }
 
-            if (pagosHistorial.isNotEmpty()) {
-                RecentPaymentsSection(
-                    pagos = pagosHistorial,
-                    seeAllPayments = seeAllPayments
-                )
-            } else {
-                PaymentHistoryVerticalEmptyState(
-                    "Cuando registres tu primer pago, podrás consultar tus últimos pagos o ventas"
-                )
+                }
+                GuideScrollSpacer()
             }
-
-            Spacer(modifier = Modifier.height(150.dp))
         }
     }
 }

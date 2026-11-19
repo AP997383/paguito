@@ -11,6 +11,10 @@ data class LoginResponse(
     val fotoUrl: String,
     val bussinesName: String,
     val verified: Boolean,
+    val creditsSms: Int=0,
+    val creditsSmsTotal:Int=0,
+    val watsapSended:Int=0,
+    val watsapsSendedTotal:Int=0,
 val userSuscription:UserSuscriptionData = UserSuscriptionData()
 )
 

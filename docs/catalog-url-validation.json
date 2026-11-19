@@ -1,0 +1,42 @@
+{
+  "date": "2026-11-18",
+  "diagnosis": "The public storefront host returns HTML 404 for API routes; the API host serves the catalog endpoints. The previously local BASE_URL configuration is now independent from catalog routing.",
+  "liveGetVerification": {
+    "path": "/v1/paguito/store/check-subdomain",
+    "store-dev.nexusecosystem-mx.com": {
+      "status": 404,
+      "contentType": "text/html"
+    },
+    "api-dev.nexusecosystem-mx.com": {
+      "status": 200,
+      "contentType": "application/json"
+    }
+  },
+  "catalogApiByFlavor": {
+    "dev": "https://api-dev.nexusecosystem-mx.com",
+    "qa": "https://api-qa.nexusecosystem-mx.com",
+    "prod": "https://api.nexusecosystem-mx.com"
+  },
+  "routingRegressionOperations": 5,
+  "unitTests": {
+    "DevDebug": {
+      "tests": 26,
+      "failures": 0,
+      "errors": 0
+    },
+    "ProdDebug": {
+      "tests": 26,
+      "failures": 0,
+      "errors": 0
+    }
+  },
+  "lintProdDebug": {
+    "errors": 0,
+    "warnings": 0,
+    "hints": 0,
+    "existingDocumentedLocalRuleExceptions": 4
+  },
+  "apk": "app/build/outputs/apk/dev/debug/app-dev-debug.apk",
+  "iOS": "Existing API_BASE_URL configuration and CatalogAPI builders already select the API host; no iOS code changes for this fix.",
+  "remoteWritesPerformed": false
+}

@@ -1,5 +1,6 @@
 package com.nexusystem.paguito.ui.screens.website.setup
 
+import com.nexusystem.paguito.ui.components.paguitoBackground
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -54,7 +55,7 @@ fun WebsiteSetupScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .paguitoBackground()
     ) {
         Column(
             modifier = Modifier

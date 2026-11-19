@@ -28,6 +28,8 @@ import com.nexus.medi.data.local.entity.DeudoresEntity
 import com.nexusystem.paguito.data.local.entity.SuscriptionsItems
 import com.nexusystem.paguito.data.local.entity.UserProfileEntity
 import com.nexusystem.paguito.data.local.entity.UserSuscriptionData
+import com.nexusystem.paguito.BuildConfig
+import com.nexusystem.paguito.data.models.firestore.FirestoreUserProfile
 import com.nexusystem.paguito.data.models.request.SuscripcionPurchaseRequest
 import com.nexusystem.paguito.data.repository.remote.auth.AuthRepository
 import com.nexusystem.paguito.data.repository.remote.auth.StorageRepository
@@ -38,9 +40,12 @@ import com.nexusystem.paguito.utils.SecureStorageManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
@@ -98,7 +103,7 @@ class PerfiViewModel @Inject constructor(
 
     var profileState by mutableStateOf<UserProfileEntity?>(null)
         private set
-
+    private val usersCollection = firestore.collection("users")
     private val _currentProductSelected = MutableStateFlow<SuscriptionsItems?>(null)
     val currentProductSelected: StateFlow<SuscriptionsItems?> = _currentProductSelected
 
@@ -125,6 +130,7 @@ class PerfiViewModel @Inject constructor(
         .build()
 
     init {
+
         loadUserProfile()
         startBillingConnection()
     }
@@ -138,6 +144,7 @@ class PerfiViewModel @Inject constructor(
         val savedProfile = secureStorage.getUserProfile()
         _newUrlServer.value = savedProfile?.fotoUrl?:""
         profileState = savedProfile
+        updateMyLocalDataProfile()
     }
 
 
@@ -150,8 +157,28 @@ class PerfiViewModel @Inject constructor(
         _accountDelete.value =0
     }
 
+    /** Actualiza la sesión desde Firestore normalizando precios numéricos y conservando la caché si el documento falla. */
+    fun updateMyLocalDataProfile() {
+        val email = profileState?.email?.takeIf { it.isNotBlank() } ?: return
+        usersCollection.document(email).addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                if (BuildConfig.DEBUG) Log.w("PROFILE_SYNC", "No se pudo consultar el perfil")
+                return@addSnapshotListener
+            }
+            if (snapshot == null || !snapshot.exists()) return@addSnapshotListener
 
-
+            try {
+                val profile = snapshot.toObject(FirestoreUserProfile::class.java)?.toEntity()
+                    ?: return@addSnapshotListener
+                secureStorage.saveUserProfile(profile)
+                profileState = profile
+            } catch (exception: RuntimeException) {
+                // Una respuesta incompatible no debe cerrar la app ni reemplazar el perfil guardado.
+                _errorMessage.value = "No se pudo actualizar el perfil. Intenta nuevamente."
+                if (BuildConfig.DEBUG) Log.w("PROFILE_SYNC", "Formato de perfil no compatible")
+            }
+        }
+    }
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun startBillingConnection() {

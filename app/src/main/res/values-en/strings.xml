@@ -49,4 +49,51 @@
     <string name="cd_avatar">Profile picture</string>
     <string name="cd_logout_icon">Logout icon</string>
     <string name="cd_arrow">Navigation arrow</string>
+
+    <!-- Paguito introduction -->
+    <string name="intro_brand_tagline" formatted="false">Your business, in order</string>
+    <string name="intro_skip" formatted="false">Skip</string>
+    <string name="intro_next" formatted="false">Next</string>
+    <string name="intro_start" formatted="false">Get started</string>
+    <string name="intro_previous" formatted="false">Previous page</string>
+    <string name="intro_page_label">Page %1$d of %2$d</string>
+    <string name="intro_preview" formatted="false">PREVIEW · SAMPLE DATA</string>
+    <string name="intro_category_overview" formatted="false">Everything in one place</string>
+    <string name="intro_title_overview" formatted="false">Your business,</string>
+    <string name="intro_accent_overview" formatted="false">at your pace.</string>
+    <string name="intro_description_overview" formatted="false">Bring customers, products, sales and payments together in a space made for your day.</string>
+    <string name="intro_detail_overview" formatted="false">Your business essentials, one tap away.</string>
+    <string name="intro_category_clients" formatted="false">Relationships that grow</string>
+    <string name="intro_title_clients" formatted="false">Every customer,</string>
+    <string name="intro_accent_clients" formatted="false">well looked after.</string>
+    <string name="intro_description_clients" formatted="false">Check balances, record payments and keep track of each customer’s next payment.</string>
+    <string name="intro_detail_clients" formatted="false">A clear history to help you follow up.</string>
+    <string name="intro_category_products" formatted="false">An organized catalog</string>
+    <string name="intro_title_products" formatted="false">Your products,</string>
+    <string name="intro_accent_products" formatted="false">always up to date.</string>
+    <string name="intro_description_products" formatted="false">Organize your catalog with photos, prices and stock. Find what you sell without the hassle.</string>
+    <string name="intro_detail_products" formatted="false">Prices and profit, in the same place.</string>
+    <string name="intro_category_growth" formatted="false">See how your business is doing</string>
+    <string name="intro_title_growth" formatted="false">More clarity.</string>
+    <string name="intro_accent_growth" formatted="false">Better decisions.</string>
+    <string name="intro_description_growth" formatted="false">Record sales and explore payment trends to understand how your business is doing.</string>
+    <string name="intro_detail_growth" formatted="false">Your numbers help you take the next step.</string>
+    <string name="intro_art_today" formatted="false">Your business today</string>
+    <string name="intro_art_today_chip" formatted="false">Today</string>
+    <string name="intro_art_sales_label" formatted="false">Recorded sales</string>
+    <string name="intro_art_clients" formatted="false">customers</string>
+    <string name="intro_art_products" formatted="false">products</string>
+    <string name="intro_art_overview_badge" formatted="false">Everything in order</string>
+    <string name="intro_art_customer" formatted="false">Sample customer</string>
+    <string name="intro_art_balance" formatted="false">Outstanding balance</string>
+    <string name="intro_art_paid" formatted="false">40% paid</string>
+    <string name="intro_art_payment_date" formatted="false">Next: Nov 25</string>
+    <string name="intro_art_clients_badge" formatted="false">Payment received</string>
+    <string name="intro_art_catalog" formatted="false">My products</string>
+    <string name="intro_art_notebook" formatted="false">Classic notebook</string>
+    <string name="intro_art_mug" formatted="false">Ceramic mug</string>
+    <string name="intro_art_products_badge" formatted="false">Ready to sell</string>
+    <string name="intro_art_week" formatted="false">Weekly sales</string>
+    <string name="intro_art_days" formatted="false">M T W T F S S</string>
+    <string name="intro_art_growth_badge" formatted="false">Your business grows</string>
 </resources>

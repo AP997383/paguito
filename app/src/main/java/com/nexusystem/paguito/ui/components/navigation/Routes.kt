@@ -10,6 +10,7 @@ sealed class Routes(val route: String) {
      * ===================================================== */
 
     object HomeGraph : Routes("home_graph")
+    object SalesGraph : Routes("sales_graph")
     object ClientesGraph : Routes("clientes_graph")
     object ProductosGraph : Routes("productos_graph")
     object ProfileGraph : Routes("profile_graph")
@@ -73,9 +74,12 @@ sealed class Routes(val route: String) {
      * PERFIL
      * ===================================================== */
 
+    object ScreenProfileTab : Routes("profileTab")
+    object ScreenSales : Routes("sales")
     object ScreenProfile : Routes("profile")
     object ScreenPerfilEditar : Routes("editarPerfil")
     object ScreenIdioms : Routes("idioms")
+    object ScreenSettingsSms : Routes("settingSms")
     object ScreenChangePasswordProfile : Routes("changePasswordProfile")
     object ScreenWebView : Routes("webView")
 

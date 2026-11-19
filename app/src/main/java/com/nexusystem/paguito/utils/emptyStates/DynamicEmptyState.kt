@@ -37,8 +37,10 @@ import androidx.compose.ui.unit.sp
 
 // --- COLORES ---
 val GreenPrimary = Color( 0xFF15956F)
-val TextDark = Color(0xFF1F2937)
-val TextLightGray = Color(0xFF9CA3AF)
+val TextDark: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurface
+val TextLightGray: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
 val BgLightGreenCircle = Color(0xFFE8F5E9) // Color de fondo circular suave
 val BgScreenColor = Color(0xFFF9FAFB)
 

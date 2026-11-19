@@ -1,177 +1,142 @@
 package com.nexusystem.paguito.ui.screens.onboarding
 
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.foundation.ExperimentalFoundationApi
+import android.animation.ValueAnimator
+import androidx.activity.compose.BackHandler
+import androidx.annotation.StringRes
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.nexusystem.paguito.R
+import com.nexusystem.paguito.ui.components.paguitoBackground
 import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
-import com.nexusystem.paguito.R
-import com.nexusystem.paguito.ui.screens.login.GreenPrimary
 
-// Modelo de datos para las páginas
-data class OnboardingData(
-    val title: String,
-    val description: String,
-    val image: Int // ID del recurso drawable
+internal enum class IntroScene { Overview, Clients, Products, Growth }
+private data class IntroPage(@StringRes val category: Int, @StringRes val title: Int, @StringRes val accent: Int,
+    @StringRes val description: Int, @StringRes val detail: Int, val scene: IntroScene)
+
+private val introPages = listOf(
+    IntroPage(R.string.intro_category_overview, R.string.intro_title_overview, R.string.intro_accent_overview, R.string.intro_description_overview, R.string.intro_detail_overview, IntroScene.Overview),
+    IntroPage(R.string.intro_category_clients, R.string.intro_title_clients, R.string.intro_accent_clients, R.string.intro_description_clients, R.string.intro_detail_clients, IntroScene.Clients),
+    IntroPage(R.string.intro_category_products, R.string.intro_title_products, R.string.intro_accent_products, R.string.intro_description_products, R.string.intro_detail_products, IntroScene.Products),
+    IntroPage(R.string.intro_category_growth, R.string.intro_title_growth, R.string.intro_accent_growth, R.string.intro_description_growth, R.string.intro_detail_growth, IntroScene.Growth)
 )
 
 @Composable
 fun OnboardingScreen(onFinish: () -> Unit) {
-    val pages = listOf(
-        OnboardingData(
-            title = "Administra tu cobranza",
-            description = "Registra a todos tus clientes de forma organizada y lleva un control preciso de tus cuentas por cobrar.",
-            image = R.drawable.onb1 // Reemplaza con tu ilustración
-        ),
-        OnboardingData(
-            title = "Gestiona tus productos",
-            description = "Mantén tu inventario al día. Agrega, edita y controla todos los productos que vendes en un solo lugar.",
-            image = R.drawable.onb2 // Reemplaza con tu ilustración
-        )
-    )
-
-    val pagerState = rememberPagerState(pageCount = { pages.size })
+    val pager = rememberPagerState(pageCount = { introPages.size })
     val scope = rememberCoroutineScope()
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White)
-            .padding(24.dp)
-    ) {
-        // Pager con el contenido
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.weight(1f)
-        ) { position ->
-            OnboardingPagerItem(pages[position])
+    var finishing by rememberSaveable { mutableStateOf(false) }
+    val complete = { if (!finishing) { finishing = true; onFinish() } }
+    fun goTo(page: Int) { scope.launch {
+        if (ValueAnimator.areAnimatorsEnabled()) pager.animateScrollToPage(page, animationSpec = tween(420, easing = FastOutSlowInEasing))
+        else pager.scrollToPage(page)
+    } }
+    BackHandler(enabled = pager.currentPage > 0 && !finishing) { goTo(pager.currentPage - 1) }
+    val colors = MaterialTheme.colorScheme
+    Column(Modifier.fillMaxSize().paguitoBackground().testTag("onboarding-screen")) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(color = colors.primaryContainer, shape = MaterialTheme.shapes.medium) {
+                Image(painterResource(R.drawable.abonia_a), null, Modifier.padding(9.dp).size(27.dp))
+            }
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Paguito", style = MaterialTheme.typography.titleLarge)
+                Text(stringResource(R.string.intro_brand_tagline), style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
+            }
+            TextButton(onClick = complete, enabled = !finishing, modifier = Modifier.testTag("onboarding-skip")) { Text(stringResource(R.string.intro_skip)) }
         }
 
-        // Fila inferior (Skip, Dots, Next)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 32.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            // Botón Skip
-            TextButton(
-                onClick = onFinish,
-                enabled = pagerState.currentPage < pages.size - 1
-            ) {
-                Text(
-                    text = if (pagerState.currentPage < pages.size - 1) "Saltar" else "",
-                    color = Color.Gray,
-                    fontSize = 16.sp
-                )
-            }
-
-            // Indicadores (Puntos)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                repeat(pages.size) { iteration ->
-                    val color = if (pagerState.currentPage == iteration) MaterialTheme.colorScheme.primary else Color.LightGray
-                    val width = animateDpAsState(targetValue = if (pagerState.currentPage == iteration) 24.dp else 8.dp)
-                    Box(
-                        modifier = Modifier
-                            .height(8.dp)
-                            .width(width.value)
-                            .clip(CircleShape)
-                            .background(color)
-                    )
-                }
-            }
-
-            // Botón Next / Start
-            TextButton(
-                onClick = {
-                    if (pagerState.currentPage < pages.size - 1) {
-                        scope.launch {
-                            pagerState.animateScrollToPage(pagerState.currentPage + 1)
-                        }
-                    } else {
-                        onFinish()
+        HorizontalPager(pager, modifier = Modifier.fillMaxWidth().weight(1f).testTag("onboarding-pager"), key = { it }) { index ->
+            val page = introPages[index]
+            BoxWithConstraints(Modifier.fillMaxSize().graphicsLayer {
+                val distance = ((pager.currentPage - index) + pager.currentPageOffsetFraction).absoluteValue.coerceIn(0f, 1f)
+                alpha = 1f - distance * 0.45f
+                scaleX = 1f - distance * 0.035f; scaleY = scaleX
+                translationY = distance * 12.dp.toPx()
+            }) {
+                val wide = maxWidth >= 650.dp && maxWidth > maxHeight
+                if (wide) {
+                    Row(Modifier.fillMaxSize().padding(horizontal = 36.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(36.dp)) {
+                        OnboardingArtwork(page.scene, pager.currentPage == index, Modifier.weight(1f).heightIn(max = 360.dp).fillMaxHeight())
+                        Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) { IntroCopy(page) }
+                    }
+                } else {
+                    val artHeight = (maxHeight * 0.48f).coerceIn(150.dp, 300.dp)
+                    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                        OnboardingArtwork(page.scene, pager.currentPage == index, Modifier.fillMaxWidth().height(artHeight))
+                        IntroCopy(page)
                     }
                 }
-            ) {
-                Text(
-                    text = if (pagerState.currentPage < pages.size - 1) "Siguiente" else "Empezar",
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
-                )
+            }
+        }
+
+        Column(Modifier.widthIn(max = 600.dp).fillMaxWidth().align(Alignment.CenterHorizontally).navigationBarsPadding().padding(horizontal = 24.dp).padding(bottom = 16.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                if (pager.currentPage > 0) IconButton(onClick = { goTo(pager.currentPage - 1) }, enabled = !finishing, modifier = Modifier.testTag("onboarding-previous")) {
+                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.intro_previous))
+                } else Spacer(Modifier.size(48.dp))
+                Row(Modifier.selectableGroup(), verticalAlignment = Alignment.CenterVertically) {
+                    introPages.indices.forEach { index ->
+                        val selected = pager.currentPage == index
+                        val width by animateDpAsState(if (selected) 24.dp else 7.dp, label = "intro-page-dot")
+                        val label = stringResource(R.string.intro_page_label, index + 1, introPages.size)
+                        Box(Modifier.size(40.dp).selectable(selected, enabled = !finishing, role = Role.Tab, onClick = { goTo(index) })
+                            .semantics { contentDescription = label }.testTag("onboarding-dot-$index"), contentAlignment = Alignment.Center) {
+                            Box(Modifier.height(7.dp).width(width).background(if (selected) colors.primary else colors.outlineVariant, CircleShape))
+                        }
+                    }
+                }
+                Text("${pager.currentPage + 1} / ${introPages.size}", style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant, modifier = Modifier.testTag("onboarding-page-count"))
+            }
+            Button(onClick = { if (pager.currentPage == introPages.lastIndex) complete() else goTo(pager.currentPage + 1) },
+                enabled = !finishing && !pager.isScrollInProgress, shape = MaterialTheme.shapes.large,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag("onboarding-next")) {
+                Text(stringResource(if (pager.currentPage == introPages.lastIndex) R.string.intro_start else R.string.intro_next))
+                Spacer(Modifier.width(10.dp)); Icon(if (pager.currentPage == introPages.lastIndex) Icons.Outlined.Check else Icons.AutoMirrored.Outlined.ArrowForward, null, Modifier.size(20.dp))
             }
         }
     }
 }
 
 @Composable
-fun OnboardingPagerItem(data: OnboardingData) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        // Círculo decorativo con Imagen (como el diseño)
-        Box(
-            modifier = Modifier
-                .size(320.dp)
-                .clip(CircleShape)
-                .background(Color(0xFFF5F5F5)),
-            contentAlignment = Alignment.Center
-        ) {
-            Image(
-                painter = painterResource(id = data.image),
-                contentDescription = null,
-                modifier = Modifier.size(250.dp), // Ajustado para que la imagen luzca bien
-                contentScale = ContentScale.Fit // O ContentScale.Crop si tu imagen es cuadrada
-            )
+private fun IntroCopy(page: IntroPage) {
+    val colors = MaterialTheme.colorScheme
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+        Text(stringResource(page.category).uppercase(), color = colors.primary, style = MaterialTheme.typography.labelMedium)
+        Column {
+            Text(stringResource(page.title), style = MaterialTheme.typography.displaySmall)
+            Text(stringResource(page.accent), style = MaterialTheme.typography.displaySmall, color = colors.primary)
         }
-
-        Spacer(modifier = Modifier.height(48.dp))
-
-        Text(
-            text = data.title,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.ExtraBold,
-            textAlign = TextAlign.Center,
-            color = Color(0xFF1A1A1A)
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = data.description,
-            fontSize = 16.sp,
-            textAlign = TextAlign.Center,
-            color = Color.Gray,
-            modifier = Modifier.padding(horizontal = 20.dp),
-            lineHeight = 24.sp
-        )
+        Text(stringResource(page.description), style = MaterialTheme.typography.bodyLarge, color = colors.onSurfaceVariant)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 2.dp, bottom = 8.dp)) {
+            Icon(Icons.Outlined.Check, null, tint = colors.primary, modifier = Modifier.size(16.dp))
+            Text(stringResource(page.detail), style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+        }
     }
 }

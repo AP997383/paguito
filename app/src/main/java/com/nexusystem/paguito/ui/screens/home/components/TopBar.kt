@@ -1,74 +1,40 @@
 package com.nexusystem.paguito.ui.screens.home.components
 
-import android.util.Log
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.*
+import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import androidx.compose.foundation.Image
 import com.nexusystem.paguito.R
 
 @Composable
-fun TopBar(
-    imageUser: String?,
-    goToMyProfile: () -> Unit
-) {
-    Log.e("PROFILE_PHOTO", "-->$imageUser")
-
+fun TopBar(imageUser: String?, goToMyProfile: () -> Unit) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .clip(RoundedCornerShape(8.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.abonia_a),
-                contentDescription = null,
-                modifier = Modifier.size(40.dp)
-            )
+        Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.primaryContainer) {
+            Image(painterResource(R.drawable.abonia_a), contentDescription = null,
+                modifier = Modifier.padding(8.dp).size(32.dp))
         }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        Text(
-            text = "Paguito",
-            fontSize = 20.sp,
-            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        Box(
-            modifier = Modifier
-                .size(50.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary)
-                .clickable { goToMyProfile() },
-            contentAlignment = Alignment.Center
-        ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text("Paguito", style = MaterialTheme.typography.titleLarge)
+            Text("Tu negocio, en orden", style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        FilledTonalIconButton(onClick = goToMyProfile, modifier = Modifier.size(48.dp), shape = CircleShape) {
             AsyncImage(
-                model = if (imageUser.isNullOrEmpty()) R.drawable.avatar else imageUser,
-                contentDescription = "Imagen de perfil del usuario",
-                modifier = Modifier
-                    .size(45.dp)
-                    .clip(CircleShape),
-                contentScale = ContentScale.Crop
+                model = imageUser?.takeIf { it.isNotBlank() } ?: R.drawable.avatar,
+                contentDescription = "Abrir mi perfil",
+                modifier = Modifier.size(40.dp).clip(CircleShape), contentScale = ContentScale.Crop
             )
         }
     }

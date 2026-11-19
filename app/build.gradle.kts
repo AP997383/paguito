@@ -5,6 +5,7 @@ import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.android.builtin.kotlin)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.legacy.kapt)
@@ -32,30 +33,46 @@ android {
         applicationId = "com.nexusystem.paguito"
         minSdk = 26
         targetSdk = 37
-        versionCode = 16
-        versionName = "1.4.1"
+        versionCode = 19
+        versionName = "2.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        create("productionRelease") {
+            storeFile = rootProject.file(localProperty("PROD_SIGNING_STORE_FILE"))
+            storePassword = localProperty("PROD_SIGNING_STORE_PASSWORD")
+            keyAlias = localProperty("PROD_SIGNING_KEY_ALIAS")
+            keyPassword = localProperty("PROD_SIGNING_KEY_PASSWORD")
+        }
     }
 
     flavorDimensions += "environment"
 
     productFlavors {
         create("dev") {
+            buildConfigField ("String", "CLOUD_RUN_HASH", "\"hmbom6x6sa\"")
             dimension = "environment"
+            applicationIdSuffix = ".dev" // Recomendado para que convivan en el mismo dispositivo
             buildConfigField("String", "ENVIRONMENT", "\"DEV\"")
             buildConfigField("String", "BASE_URL", "\"${localProperty("DEV_BASE_URL")}\"")
             buildConfigField("String", "PUBLIC_STORE_URL", "\"https://store-dev.nexusecosystem-mx.com\"")
         }
 
         create("qa") {
+            buildConfigField ("String", "CLOUD_RUN_HASH", "\"hmbom6x6sa\"")
             dimension = "environment"
+            applicationIdSuffix = ".qa"
             buildConfigField("String", "ENVIRONMENT", "\"QA\"")
             buildConfigField("String", "BASE_URL", "\"${localProperty("QA_BASE_URL")}\"")
             buildConfigField("String", "PUBLIC_STORE_URL", "\"https://store-qa.nexusecosystem-mx.com\"")
         }
 
         create("prod") {
+            signingConfig = signingConfigs.getByName("productionRelease")
+            buildConfigField ("String", "CLOUD_RUN_HASH", "\"2a2qk4zvlq\"")
             dimension = "environment"
+            // Prod por lo general no lleva sufijo para mantener el paquete oficial en las tiendas
             buildConfigField("String", "ENVIRONMENT", "\"PROD\"")
             buildConfigField("String", "BASE_URL", "\"${localProperty("PROD_BASE_URL")}\"")
             buildConfigField("String", "PUBLIC_STORE_URL", "\"https://store.nexusecosystem-mx.com\"")
@@ -88,6 +105,7 @@ android {
 }
 
 dependencies {
+    testImplementation("junit:junit:4.13.2")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -148,6 +166,10 @@ dependencies {
     implementation(libs.play.services.ads)
 
     implementation(libs.nexus.payments.android)
+
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    androidTestImplementation("androidx.test.ext:junit:1.3.0")
 
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)

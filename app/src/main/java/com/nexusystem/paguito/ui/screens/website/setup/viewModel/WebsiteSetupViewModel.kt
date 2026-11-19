@@ -1,6 +1,8 @@
 package com.nexusystem.paguito.ui.screens.website.setup.viewModel
 
 import android.content.Context
+import kotlinx.coroutines.CancellationException
+import com.nexusystem.paguito.data.local.websiteBusinessId
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nexus.medi.data.local.entity.PorductosEntity
@@ -93,6 +95,8 @@ class WebsiteSetupViewModel @Inject constructor(
                     subdomainAvailable = true,
                     subdomainMessage = "Este enlace está disponible"
                 )
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isCheckingSubdomain = false,
@@ -108,10 +112,7 @@ class WebsiteSetupViewModel @Inject constructor(
     ) {
         val state = _uiState.value
 
-        val email = secureStorage.getUserProfile()?.email
-            ?.trim()
-            ?.lowercase()
-            .orEmpty()
+        val email = websiteBusinessId(secureStorage.getUserProfile()?.email.orEmpty())
 
         val cleanSubdomain = state.subdomain.trim()
         val cleanWhatsapp = state.whatsapp.filter { it.isDigit() }
@@ -170,17 +171,19 @@ class WebsiteSetupViewModel @Inject constructor(
                     }
                 )
 
-                catalogRepository.syncCatalog(request)
-
-                val store = catalogRepository.getPublicStore(cleanSubdomain)
+                val store = catalogRepository.syncCatalog(request)
 
                 _uiState.value = _uiState.value.copy(
                     isPublishing = false,
                     showSuccessDialog = true,
+                    isEditingWebsite = true,
+                    subdomainAvailable = true,
                     publishedWebsiteURL = "${BuildConfig.PUBLIC_STORE_URL}/${store.subdomain}",
                     publishedBusinessName = store.businessName,
                     publishedProductsCount = store.products.size
                 )
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isPublishing = false,

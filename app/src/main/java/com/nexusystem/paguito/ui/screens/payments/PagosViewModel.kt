@@ -233,7 +233,7 @@ class PagosViewModel @Inject constructor(
                          firestore.collection("deudores")
                             .document(profileState?.email.toString())
                             .collection("deudores")
-                            .document(pago.idDeudorRemoteDatabase)
+                                                        .document(pago.idDeudorRemoteDatabase)
                             .collection("pagos")
                             .document(pago.idRemoteDatabase)
                              .delete()

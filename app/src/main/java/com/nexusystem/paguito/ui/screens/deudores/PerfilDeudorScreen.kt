@@ -1,5 +1,6 @@
 package com.nexusystem.paguito.ui.screens.deudores
 
+import com.nexusystem.paguito.ui.components.toMovement
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -47,11 +48,14 @@ import com.nexus.medi.data.local.entity.DeudoresEntity
 import com.nexus.medi.data.local.entity.PagosEntinty
 import com.nexus.medi.data.local.entity.PagostoPreviewTiket
 import com.nexus.medi.data.local.entity.PorductosEntity
+import com.nexusystem.paguito.R
 import com.nexusystem.paguito.ui.screens.payments.PagosViewModel
 import com.nexusystem.paguito.ui.screens.payments.PeriodItem
 import com.nexusystem.paguito.ui.screens.productos.RedAlert
+import com.nexusystem.paguito.utils.LoadingOverlay
 import com.nexusystem.paguito.utils.bottomsSheets.AbonoBottomSheet
 import com.nexusystem.paguito.utils.calcularSiguienteVencimiento
+import com.nexusystem.paguito.utils.dialogs.PremiumLimitWatsapsReachedDialog
 import com.nexusystem.paguito.utils.dialogs.SuccessAbonoDialog
 import com.nexusystem.paguito.utils.dialogs.SuccessDialog
 import com.nexusystem.paguito.utils.emptyStates.PaymentHistoryEmptyState
@@ -65,14 +69,20 @@ import kotlin.text.toInt
 // --- COLORES PRINCIPALES ---
 val BluePrimary = Color(0xFF3B82F6)
 val RedAlert = Color(0xFFEF4444)
-val BgColor = Color(0xFFF9FAFB)
+val BgColor: Color
+    @Composable get() = MaterialTheme.colorScheme.background
 val CardWhite = Color(0xFFFFFFFF)
-val TextDark = Color(0xFF1F2937)
-val TextGray = Color(0xFF6B7280)
-val TextLightGray = Color(0xFF9CA3AF)
-val BorderColor = Color(0xFFE5E7EB)
+val TextDark: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurface
+val TextGray: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+val TextLightGray: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+val BorderColor: Color
+    @Composable get() = MaterialTheme.colorScheme.outlineVariant
 val LightBlueBg = Color(0xFFF4F8FF)
-val IconBgGray = Color(0xFFF3F4F6)
+val IconBgGray: Color
+    @Composable get() = MaterialTheme.colorScheme.surfaceVariant
 
 // --- MODELO DE DATOS ---
 data class Transaction(
@@ -90,18 +100,67 @@ data class Transaction(
 fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntity,viewmodelDeudro: DeudoresViewModel,pagosViewModel: PagosViewModel,
                           openPreviewTicket:(PagostoPreviewTiket)->Unit,openDetailVenta:(PagosEntinty)->Unit,openAcountState:(DeudoresEntity)->Unit) {
     var showFastPayment by remember { mutableStateOf(false) }
+    val isLoading by viewmodelDeudro.isLoading.collectAsState()
     val pagosPorCliente by pagosViewModel.pagos.collectAsState()
     val deleteSuccess by pagosViewModel.deleteSuccess.collectAsState()
+    val reminderSuccess by viewmodelDeudro.reminderSuccess.collectAsState()
     var showSuccessPayment by remember { mutableStateOf(false) }
     var paymentData by remember{ mutableStateOf(PagosEntinty())}
     var paymentDatapreviewTiket by remember{ mutableStateOf(PagostoPreviewTiket())}
     var currentpaymentSelected by remember{ mutableStateOf(PagosEntinty())}
-    var pagado = 0.0f
-    var saldoPendiente = 0.0f
+    val pagado = pagosPorCliente.filterNotNull().filter { it.isIngreso }.sumOf { it.montoAbonado.toDouble() }.toFloat()
+    val saldoPendiente = deudorData.montoActualAdeudado
+    val context = LocalContext.current
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showReminders by remember { mutableStateOf(false) }
+    var showNOMoreWatsaps by remember { mutableStateOf(false) }
 
     var filtroSeleccionado by remember { mutableStateOf(PagoFiltro.TODOS) }
+    Log.e("DATA_CALCULATE","-->"+pagosPorCliente)
 
+    if(reminderSuccess) {
+        SuccessDialog("!Se envio el recordatorio a tu cliente correctamente!", {
+            viewmodelDeudro.resetreminderSuccess()
+            onBackClick()
+        }, {
+            onBackClick()
+        })
+    }
+
+    val profile = pagosViewModel.profileState
+    val fechasPagosRealizados = remember(pagosPorCliente) {
+        pagosPorCliente.filterNotNull().filter { it.isIngreso }.mapNotNull { pago ->
+            pago?.fechaAbono?.let { fechaStr ->
+                try {
+                    // Intentar primero como fecha y hora (yyyy-MM-dd HH:mm:ss)
+                    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                    LocalDateTime.parse(fechaStr, formatter).toLocalDate()
+                } catch (e: Exception) {
+                    try {
+                        // Si falla, intentar como fecha simple (yyyy-MM-dd)
+                        LocalDate.parse(fechaStr)
+                    } catch (e2: Exception) {
+                        Log.e("DATA_CALCULATE", "Error al parsear fecha: $fechaStr", e2)
+                        null
+                    }
+                }
+            }
+        }.sorted() // Ordenamos las fechas ya parseadas
+    }
+    val proximaFecha by remember(deudorData.fechaInicialDeuda, fechasPagosRealizados) {
+        derivedStateOf {
+            try {
+                val fechaInicio = LocalDate.parse(deudorData.fechaInicialDeuda)
+                calcularSiguienteVencimiento(
+                    fechaInicio,
+                    deudorData.periodicidad,
+                    fechasPagosRealizados
+                )
+            } catch (e: Exception) {
+                LocalDate.now() // Fallback seguro
+            }
+        }
+    }
     // 2. Filtrado inteligente de la lista usando derivedStateOf
     val listaFiltrada by remember {
         derivedStateOf {
@@ -134,52 +193,33 @@ fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntit
             }
         )
     }
-
-    LaunchedEffect(pagosPorCliente) {
-        if(pagosPorCliente.size>0) {
-            pagosPorCliente.forEach {
-                if (it!!.isIngreso) {
-                    pagado += it!!.montoAbonado
-                }
-            }
-        }
+    if(showNOMoreWatsaps){
+        PremiumLimitWatsapsReachedDialog({
+            showNOMoreWatsaps =false
+        },{
+            showNOMoreWatsaps =false
+        })
     }
 
-
-    val profile = pagosViewModel.profileState
-    val fechasPagosRealizados = remember(pagosPorCliente) {
-        pagosPorCliente.filter { it?.isIngreso!! }.mapNotNull { pago ->
-            pago?.fechaAbono?.let { fechaStr ->
-                try {
-                    // Intentar primero como fecha y hora (yyyy-MM-dd HH:mm:ss)
-                    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-                    LocalDateTime.parse(fechaStr, formatter).toLocalDate()
-                } catch (e: Exception) {
-                    try {
-                        // Si falla, intentar como fecha simple (yyyy-MM-dd)
-                        LocalDate.parse(fechaStr)
-                    } catch (e2: Exception) {
-                        Log.e("DATA_CALCULATE", "Error al parsear fecha: $fechaStr", e2)
-                        null
-                    }
-                }
-            }
-        }.sorted() // Ordenamos las fechas ya parseadas
-    }
-    Log.e("DATA_CALCULATE","-->"+pagosPorCliente)
-    val proximaFecha by remember(deudorData.fechaInicialDeuda, fechasPagosRealizados) {
-        derivedStateOf {
-            try {
-                val fechaInicio = LocalDate.parse(deudorData.fechaInicialDeuda)
-                calcularSiguienteVencimiento(
-                    fechaInicio,
-                    deudorData.periodicidad,
-                    fechasPagosRealizados
+    if(showReminders){
+        ElegirTipoRecordatorioBottomSheet({
+            showReminders =false
+        },{
+            if(profile?.userSuscription?.isActive==true) {
+                viewmodelDeudro.manualWatsap(
+                    it,
+                    deudorData.nombre,
+                    deudorData.telefono,
+                    saldoPendiente.toString(),
+                    proximaFecha.toString()
                 )
-            } catch (e: Exception) {
-                LocalDate.now() // Fallback seguro
+            }else{
+                if(profile?.watsapSended?:0>=10){
+                    showNOMoreWatsaps =true
+                }
             }
-        }
+            showReminders =false
+        })
     }
 
     val esAtrasado = remember(proximaFecha) { proximaFecha.isBefore(LocalDate.now())}
@@ -248,164 +288,34 @@ fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntit
 
         }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Perfil de Cliente", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextDark2) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Atrás", tint = TextDark2)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = CardWhite),
-                windowInsets = WindowInsets(0.dp)
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showFastPayment = true },
-                containerColor = BluePrimary2,
-                contentColor = Color.White,
-                shape = CircleShape,
-                modifier = Modifier.size(56.dp)
-            ) {
-                Text("$", fontSize = 24.sp, fontWeight = FontWeight.Medium)
-            }
-        },
-        containerColor = BgColor
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 80.dp)
-            ) {
-                item {
-                // 1. BANNER DE ALERTA ROJO
-                if (esAtrasado) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(RedAlert)
-                            .padding(vertical = 12.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Outlined.ErrorOutline,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            "Atrasado",
-                            color = Color.White,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // 2. CABECERA DEL PERFIL (Avatar, Nombre, Botones)
-                ProfileHeaderSection(deudorData.nombre, deudorData.telefono,{
-                    openAcountState(deudorData)
-                })
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                saldoPendiente = deudorData.montoActualAdeudado
-                // 3. TARJETA DE SALDO PENDIENTE
-                BalanceCard(
-                    deudorData.montoAcomulado,
-                    deudorData.montoAcomulado- saldoPendiente,
-                    saldoPendiente,
-                    deudorData.periodicidad,
-                    proximaFecha.toString()
-                )
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                // 4. HISTORIAL DE TRANSACCIONES
-                Text(
-                    text = "Historial de Transacciones",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextDark2,
-                    modifier = Modifier.padding(horizontal = 20.dp)
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 20.dp),
-                        horizontalArrangement = Arrangement.Center, // Centra los elementos horizontalmente
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        PagoFiltro.values().forEach { filtro ->
-                            val isSelected = filtroSeleccionado == filtro
-
-                            Surface(
-                                modifier = Modifier
-                                    .padding(horizontal = 8.dp) // Espaciado entre chips
-                                    .clickable { filtroSeleccionado = filtro },
-                                shape = RoundedCornerShape(20.dp), // Esquinas muy redondeadas tipo píldora
-                                color = if (isSelected) Color(0xFF3283F6) else Color(0xFFF1F3F4) // Color azul o gris de image_14.png
-                            ) {
-                                Text(
-                                    text = filtro.name, // Usar title con capitalización correcta
-                                    color = if (isSelected) Color.White else Color(0xFF5F6368), // Texto blanco o gris oscuro
-                                    fontSize = 12.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp) // Padding interno generoso
-                                )
-                            }
-                        }
-                    }
-                    }
-
-                // 3. Barra Horizontal de Chips
-
-                if (listaFiltrada.isEmpty()) {
-                    item {   PaymentHistoryEmptyState(modifier = Modifier, {}) }
-                } else {
-                    items(listaFiltrada) { tx ->
-                        if (tx != null) {
-                            val contactText = listOfNotNull(profile?.email, profile?.phone).joinToString(" / ")
-                            TransactionItem(transaction = tx, isLast = tx == listaFiltrada.last(),{
-                                openDetailVenta(tx)
-                            },{
-                                paymentDatapreviewTiket =PagostoPreviewTiket(
-                                    contactText,
-                                    deudorData.nombre,profile?.bussinesName.toString(),tx.montoAbonado,
-                                    saldoAntesDeAbono =  (tx.saldoAntesDeAbono).toInt(),
-                                    getTodayDateString(),
-                                    deudorData.montoActualAdeudado.toInt() - tx.montoAbonado,
-                                    1,
-                                    tx.jsonAbonoPorProducto,
-                                    isIngreso = tx.isIngreso
-
-                                )
-                                openPreviewTicket(paymentDatapreviewTiket)
-                            },{
-                                currentpaymentSelected = tx
-                                showDeleteDialog =true
-                            })
-                        }
-                    }
-                }
-                item{
-                    Spacer(modifier = Modifier.height(80.dp)) // Espacio para que el FAB no tape el contenido
-                }
-
-            }
-        }
+    fun previewMovement(tx: PagosEntinty) {
+        val contactText = listOfNotNull(profile?.email, profile?.phone).joinToString(" / ")
+        paymentDatapreviewTiket = PagostoPreviewTiket(
+            contactText, deudorData.nombre, profile?.bussinesName.orEmpty(), tx.montoAbonado,
+            saldoAntesDeAbono = tx.saldoAntesDeAbono, getTodayDateString(),
+            deudorData.montoActualAdeudado.toInt() - tx.montoAbonado, 1,
+            tx.jsonAbonoPorProducto, isIngreso = tx.isIngreso
+        )
+        openPreviewTicket(paymentDatapreviewTiket)
     }
+    Box {
+        com.nexusystem.paguito.ui.screens.deudores.components.CustomerProfileContent(
+            client = deudorData, payments = pagosPorCliente.filterNotNull(),
+            nextDate = if (runCatching { LocalDate.parse(deudorData.fechaInicialDeuda) }.isSuccess) proximaFecha.toString() else "",
+            isLate = esAtrasado, onBack = onBackClick, onPayment = { showFastPayment = true },
+            onCall = { context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:${deudorData.telefono}"))) },
+            onReminder = { showReminders = true }, onStatement = { openAcountState(deudorData) },
+            onOpenMovement = { tx -> if (tx.isIngreso) previewMovement(tx) else openDetailVenta(tx) },
+            onReceipt = { previewMovement(it) },
+            onDelete = { currentpaymentSelected = it; showDeleteDialog = true }
+        )
+        LoadingOverlay(
+            isLoading = isLoading,
+            lottieRes = R.raw.loadings
+        )
+    }
+
+
 }
 enum class PagoFiltro {
     TODOS,
@@ -415,81 +325,14 @@ enum class PagoFiltro {
 // --- COMPONENTES SECUNDARIOS ---
 
 @Composable
-fun ProfileHeaderSection(name:String,phone: String,openAcountState:()->Unit) {
-    val context = LocalContext.current
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // Avatar Placeholder (En app real usa AsyncImage)
-        Box(
-            modifier = Modifier
-                .size(80.dp)
-                .clip(CircleShape)
-                .background(BorderColor),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(Icons.Outlined.Person, contentDescription = null, tint = TextGray1, modifier = Modifier.size(40.dp))
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text(name, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = TextDark2)
-        Text(phone, fontSize = 14.sp, color = TextGray1)
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(24.dp)
-        ) {
-            // --- BOTÓN LLAMAR ---
-            ActionIconButton(
-                icon = Icons.Outlined.Phone,
-                tint = BluePrimary2,
-                label = "Llamar"
-            ) {
-                val intent = Intent(Intent.ACTION_DIAL).apply {
-                    data = Uri.parse("tel:$phone")
-                }
-                context.startActivity(intent)
-            }
-
-            // --- BOTÓN WHATSAPP ---
-            // --- BOTÓN WHATSAPP ---
-            ActionIconButton(
-                icon = Icons.Outlined.ChatBubbleOutline,
-                tint = TextDark2,
-                label = "WhatsApp"
-            ) {
-                // 1. Limpiamos el número (solo dígitos)
-                val cleanNumber = phone.replace(Regex("[^0-9]"), "")
-                val waUrl = "https://api.whatsapp.com/send?phone=$cleanNumber"
-
-                val intent = Intent(Intent.ACTION_VIEW).apply {
-                    data = Uri.parse(waUrl)
-                }
-
-                try {
-                    // Intentamos abrirlo. Al no poner .setPackage,
-                    // Android buscará CUALQUIER app que maneje URLs de WhatsApp.
-                    context.startActivity(intent)
-                } catch (e: Exception) {
-                    // Si por alguna razón falla el intent (raro en Android modernos),
-                    // abrimos el navegador como último recurso
-                    val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(waUrl))
-                    context.startActivity(browserIntent)
-                }
-            }
-            ActionIconButton(
-                icon = Icons.Outlined.AccountBalance,
-                tint = BluePrimary2,
-                label = "Enviar Historial"
-            ) {
-                openAcountState()
-            }
-        }
+fun ProfileHeaderSection(name: String, phone: String, openAcountState: () -> Unit, OpenEndRangeeminders: () -> Unit) {
+        val context = LocalContext.current
+        com.nexusystem.paguito.ui.screens.deudores.components.CustomerIdentityCard(
+            DeudoresEntity(nombre = name, telefono = phone),
+            { context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))) },
+            OpenEndRangeeminders, openAcountState
+        )
     }
-}
 
 @Composable
 fun ActionIconButton(icon: ImageVector, tint: Color, label: String, onClick: () -> Unit) {
@@ -514,267 +357,14 @@ fun ActionIconButton(icon: ImageVector, tint: Color, label: String, onClick: () 
 }
 
 @Composable
-fun BalanceCard(montoActualAdeudado:Float,pagado:Float,saldoPendiente:Float,periodicidad: String,proximaFecha: String) {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = CardWhite,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp)
-            .shadow(4.dp, RoundedCornerShape(16.dp), spotColor = Color(0x1A000000))
-    ) {
-        Column {
-            // Línea de acento azul en la parte superior
-            Box(modifier = Modifier.fillMaxWidth().height(4.dp).background(BluePrimary2))
-
-            Column(modifier = Modifier.padding(20.dp)) {
-                Text("SALDO PENDIENTE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextLightGray, letterSpacing = 1.sp)
-
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text(formatAsCurrency(saldoPendiente), fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = TextDark2)
-                    Text(" MXN", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextLightGray, modifier = Modifier.padding(bottom = 6.dp))
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Pagado:"+ formatAsCurrency(pagado), fontSize = 12.sp, color = TextDark2, fontWeight = FontWeight.Medium)
-                    Text("De: "+formatAsCurrency(montoActualAdeudado), fontSize = 12.sp, color = TextLightGray)
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Barra de progreso
-                val progress = if (montoActualAdeudado > 0f) {
-                    (pagado / montoActualAdeudado).coerceIn(0f, 1f)
-                } else {
-                    0f
-                }
-                Log.e("PROGRESS_BAR","-->"+progress)
-                LinearProgressIndicator(
-                    progress = { progress}, // 1500 de 6000
-                    modifier = Modifier.fillMaxWidth().height(6.dp),
-                    color = BluePrimary2,
-                    trackColor = IconBgGray,
-                    strokeCap = StrokeCap.Round
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Próximo pago
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = LightBlueBg,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth() // Importante para que el peso tenga de donde repartir
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center // Asegura centrado general
-                    ) {
-                        // --- PRIMER ELEMENTO (50% del ancho) ---
-                        Row(
-                            modifier = Modifier.weight(1f),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Start // Alinea contenido al inicio de su mitad
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.White),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    Icons.Outlined.CalendarToday,
-                                    contentDescription = null,
-                                    tint = BluePrimary2,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Column {
-                                Text("Próximo pago", fontSize = 11.sp, color = TextGray1)
-                                Text(proximaFecha, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextDark2)
-                            }
-                        }
-
-                        // --- SEGUNDO ELEMENTO (50% del ancho) ---
-                        // Quitamos el size(100.dp) para que el weight controle el tamaño
-                        Row(
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(start = 8.dp),
-                            horizontalArrangement = Arrangement.End, // Alinea el chip al final de su mitad
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            val periods = remember(periodicidad) {
-                                when(periodicidad) {
-                                    "S" -> listOf(Triple("Semanal", Icons.Outlined.Update, 1f))
-                                    "Q" -> listOf(Triple("Quincenal", Icons.Outlined.DateRange, 1f))
-                                    "M" -> listOf(Triple("Mensual", Icons.Outlined.CalendarMonth, 1f))
-                                    "A" -> listOf(Triple("Abierto", Icons.Outlined.AllInclusive, 1f))
-                                    else -> emptyList()
-                                }
-                            }
-
-                            periods.forEach { (text, icon, _) ->
-                                PeriodItem(
-                                    text = text,
-                                    icon = icon,
-                                    isSelected = true,
-                                    modifier = Modifier.wrapContentWidth(), // El item solo ocupa lo que necesita
-                                    onClick = { }
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
+fun BalanceCard(montoActualAdeudado: Float, pagado: Float, saldoPendiente: Float, periodicidad: String, proximaFecha: String) {
+        com.nexusystem.paguito.ui.screens.deudores.components.CustomerBalanceCard(montoActualAdeudado, pagado, saldoPendiente, periodicidad, proximaFecha)
     }
-}
 
 
 @Composable
-fun TransactionItem(
-    transaction: PagosEntinty,
-    isLast: Boolean,
-    openPaymentDetail: () -> Unit,
-    openPreviewTiket: () -> Unit,
-    onDelete: () -> Unit // Nuevo parámetro para la acción de eliminar
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(IntrinsicSize.Min)
-            .padding(horizontal = 16.dp)
-            .clickable { if (transaction.isIngreso) openPreviewTiket() else openPaymentDetail() }
-    ) {
-        // --- COLUMNA IZQUIERDA: Ícono y Línea conectora ---
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.width(36.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .border(1.dp, BorderColor, CircleShape)
-                    .background(IconBgGray, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = if (transaction.isIngreso) Icons.Outlined.Download else Icons.Outlined.LocalMall,
-                    contentDescription = null,
-                    tint = TextDark2,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
-            if (!isLast) {
-                Box(modifier = Modifier.width(1.dp).weight(1f).background(BorderColor))
-            }
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        // --- COLUMNA DERECHA: Timeline de Contenido ---
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(bottom = if (isLast) 0.dp else 24.dp)
-        ) {
-            // Header: Título, Fecha y Botón de Eliminar
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = if (transaction.isIngreso) "Abono" else "Venta",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (transaction.isIngreso) Color(0xFF2E7D32) else Color(0xFF1976D2)
-                    )
-                    Text(text = transaction.fechaAbono, fontSize = 11.sp, color = TextLightGray)
-                }
-
-                if (transaction.isIngreso) {
-                    IconButton(
-                        onClick = onDelete,
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Eliminar",
-                            tint = Color.Red.copy(alpha = 0.6f),
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Lista de productos
-            if (!transaction.jsonAbonoPorProducto.isNullOrEmpty()) {
-                val listType = object : TypeToken<ArrayList<PorductosEntity>>() {}.type
-                val listaRecuperada: ArrayList<PorductosEntity> = try {
-                    Gson().fromJson(transaction.jsonAbonoPorProducto, listType)
-                } catch (e: Exception) {
-                    arrayListOf()
-                }
-
-                listaRecuperada.forEachIndexed { index, producto ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(26.dp)
-                                .border(1.dp, BorderColor, CircleShape)
-                                .background(IconBgGray, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Sell,
-                                contentDescription = null,
-                                tint = TextDark2,
-                                modifier = Modifier.size(12.dp)
-                            )
-                        }
-                        Text(text = producto.nombre, fontSize = 12.sp, color = Color.DarkGray)
-                        Text(text = "---", fontSize = 12.sp, color = Color.DarkGray)
-                        Text(
-                            text = formatAsCurrency(producto.precioConGanancia),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-
-                    if (index < listaRecuperada.size - 1) {
-                        HorizontalDivider(
-                            modifier = Modifier.padding(vertical = 4.dp),
-                            thickness = 0.5.dp,
-                            color = BorderColor.copy(alpha = 0.5f)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Total
-            Text(
-                text = "Total: ${formatAsCurrency(transaction.montoAbonado)}",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black
-            )
-        }
+fun TransactionItem(transaction: PagosEntinty, isLast: Boolean, openPaymentDetail: () -> Unit, openPreviewTiket: () -> Unit, onDelete: () -> Unit) {
+        com.nexusystem.paguito.ui.components.MovementCard(transaction.toMovement(),
+            onOpen = if (transaction.isIngreso) openPreviewTiket else openPaymentDetail,
+            onReceipt = openPreviewTiket, onDelete = onDelete)
     }
-}

@@ -4,6 +4,8 @@
 package com.nexusystem.paguito.navigation
 
 import android.net.Uri
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -18,7 +20,9 @@ import com.nexusystem.paguito.ui.screens.perfil.ChangePasswordProfileScreen
 import com.nexusystem.paguito.ui.screens.perfil.EditProfileScreen
 import com.nexusystem.paguito.ui.screens.perfil.PerfiViewModel
 import com.nexusystem.paguito.ui.screens.perfil.ProfileScreen
+import com.nexusystem.paguito.ui.screens.sms.SmsRemindersScreen
 
+@RequiresApi(Build.VERSION_CODES.O)
 fun NavGraphBuilder.profileGraph(
     navController: NavHostController,
     perfilViewModel: PerfiViewModel,
@@ -28,7 +32,8 @@ fun NavGraphBuilder.profileGraph(
         startDestination = Routes.ScreenProfile.route,
         route = Routes.ProfileGraph.route
     ) {
-        composable(Routes.ScreenProfile.route) {
+        for (profileRoute in listOf(Routes.ScreenProfile.route, Routes.ScreenProfileTab.route)) {
+        composable(profileRoute) {
             ProfileScreen(
                 {
                     navController.navigate(
@@ -47,6 +52,7 @@ fun NavGraphBuilder.profileGraph(
                     )
                 },
                 onBack = navController::popBackStack,
+                showBack = profileRoute != Routes.ScreenProfileTab.route,
                 openIdiomas = {
                     navController.navigate(
                         Routes.ScreenIdioms.route
@@ -62,8 +68,15 @@ fun NavGraphBuilder.profileGraph(
                                 "/$json"
                     )
                 },
-                viewModel = perfilViewModel
+                viewModel = perfilViewModel,
+                openSettingsSms = {
+                    navController.navigate(
+                        Routes.ScreenSettingsSms.route
+                    )
+                }
             )
+        }
+
         }
 
         composable(
@@ -106,6 +119,12 @@ fun NavGraphBuilder.profileGraph(
             EditProfileScreen(
                 navController::popBackStack,
                 perfilViewModel
+            )
+        }
+        composable(
+            Routes.ScreenSettingsSms.route
+        ) {
+            SmsRemindersScreen({navController.popBackStack()},{},{},authViewModel
             )
         }
 
