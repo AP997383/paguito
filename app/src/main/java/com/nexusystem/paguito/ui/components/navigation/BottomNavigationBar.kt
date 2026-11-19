@@ -4,6 +4,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -59,11 +60,13 @@ fun RoundedBottomBar(navController: NavHostController, onItemSelected: (String) 
         Row(Modifier.fillMaxSize().selectableGroup()) {
             items.forEachIndexed { index, item ->
                 val isActive = activeIndex == index
+                val interactionSource = remember(item.route) { MutableInteractionSource() }
                 val rise by animateDpAsState(if (isActive) 10.dp else 0.dp,
                     animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow), label = "navigation-icon-rise")
                 val iconColor by animateColorAsState(if (isActive) colors.onPrimary else colors.onSurfaceVariant, label = "navigation-icon-color")
                 val bubbleColor by animateColorAsState(if (isActive) colors.primary else Color.Transparent, label = "navigation-bubble-color")
-                Box(Modifier.weight(1f).fillMaxHeight().selectable(selected = isActive, role = Role.Tab, onClick = {
+                Box(Modifier.weight(1f).fillMaxHeight().selectable(selected = isActive,
+                    interactionSource = interactionSource, indication = null, role = Role.Tab, onClick = {
                     navigateToMainTab(navController, item.route)
                     onItemSelected(item.route)
                 })) {
