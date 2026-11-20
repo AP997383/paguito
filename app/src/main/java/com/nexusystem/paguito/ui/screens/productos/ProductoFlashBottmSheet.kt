@@ -53,7 +53,6 @@ import androidx.core.net.toFile
 import com.nexus.medi.data.local.entity.PorductosEntity
 import com.nexusystem.paguito.R
 import com.nexusystem.paguito.utils.LoadingOverlay
-import com.nexusystem.paguito.utils.bottomsSheets.BgBottomSheet
 import com.nexusystem.paguito.utils.bottomsSheets.BlueLight
 import com.nexusystem.paguito.utils.bottomsSheets.BluePrimary
 import com.nexusystem.paguito.utils.dialogs.SuccessAlertDialog
@@ -76,7 +75,8 @@ fun ProductoFlashBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = BgBottomSheet,
+        containerColor = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
         dragHandle = { BottomSheetDefaults.DragHandle() }
     ) {
         FlashBottomSheet(

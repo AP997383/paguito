@@ -37,7 +37,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nexus.medi.data.local.entity.PorductosEntity
 import com.nexusystem.paguito.R
-import com.nexusystem.paguito.utils.bottomsSheets.BgBottomSheet
 import com.nexusystem.paguito.utils.bottomsSheets.BlueLight
 import com.nexusystem.paguito.utils.bottomsSheets.BluePrimary
 import com.nexusystem.paguito.utils.emptyStates.DynamicEmptyState
@@ -57,7 +56,8 @@ fun ChoseProductBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = BgBottomSheet,
+        containerColor = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
         dragHandle = { BottomSheetDefaults.DragHandle() }
     ) {
         AbonoBottomSheetContent(
