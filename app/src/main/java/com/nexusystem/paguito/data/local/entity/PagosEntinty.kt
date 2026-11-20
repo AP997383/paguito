@@ -1,5 +1,7 @@
 package com.nexus.medi.data.local.entity
 
+import androidx.room.ColumnInfo
+import com.google.firebase.firestore.Exclude
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.google.gson.annotations.SerializedName
@@ -11,15 +13,18 @@ data class PagosEntinty(
     var idRemoteDatabase: String="",
     var idDeudorRemoteDatabase: String="",
     val idDeudor: String="",
-    val montoAbonado: Int=0,
-    val saldoAntesDeAbono: Int=0,
+    val montoAbonado: Double=0.0,
+    val saldoAntesDeAbono: Double=0.0,
     val fechaAbono: String="",
     val pagoATiempo: Boolean=false,
     val tipoPago:Int=1,
     @SerializedName("ingreso")
     val isIngreso: Boolean =false,
     val notas:String="",
-    var jsonAbonoPorProducto: String=""
+    var jsonAbonoPorProducto: String="",
+    /** Identidad local; la cuenta se asigna desde la sesión, no desde la respuesta remota. */
+    @get:Exclude @ColumnInfo(defaultValue = "''") val ownerAccount: String = "",
+    @get:Exclude @ColumnInfo(defaultValue = "0") val isSynced: Boolean = false
 )
 
 
@@ -27,10 +32,10 @@ data class PagostoPreviewTiket(
     var correoAndPhone:String="",
     var nameClient: String="",
     var nameBussines: String="",
-    val montoAbonado: Int=0,
-    val saldoAntesDeAbono: Int=0,
+    val montoAbonado: Double=0.0,
+    val saldoAntesDeAbono: Double=0.0,
     val fechaAbono: String="",
-    val ammountTotal: Int=0,
+    val ammountTotal: Double=0.0,
     val tipoPago:Int=1,
     val jsonAbonoPorProducto: String="",
     val isIngreso: Boolean=false

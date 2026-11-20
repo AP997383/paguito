@@ -18,9 +18,18 @@ class ProductosUseCase @Inject constructor(
     suspend fun obtenerNumeroProductos(): Flow<Int> = localRepository.obtenerNumeroProductos()
     suspend fun inversionEnProductos(): Flow<ProductosSummary1> = localRepository.inversionEnProductos()
 
-     suspend fun guardarProducto(data:PorductosEntity):Long = localRepository.add(data)
+     suspend fun guardarProducto(data:PorductosEntity, email: String):Long = localRepository.add(data, email)
     suspend fun deleteProduct(data:PorductosEntity) = localRepository.deleteProduct(data)
-    suspend fun guardarProductos(data: ArrayList<PorductosResponse>) = localRepository.addProductos(data)
+    suspend fun guardarProductos(data: ArrayList<PorductosResponse>, email: String) = localRepository.addProductos(data, email)
+    /** Restaura propiedad histórica únicamente con IDs verificados en la colección de la cuenta. */
+    suspend fun claimVerifiedLegacyProducts(email: String, remoteIds: List<String>) =
+        localRepository.claimVerifiedLegacyProducts(email, remoteIds)
+
+    /** Confirmación del producto remoto sin volver a crear el registro local. */
+    suspend fun markSynced(email: String, remoteId: String) = localRepository.markSynced(email, remoteId)
+
+    /** Consulta exclusivamente el catálogo de la cuenta que inició la publicación. */
+    suspend fun snapshot(email: String): List<PorductosEntity> = localRepository.snapshot(email)
  //   suspend fun deleteMyRegister(data:MyBloodPresureAndGlucosaEntity) = localRepository.delete(data)
 
     suspend fun guardarFoto(userId: String, imageUri: Uri): String =

@@ -170,7 +170,7 @@ class PerfiViewModel @Inject constructor(
             try {
                 val profile = snapshot.toObject(FirestoreUserProfile::class.java)?.toEntity()
                     ?: return@addSnapshotListener
-                secureStorage.saveUserProfile(profile)
+                if (!secureStorage.updateCurrentUserProfile(profile)) return@addSnapshotListener
                 profileState = profile
             } catch (exception: RuntimeException) {
                 // Una respuesta incompatible no debe cerrar la app ni reemplazar el perfil guardado.
@@ -307,7 +307,7 @@ class PerfiViewModel @Inject constructor(
                     )
 
                     // 4. Guardamos y recargamos
-                    secureStorage.saveUserProfile(profileToSave)
+                    if (!secureStorage.updateCurrentUserProfile(profileToSave)) return@launch
                     profileState = profileToSave // Actualizamos el estado local inmediatamente
                     loadUserProfile()
                 }

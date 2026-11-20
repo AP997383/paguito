@@ -162,11 +162,10 @@ fun RegisterSellScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit = 
                             val jsonCompleto: String = Gson().toJson(selectedProducts)
                             paymentDatapreviewTiket = PagostoPreviewTiket(
                                 contactText,
-                                currentDeudorSelected!!.nombre, "", amount.toFloat().toInt(),
-                                saldoAntesDeAbono = currentDeudorSelected!!.montoActualAdeudado.toInt(),
+                                currentDeudorSelected!!.nombre, "", amount.toDouble(),
+                                saldoAntesDeAbono = currentDeudorSelected!!.montoActualAdeudado.toDouble(),
                                 startDate.toString(),
-                                currentDeudorSelected!!.montoActualAdeudado.toInt() + amount.toFloat()
-                                    .toInt(),
+                                currentDeudorSelected!!.montoActualAdeudado.toDouble() + amount.toDouble(),
                                 1,
                                 jsonCompleto,
                                 isIngreso = false
@@ -177,8 +176,8 @@ fun RegisterSellScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit = 
                                 "",
                                 currentDeudorSelected!!.idRemoteDatabase,
                                 currentDeudorSelected!!.id.toString(),
-                                amount.toFloat().toInt(),
-                                saldoAntesDeAbono = currentDeudorSelected!!.montoActualAdeudado.toInt(),
+                                amount.toDouble(),
+                                saldoAntesDeAbono = currentDeudorSelected!!.montoActualAdeudado.toDouble(),
                                 startDate.toString(),
                                 true,
                                 selectedMethodId,

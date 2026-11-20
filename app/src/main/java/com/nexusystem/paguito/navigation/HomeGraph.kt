@@ -41,6 +41,18 @@ fun NavGraphBuilder.homeGraph(
     productosViewModel: ProductosViewModel,
     perfiViewModel: PerfiViewModel
 ) {
+    // El mismo comprobante se abre desde Inicio y desde el historial completo.
+    val openMovement: (com.nexusystem.paguito.data.local.entity.PagoConNombre) -> Unit = { movement ->
+        val profile = deudoresViewModel.profileState
+        val ticket = PagostoPreviewTiket(
+            correoAndPhone = listOfNotNull(profile?.email, profile?.phone).joinToString(" · "),
+            nameClient = movement.nameDeudor, nameBussines = profile?.bussinesName.orEmpty(),
+            montoAbonado = movement.montoAbonado, saldoAntesDeAbono = movement.saldoAntesDeAbono,
+            fechaAbono = movement.fechaAbono, tipoPago = movement.tipoPago,
+            jsonAbonoPorProducto = movement.jsonAbonoPorProducto, isIngreso = movement.isIngreso
+        )
+        navController.navigate(Routes.ScreenPreviewTicket.route + "/" + Uri.encode(Gson().toJson(ticket)))
+    }
     navigation(
         startDestination = Routes.ScreenHome.route,
         route = Routes.HomeGraph.route
@@ -90,6 +102,7 @@ fun NavGraphBuilder.homeGraph(
                         Routes.ScreenViewAllDeudores.route
                     )
                 },
+                openMovement = openMovement,
                 seeAllPayments = {
                     navController.navigate(
                         Routes.ScreenViewAllPayments.route
@@ -344,7 +357,8 @@ fun NavGraphBuilder.homeGraph(
         ) {
             HistorialPagosScreen(
                 navController::popBackStack,
-                pagosViewModel
+                pagosViewModel,
+                onMovement = openMovement
             )
         }
 

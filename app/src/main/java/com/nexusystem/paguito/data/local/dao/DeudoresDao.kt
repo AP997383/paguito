@@ -12,40 +12,40 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface  DeudoresDao {
 
-    @Query("SELECT * FROM DeudoresTable")
-    fun obtenerTodosDeudores(): Flow<List<DeudoresEntity>>
+    @Query("SELECT * FROM DeudoresTable WHERE ownerAccount = :owner")
+    fun obtenerTodosDeudores(owner: String): Flow<List<DeudoresEntity>>
 
 
         @Query("""
-        SELECT 
-            COUNT(*) as totalDeudores, 
-            COALESCE(SUM(montoActualAdeudado), 0.0) as sumaTotalMontos 
-        FROM DeudoresTable
+        SELECT
+            COUNT(*) as totalDeudores,
+            COALESCE(SUM(CASE WHEN montoActualAdeudado < 0 THEN montoActualAdeudado ELSE montoActualAdeudado - MAX(creditBalance, 0) END), 0.0) as sumaTotalMontos
+        FROM DeudoresTable WHERE ownerAccount = :owner
     """)
-        fun getDeudoresSummary(): Flow<DeudoresSummary>
+        fun getDeudoresSummary(owner: String): Flow<DeudoresSummary>
 
     @Query("""
-        SELECT 
-            COUNT(*) as totalDeudores, 
-            COALESCE(SUM(montoActualAdeudado), 0.0) as sumaTotalMontos 
-        FROM DeudoresTable
+        SELECT
+            COUNT(*) as totalDeudores,
+            COALESCE(SUM(CASE WHEN montoActualAdeudado < 0 THEN montoActualAdeudado ELSE montoActualAdeudado - MAX(creditBalance, 0) END), 0.0) as sumaTotalMontos
+        FROM DeudoresTable WHERE ownerAccount = :owner
     """)
-    fun get5DeudoresSummary(): Flow<DeudoresSummary>
+    fun get5DeudoresSummary(owner: String): Flow<DeudoresSummary>
         // O puedes usar 'suspend fun' si no necesitas observar cambios en tiempo real
-        @Query("UPDATE DeudoresTable SET montoActualAdeudado = montoActualAdeudado - :monto WHERE id = :deudorId")
-        suspend fun restarSaldo(deudorId: Int, monto: Float)
+        @Query("UPDATE DeudoresTable SET creditBalance = MAX(0, -((CASE WHEN montoActualAdeudado < 0 THEN montoActualAdeudado ELSE montoActualAdeudado - MAX(creditBalance, 0) END) - :monto)), montoActualAdeudado = MAX(0, (CASE WHEN montoActualAdeudado < 0 THEN montoActualAdeudado ELSE montoActualAdeudado - MAX(creditBalance, 0) END) - :monto) WHERE id = :deudorId AND ownerAccount = :owner")
+        suspend fun restarSaldo(deudorId: Int, monto: Float, owner: String)
 
-    @Query("UPDATE DeudoresTable SET montoActualAdeudado = montoActualAdeudado + :monto, montoAcomulado = montoAcomulado + :monto WHERE id = :deudorId")
-    suspend fun sumarSaldo(deudorId: Int, monto: Float)
+    @Query("UPDATE DeudoresTable SET creditBalance = MAX(0, -((CASE WHEN montoActualAdeudado < 0 THEN montoActualAdeudado ELSE montoActualAdeudado - MAX(creditBalance, 0) END) + :monto)), montoActualAdeudado = MAX(0, (CASE WHEN montoActualAdeudado < 0 THEN montoActualAdeudado ELSE montoActualAdeudado - MAX(creditBalance, 0) END) + :monto), montoAcomulado = montoAcomulado + :monto WHERE id = :deudorId AND ownerAccount = :owner")
+    suspend fun sumarSaldo(deudorId: Int, monto: Float, owner: String)
 
-    @Query("SELECT * FROM DeudoresTable")
-    fun obtenerDeudoresPorFecha(): Flow<List<DeudoresEntity>>
+    @Query("SELECT * FROM DeudoresTable WHERE ownerAccount = :owner")
+    fun obtenerDeudoresPorFecha(owner: String): Flow<List<DeudoresEntity>>
 
-    @Query("SELECT * FROM DeudoresTable")
-    fun obtenerMorosos(): Flow<List<DeudoresEntity>>
+    @Query("SELECT * FROM DeudoresTable WHERE ownerAccount = :owner")
+    fun obtenerMorosos(owner: String): Flow<List<DeudoresEntity>>
 
-    @Query("SELECT * FROM DeudoresTable")
-    fun obtenerBuenosPagadores(): Flow<List<DeudoresEntity>>
+    @Query("SELECT * FROM DeudoresTable WHERE ownerAccount = :owner")
+    fun obtenerBuenosPagadores(owner: String): Flow<List<DeudoresEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun agregarNuevoDeudor(mascota: DeudoresEntity): Long
@@ -53,15 +53,21 @@ interface  DeudoresDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun agregarDeudores(productos: List<DeudoresEntity>)
 
-    @Query("SELECT idRemoteDatabase FROM DeudoresTable")
-    suspend fun getAllRemoteIds(): List<String>
+    @Query("SELECT idRemoteDatabase FROM DeudoresTable WHERE ownerAccount = :owner")
+    suspend fun getAllRemoteIds(owner: String): List<String>
 
-    @Query("UPDATE DeudoresTable SET inRemote=true WHERE idRemoteDatabase=:id")
-    suspend fun updateSync(id: String)
+    @Query("UPDATE DeudoresTable SET inRemote=true WHERE idRemoteDatabase=:id AND ownerAccount = :owner")
+    suspend fun updateSync(id: String, owner: String)
 
-    @Query("DELETE FROM DeudoresTable  WHERE idRemoteDatabase=:id")
-    suspend fun deleteDeudor(id: String)
+    @Query("DELETE FROM DeudoresTable  WHERE idRemoteDatabase=:id AND ownerAccount = :owner")
+    suspend fun deleteDeudor(id: String, owner: String)
 
-    @Delete
-    suspend fun elominarDeudor(mascota: DeudoresEntity)
+    @Query("DELETE FROM DeudoresTable WHERE id = :id AND ownerAccount = :owner")
+    suspend fun elominarDeudor(id: Int, owner: String)
+    @Query("SELECT * FROM DeudoresTable WHERE ownerAccount = :owner")
+    suspend fun snapshot(owner: String): List<DeudoresEntity>
+    @Query("SELECT * FROM DeudoresTable WHERE id = :id LIMIT 1")
+    suspend fun findById(id: Int): DeudoresEntity?
+    @Query("SELECT * FROM DeudoresTable WHERE idRemoteDatabase = :remoteId AND (ownerAccount = :owner OR ownerAccount = '') ORDER BY CASE WHEN ownerAccount = :owner THEN 0 ELSE 1 END LIMIT 1")
+    suspend fun findRemote(remoteId: String, owner: String): DeudoresEntity?
 }

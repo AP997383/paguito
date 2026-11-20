@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -41,6 +42,7 @@ fun ProcessingScreen(
     // Estado para rastrear el paso actual (del 1 al 3)
     var currentStep by remember { mutableStateOf(1) }
     val allDataDownloaded by viewModel.allDataSucessfull.collectAsState()
+    val syncError by viewModel.errorMessage.collectAsState()
     // Estado para controlar cuándo mostrar el botón "Continuar"
     var showContinueButton by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
@@ -48,7 +50,7 @@ fun ProcessingScreen(
     }
 
     // Simulación de carga: Incrementa el paso cada 2 segundos
-    LaunchedEffect(key1 = currentStep) {
+    LaunchedEffect(currentStep, allDataDownloaded) {
         if (currentStep < 3) {
             delay(3000L) // Retraso de 2 segundos (2000ms) por paso
             currentStep += 1
@@ -206,6 +208,12 @@ fun ProcessingScreen(
             }
         }
         Spacer(modifier = Modifier.height(26.dp))
+
+        if (syncError.isNotBlank()) {
+            Text(stringResource(R.string.account_sync_failed), color = MaterialTheme.colorScheme.error)
+            TextButton(onClick = { viewModel.getAllMyData(email) }) { Text(stringResource(R.string.account_sync_retry)) }
+            TextButton(onClick = onBackClick) { Text(stringResource(R.string.account_sync_back)) }
+        }
 
         // --- Botón de Continuar (Sólo visible en el paso 3) ---
         if (showContinueButton) {

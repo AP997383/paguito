@@ -13,6 +13,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.nexus.medi.data.local.entity.PorductosEntity
 import com.nexusystem.paguito.data.local.entity.UserProfileEntity
+import com.nexusystem.paguito.data.local.session.LocalAccountKey
 import com.nexusystem.paguito.data.models.request.SyncCatalogProduct
 import com.nexusystem.paguito.data.models.request.SyncCatalogRequest
 import com.nexusystem.paguito.data.repository.remote.auth.CatalogRepository
@@ -22,7 +23,14 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
+import com.nexusystem.paguito.BuildConfig
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
@@ -42,8 +50,6 @@ class ProductosViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    private val _numProducts = MutableStateFlow(0)
-    val numProducts: StateFlow<Int> = _numProducts
 
     private val _newUrlServer = MutableStateFlow("")
     val newUrlServer = _newUrlServer.asStateFlow()
@@ -52,7 +58,13 @@ class ProductosViewModel @Inject constructor(
     val medicine = _medicine.asStateFlow()
 
     private val _produtosList = MutableStateFlow<List<PorductosEntity?>>(emptyList())
-    val produtosList = _produtosList.asStateFlow()
+    /** Una lista ya emitida también se filtra al cambiar de sesión, antes de recibir la siguiente consulta Room. */
+    val produtosList = combine(_produtosList, secureStorage.accountKeys) { products, owner ->
+        products.filter { it?.ownerAccount == owner }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val numProducts: StateFlow<Int> = produtosList.map { it.size }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
+    private var productsJob: Job? = null
 
     private val _medicineNotFound = MutableStateFlow(false)
     val medicineNotFound = _medicineNotFound.asStateFlow()
@@ -65,6 +77,26 @@ class ProductosViewModel @Inject constructor(
 
     init {
         loadUserProfile()
+        obtenerProductos()
+        viewModelScope.launch {
+            secureStorage.accountKeys.collectLatest {
+                _medicine.value = null
+                _newUrlServer.value = ""
+                loadUserProfile()
+                val email = profileState?.email.orEmpty()
+                if (email.isNotBlank()) {
+                    try {
+                        val verified = firestore.collection("productos").document(email)
+                            .collection("productos").get().await().documents.map { it.id }
+                        productosUserCase.claimVerifiedLegacyProducts(email, verified)
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (_: Exception) {
+                        if (BuildConfig.DEBUG) Log.d("PRODUCT_ACCOUNT", "No se pudo comprobar la propiedad histórica")
+                    }
+                }
+            }
+        }
     }
 
     fun setUriLocal(url: String) {
@@ -79,21 +111,16 @@ class ProductosViewModel @Inject constructor(
 
     @RequiresApi(Build.VERSION_CODES.O)
     fun obtenerProductos() {
-        viewModelScope.launch {
+        if (productsJob?.isActive == true) return
+        productsJob = viewModelScope.launch {
             productosUserCase.obtenerProductos().collect { list ->
                 _produtosList.value = list
             }
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    fun obtenerNumeroProductos() {
-        viewModelScope.launch {
-            productosUserCase.obtenerNumeroProductos().collect { count ->
-                _numProducts.value = count
-            }
-        }
-    }
+    /** El conteo proviene de la misma lista aislada que usan los selectores y la pantalla de productos. */
+    fun obtenerNumeroProductos() { obtenerProductos() }
 
     @RequiresApi(Build.VERSION_CODES.O)
     fun daysUntilExpiration(dateStr: String): Int {
@@ -214,6 +241,8 @@ class ProductosViewModel @Inject constructor(
         userId: String,
         producto: PorductosEntity
     ) {
+        val owner = LocalAccountKey.fromEmail(userId)
+        check(owner == secureStorage.currentAccountKey() && owner != LocalAccountKey.GUEST)
         val newDocRef = firestore
             .collection("productos")
             .document(userId)
@@ -224,11 +253,12 @@ class ProductosViewModel @Inject constructor(
 
         producto.idRemoteDatabase = generatedId
 
-        productosUserCase.guardarProducto(producto)
+        productosUserCase.guardarProducto(producto, userId)
 
         newDocRef
             .set(producto, SetOptions.merge())
             .await()
+        productosUserCase.markSynced(userId, generatedId)
     }
 
     private suspend fun deleteProductInFirebaseSuspend(
@@ -250,10 +280,7 @@ class ProductosViewModel @Inject constructor(
         try {
             val store = catalogRepository.getPublicStoreByBusinessId(userEmail)
 
-            val products = productosUserCase
-                .obtenerProductos()
-                .first()
-                .filterNotNull()
+            val products = productosUserCase.snapshot(userEmail)
 
             val request = SyncCatalogRequest(
                 businessId = userEmail,
@@ -277,6 +304,7 @@ class ProductosViewModel @Inject constructor(
                 }
             )
 
+            check(LocalAccountKey.fromEmail(userEmail) == secureStorage.currentAccountKey())
             catalogRepository.syncCatalog(request)
         } catch (e: Throwable) {
             Log.e("WEBSITE_SYNC", "No se sincronizó sitio: ${e.message}")

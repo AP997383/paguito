@@ -96,4 +96,8 @@
     <string name="intro_art_week" formatted="false">Weekly sales</string>
     <string name="intro_art_days" formatted="false">M T W T F S S</string>
     <string name="intro_art_growth_badge" formatted="false">Your business grows</string>
+
+    <string name="account_sync_failed">The download could not be completed. Your local data is preserved.</string>
+    <string name="account_sync_retry">Retry</string>
+    <string name="account_sync_back">Back</string>
 </resources>

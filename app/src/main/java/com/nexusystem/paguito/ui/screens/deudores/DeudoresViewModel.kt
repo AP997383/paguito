@@ -25,6 +25,8 @@ import com.nexusystem.paguito.domain.usescases.deudores.DeudoresUseCase
 import com.nexusystem.paguito.utils.SecureStorageManager
 import com.nexusystem.paguito.utils.getTodayDateString
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,6 +41,7 @@ import javax.inject.Inject
 @HiltViewModel
 class DeudoresViewModel @Inject constructor(
     private val authRepository: AuthRepository,
+    private val accountSync: com.nexusystem.paguito.data.sync.AccountSyncCoordinator,
     private val deudoresUseCase: DeudoresUseCase,
     private val abonosUseCase: AbonosUseCase,
     private val firestore: FirebaseFirestore,
@@ -96,14 +99,31 @@ class DeudoresViewModel @Inject constructor(
         private set
 
     init {
+        viewModelScope.launch { secureStorage.profileChanges.collect { loadUserProfile() } }
         firestore.firestoreSettings = settings
         loadUserProfile()
+        viewModelScope.launch {
+            secureStorage.accountKeys.collectLatest {
+                _deudores.value = emptyList(); _sumaryFive.value = null; _sumaryAll.value = null
+                loadUserProfile()
+                refreshCloudData()
+            }
+        }
+    }
+
+    /** Refresca al volver a Inicio, conservando la caché durante errores de conexión. */
+    fun refreshCloudData(force: Boolean = false) {
+        val email = secureStorage.getUserProfile()?.email ?: return
+        viewModelScope.launch {
+            try { accountSync.refresh(email, force = force) }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (failure: Exception) { if (com.nexusystem.paguito.BuildConfig.DEBUG) Log.w("ACCOUNT_SYNC", "No se pudo actualizar la caché: ${failure.javaClass.simpleName}") }
+        }
     }
 
     fun loadUserProfile() {
         // Recuperamos del Secure Storage
         val savedProfile = secureStorage.getUserProfile()
-        Log.e("PROFILE_PHOTO", "-->$savedProfile")
         mail = savedProfile?.email?:""
         profileState = savedProfile
     }
@@ -119,10 +139,20 @@ class DeudoresViewModel @Inject constructor(
 
     @RequiresApi(Build.VERSION_CODES.O)
     fun eliminarDeudorYpagos(idDeudor:String) {
+        val client = _deudores.value.filterNotNull().firstOrNull { it.id?.toString() == idDeudor } ?: return
+        val email = secureStorage.getUserProfile()?.email.orEmpty()
         viewModelScope.launch {
-            deudoresUseCase.aliminarDeudorDeudor(idDeudor)
-            abonosUseCase.eliminarAbonos(idDeudor)
-            obtenerDeudores()
+            try {
+                if (email.isNotBlank() && client.idRemoteDatabase.isNotBlank()) {
+                    firestore.collection("deudores").document(email).collection("deudores")
+                        .document(client.idRemoteDatabase).update(mapOf("isDeleted" to true, "deletedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp())).await()
+                }
+                if (secureStorage.getUserProfile()?.email.orEmpty() != email) return@launch
+                deudoresUseCase.aliminarDeudorDeudor(idDeudor)
+                abonosUseCase.eliminarAbonos(idDeudor)
+            } catch (_: Exception) {
+                if (com.nexusystem.paguito.BuildConfig.DEBUG) Log.w("Paguito", "No se pudo confirmar la baja del cliente")
+            }
         }
     }
 
@@ -176,88 +206,50 @@ class DeudoresViewModel @Inject constructor(
         }
     }
     @RequiresApi(Build.VERSION_CODES.O)
-    fun updateDeudor( producto: DeudoresEntity?) {
+    /** Editar el contacto nunca vuelve a publicar un saldo guardado antes de un movimiento en otro teléfono. */
+    fun updateDeudor(producto: DeudoresEntity?) {
+        val client = producto ?: return
+        val email = secureStorage.getUserProfile()?.email.orEmpty()
         viewModelScope.launch {
-            producto?.let { product ->
-                try {
-
-                        // 1. Preparamos los datos
-                        val newDocRef = firestore.collection("deudores")
-                            .document(profileState?.email?:"")
-                            .collection("deudores")
-                            .document(producto.idRemoteDatabase)
-                        product.inRemote =true
-                        newDocRef.set(product, SetOptions.merge())
-                            .addOnSuccessListener {
-                                viewModelScope.launch {
-                                    deudoresUseCase.agregarDeudor(product)
-                                    Log.d("SAVEDEUDOE", "Sincronizado con la nube exitosamente")
-                                }
-                            }
-                            .addOnFailureListener { e ->
-                                Log.e("SAVEDEUDOE", "Error en cola de sincronización: ${e.message}")
-                            }
-
-                } catch (e: Exception) {
-                    deudoresUseCase.agregarDeudor(product)
-                    e.printStackTrace()
-                }
+            try {
+                if (email.isBlank() || client.idRemoteDatabase.isBlank()) { deudoresUseCase.agregarDeudor(client); return@launch }
+                require(client.ownerAccount == secureStorage.currentAccountKey())
+                firestore.collection("deudores").document(email).collection("deudores").document(client.idRemoteDatabase)
+                    .update(mapOf("nombre" to client.nombre, "telefono" to client.telefono, "correo" to client.correo, "domicilio" to client.domicilio,
+                        "periodicidad" to client.periodicidad, "notasSobreDeudor" to client.notasSobreDeudor)).await()
+                accountSync.refresh(email, force = true)
+            } catch (_: Exception) {
+                if (com.nexusystem.paguito.BuildConfig.DEBUG) Log.w("Paguito", "No se pudo confirmar la edición del contacto")
             }
         }
     }
 
+    /** Crea cliente y venta inicial en un lote; el servicio aplica el saldo una sola vez. */
     @RequiresApi(Build.VERSION_CODES.O)
     fun saveDeudorInFirebase(userId: String, producto: DeudoresEntity?) {
+        val product = producto ?: return
         viewModelScope.launch {
-            producto?.let { product ->
-                try {
-                    if(userId.isNullOrEmpty()){
-                        deudoresUseCase.agregarDeudor(product)
-                    }else{
-                        // 1. Preparamos los datos
-                        val newDocRef = firestore.collection("deudores")
-                            .document(userId)
-                            .collection("deudores")
-                            .document()
-                        val generatedId = newDocRef.id
-                        product.idRemoteDatabase = generatedId
-                        val idLocal = deudoresUseCase.agregarDeudor(product)
-                        product.inRemote =true
-                        newDocRef.set(product, SetOptions.merge())
-                            .addOnSuccessListener {
-                                viewModelScope.launch {
-                                    deudoresUseCase.updateSync(product)
-                                    val jsonCompleto: String = Gson().toJson(producto.idsPorductos)
-                                    val paymentData = PagosEntinty(
-                                        null,
-                                        "",
-                                        generatedId,
-                                        idLocal.toString(),
-                                        producto.montoAcomulado.toInt(),
-                                        saldoAntesDeAbono = 0,
-                                        getTodayDateString(),
-                                        true,
-                                        0,
-                                        false,
-                                        "",
-                                        jsonCompleto
-                                    )
-                                    registrarVentaRemoteFirebase(userId,paymentData)
-                                    Log.d("SAVEDEUDOE", "Sincronizado con la nube exitosamente")
-                                }
-                            }
-                            .addOnFailureListener { e ->
-                                Log.e("SAVEDEUDOE", "Error en cola de sincronización: ${e.message}")
-                            }
-
-                        Log.e("SAVEDEUDOE", "--> Se guardó localmente: " + generatedId)
-                    }
-
-                } catch (e: Exception) {
-                    deudoresUseCase.agregarDeudor(product)
-                    e.printStackTrace()
-                }
-            }
+            if (userId.isBlank()) { deudoresUseCase.agregarDeudor(product); return@launch }
+            val owner = com.nexusystem.paguito.data.local.session.LocalAccountKey.fromEmail(userId)
+            check(owner == secureStorage.currentAccountKey())
+            val document = firestore.collection("deudores").document(userId).collection("deudores").document()
+            product.idRemoteDatabase = document.id
+            val localId = deudoresUseCase.agregarDeudor(product.copy(inRemote = false))
+            try {
+                val batch = firestore.batch()
+                val initialAmount = product.montoActualAdeudado.toDouble()
+                val payload = if (initialAmount > 0) product.copy(montoActualAdeudado = 0f, montoAcomulado = 0f, inRemote = true) else product.copy(inRemote = true)
+                batch.set(document, payload, SetOptions.merge())
+                val sale = if (initialAmount > 0) PagosEntinty(id = null, idRemoteDatabase = "initial-sale", idDeudorRemoteDatabase = document.id,
+                    idDeudor = localId.toString(), montoAbonado = initialAmount, saldoAntesDeAbono = 0.0, fechaAbono = getTodayDateString(),
+                    pagoATiempo = true, tipoPago = 1, isIngreso = false, notas = product.notasSobreDeudor.ifBlank { "Deuda inicial" }, jsonAbonoPorProducto = product.idsPorductos) else null
+                if (sale != null) batch.set(document.collection("ventas").document("initial-sale"), sale)
+                batch.commit().await()
+                check(owner == secureStorage.currentAccountKey())
+                deudoresUseCase.updateSync(product)
+                if (sale != null) abonosUseCase.guardarprimeraVenta(sale.copy(isSynced = true))
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { if (com.nexusystem.paguito.BuildConfig.DEBUG) Log.w("CLIENT_SAVE", "El alta permanece pendiente de confirmación") }
         }
     }
 

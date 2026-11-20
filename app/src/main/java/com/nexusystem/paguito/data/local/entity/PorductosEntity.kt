@@ -1,10 +1,13 @@
 package com.nexus.medi.data.local.entity
 
+import androidx.room.Index
+import androidx.room.ColumnInfo
+import com.google.firebase.firestore.Exclude
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.google.gson.annotations.SerializedName
 
-@Entity(tableName = "ProductosTble")
+@Entity(tableName = "ProductosTble", indices = [Index("ownerAccount")])
 data class PorductosEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Int? = 0,
@@ -17,7 +20,12 @@ data class PorductosEntity(
     var signoMultiplicador: String ="%",
     var inventario:Int = 0,
     var notasAdicionales: String="",
-    var ventas: Int=0
+    var ventas: Int=0,
+    /** Solo persistencia local: Firestore y las respuestas remotas no deciden el propietario. */
+    @get:Exclude
+    @ColumnInfo(defaultValue = "''")
+    val ownerAccount: String = "",
+    @get:Exclude @ColumnInfo(defaultValue = "0") val isSynced: Boolean = false
 
 )
 

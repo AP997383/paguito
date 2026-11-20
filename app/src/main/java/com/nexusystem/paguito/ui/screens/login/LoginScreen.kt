@@ -71,21 +71,22 @@ fun LoginScreen(
     var identifierError by remember { mutableStateOf<String?>(null) }
     var passwordError by remember { mutableStateOf<String?>(null) }
     val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
-    if (successLogin != null) {
+    LaunchedEffect(successLogin) {
+        val user = successLogin ?: return@LaunchedEffect
         val profileToSave = UserProfileEntity(
-            verified = successLogin!!.verified,
-            email =successLogin!!.email?:"" ,
-            fotoUrl = successLogin!!.fotoUrl ?: "",
-            fullName = successLogin!!.fullName?:"",
-            bussinesName = successLogin!!.bussinesName?:"",
-            phone = successLogin!!.phone?:"",
-            watsapSended = successLogin!!.watsapSended?:0,
-            watsapsSendedTotal = successLogin!!.watsapsSendedTotal?:0,
+            verified = user.verified,
+            email =user.email?:"" ,
+            fotoUrl = user.fotoUrl ?: "",
+            fullName = user.fullName?:"",
+            bussinesName = user.bussinesName?:"",
+            phone = user.phone?:"",
+            watsapSended = user.watsapSended?:0,
+            watsapsSendedTotal = user.watsapsSendedTotal?:0,
             token =prefs.getString("MyToken","").toString(),
-            userSuscription = successLogin!!.userSuscription?: UserSuscriptionData()
+            userSuscription = user.userSuscription?: UserSuscriptionData()
         )
         secureStorage.saveUserProfile(profileToSave)
-        onLoginSuccess(successLogin!!)
+        onLoginSuccess(user)
         viewModel.resetLogin()
     }
     val errorMessage by viewModel.errorMessage.collectAsState()

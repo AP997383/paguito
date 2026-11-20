@@ -242,10 +242,10 @@ fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntit
             paymentDatapreviewTiket =PagostoPreviewTiket(
                 contactText,
                 deudorData.nombre,"",
-                monto.toFloat().toInt(),
-                saldoAntesDeAbono =      (deudorData.montoActualAdeudado -pagado  ).toInt(),
+                monto.toDouble(),
+                saldoAntesDeAbono =      (deudorData.montoActualAdeudado -pagado).toDouble(),
                 getTodayDateString(),
-                deudorData.montoActualAdeudado.toFloat().toInt() - monto.toFloat().toInt() ,
+                deudorData.montoActualAdeudado.toDouble() - monto.toDouble() ,
                 1,
                 "",
                 isIngreso = true
@@ -256,8 +256,8 @@ fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntit
                 "",
                 deudorData!!.idRemoteDatabase,
                 deudorData!!.id.toString(),
-                monto.toFloat().toInt(),
-                saldoAntesDeAbono =  ( deudorData.montoActualAdeudado - pagado ).toInt(),
+                monto.toDouble(),
+                saldoAntesDeAbono =  (deudorData.montoActualAdeudado - pagado).toDouble(),
                 getTodayDateString(),
                 true,
                 1,
@@ -293,7 +293,7 @@ fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntit
         paymentDatapreviewTiket = PagostoPreviewTiket(
             contactText, deudorData.nombre, profile?.bussinesName.orEmpty(), tx.montoAbonado,
             saldoAntesDeAbono = tx.saldoAntesDeAbono, getTodayDateString(),
-            deudorData.montoActualAdeudado.toInt() - tx.montoAbonado, 1,
+            deudorData.montoActualAdeudado.toDouble() - tx.montoAbonado, 1,
             tx.jsonAbonoPorProducto, isIngreso = tx.isIngreso
         )
         openPreviewTicket(paymentDatapreviewTiket)

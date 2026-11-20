@@ -37,6 +37,7 @@ fun DashboardScreen(
     openWebsite: () -> Unit,
     seeAllDeudores: () -> Unit,
     seeAllPayments: () -> Unit,
+    openMovement: (com.nexusystem.paguito.data.local.entity.PagoConNombre) -> Unit,
     goToMyProfile: () -> Unit,
     openNexusPay: () -> Unit,
     deudoresViewModel: DeudoresViewModel,
@@ -71,7 +72,16 @@ fun DashboardScreen(
             .map { it.first }
     }
 
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) deudoresViewModel.refreshCloudData()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     LaunchedEffect(Unit) {
+        deudoresViewModel.refreshCloudData()
         productosViewmodel.obtenerNumeroProductos()
         deudoresViewModel.loadUserProfile()
         deudoresViewModel.obtenerDeudores()
@@ -208,7 +218,7 @@ fun DashboardScreen(
                     if (pagosHistorial.isNotEmpty()) {
                         RecentPaymentsSection(
                             pagos = pagosHistorial,
-                            seeAllPayments = seeAllPayments
+                            seeAllPayments = seeAllPayments, onMovement = openMovement
                         )
                     } else {
                         Spacer(Modifier.height(20.dp))

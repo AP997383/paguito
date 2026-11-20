@@ -20,6 +20,7 @@ import com.nexusystem.paguito.domain.data.auth.UserDataModelAuth
 import com.nexusystem.paguito.domain.usescases.abonos.AbonosUseCase
 import com.nexusystem.paguito.domain.usescases.deudores.DeudoresUseCase
 import com.nexusystem.paguito.domain.usescases.productos.ProductosUseCase
+import com.nexusystem.paguito.data.local.session.LocalAccountKey
 import com.nexusystem.paguito.utils.PaguitoStore
 import com.nexusystem.paguito.utils.SecureStorageManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -32,6 +33,7 @@ import javax.inject.Inject
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val authApi: AuthApi,
+    private val accountSync: com.nexusystem.paguito.data.sync.AccountSyncCoordinator,
     private val authRepository: AuthRepository,
     private val productosUserCase: ProductosUseCase,
     private val pagosUserCase: AbonosUseCase,
@@ -245,33 +247,16 @@ class AuthViewModel @Inject constructor(
     fun getAllMyData(email: String) {
         viewModelScope.launch {
             _isLoading.value = true
+            _allDataSucessfull.value = false
             _errorMessage.value =""
 
             try {
-                val result = authRepository.getAllMyData(email)
-                if(!result.productos.isNullOrEmpty()) {
-                    productosUserCase.guardarProductos(result.productos)
-                }
-                if(!result.deudores.isNullOrEmpty()) {
-                    deudoresUserCase.agregarDeudores(result.deudores)
-                    result.deudores.forEach { deudor->
-                        Log.e("NOMBRE_DEUDOR","-->"+deudor.nombre)
-                        Log.e("NOMBRE_DEUDOR","pagos-->"+deudor.pagos)
-                        Log.e("NOMBRE_DEUDOR","ventas-->"+deudor.ventas)
-                        if(!deudor.pagos.isNullOrEmpty()){
-                            pagosUserCase.guardarAbonos(deudor.pagos)
-                        }
-                        if(!deudor.ventas.isNullOrEmpty()){
-                            pagosUserCase.guardarAbonos(deudor.ventas)
-                        }
-                    }
-                }
+                accountSync.refresh(email, force = true)
                 _allDataSucessfull.value =true
             } catch (e: Exception) {
                 Log.e("ERROR_PARSEO","-->"+e.toString())
                 _errorMessage.value = e.message?:""
             } finally {
-                _allDataSucessfull.value =true
                 _isLoading.value = false
             }
         }

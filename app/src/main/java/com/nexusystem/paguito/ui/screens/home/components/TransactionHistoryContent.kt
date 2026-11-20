@@ -17,7 +17,7 @@ import com.nexusystem.paguito.data.local.entity.PagoConNombre
 import com.nexusystem.paguito.ui.components.*
 
 @Composable
-fun TransactionHistoryContent(payments: List<PagoConNombre>, onBack: () -> Unit) {
+fun TransactionHistoryContent(payments: List<PagoConNombre>, onBack: () -> Unit, onMovement: (PagoConNombre) -> Unit = {}) {
     var query by rememberSaveable { mutableStateOf("") }
     var filter by rememberSaveable { mutableStateOf(MovementFilter.All) }
     var recentDays by rememberSaveable { mutableStateOf(0) }
@@ -54,7 +54,8 @@ fun TransactionHistoryContent(payments: List<PagoConNombre>, onBack: () -> Unit)
                 Text(movementDayLabel(entry.rawDate), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 6.dp, bottom = 10.dp))
             }
-            MovementCard(entry)
+            val original = payments.firstOrNull { it.toMovement().key == entry.key }
+            MovementCard(entry, onOpen = { original?.let(onMovement) }, onReceipt = { original?.let(onMovement) })
         }
     }
 }

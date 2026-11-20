@@ -83,7 +83,7 @@ if(updateSucess) {
                 secureStorage.getUserProfile()?.let { current ->
                     val updated = current.copy(email = email, fotoUrl = newUrlFromServer.ifBlank { current.fotoUrl },
                         fullName = myName, bussinesName = businessName, phone = phone)
-                    secureStorage.saveUserProfile(updated)
+                    if (!secureStorage.updateCurrentUserProfile(updated)) return@let
                     viewModel.updateAllInfo(email, updated)
                 }
             },

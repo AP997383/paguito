@@ -185,7 +185,8 @@ fun AddProductScreen(
             signoMultiplicador = symbol,
             inventario = finalStock,
             notasAdicionales = notes,
-            ventas = if (isEditingProduct) currentProduct.ventas else 0
+            ventas = if (isEditingProduct) currentProduct.ventas else 0,
+            ownerAccount = if (isEditingProduct) currentProduct.ownerAccount else ""
         )
 
         viewmodel.addNewCartilla(

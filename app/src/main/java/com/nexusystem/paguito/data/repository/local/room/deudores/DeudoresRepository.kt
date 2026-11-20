@@ -1,77 +1,37 @@
 package com.nexus.medi.data.repository.local.room.bloodAndPresure
 
-import android.util.Log
 import com.nexusystem.paguito.data.local.dao.DeudoresDao
 import com.nexus.medi.data.local.entity.DeudoresEntity
+import com.nexusystem.paguito.data.local.session.LocalAccountSource
 import com.nexusystem.paguito.domain.data.DeudoresSummary
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapLatest
 import javax.inject.Inject
 import javax.inject.Singleton
 
-@Singleton
-class DeudoresRepository @Inject constructor(
-    private val recipesDao: DeudoresDao
-) {
+/** Clientes y resúmenes limitados a la cuenta activa; conserva IDs locales al actualizar desde el servicio. */
+@Singleton @OptIn(ExperimentalCoroutinesApi::class)
+class DeudoresRepository @Inject constructor(private val recipesDao: DeudoresDao, private val accounts: LocalAccountSource) {
+    fun obtenerDeudores(): Flow<List<DeudoresEntity>> = accounts.accountKeys.flatMapLatest(recipesDao::obtenerTodosDeudores)
+    fun obtenerDatosDeCards(): Flow<DeudoresSummary> = accounts.accountKeys.flatMapLatest(recipesDao::getDeudoresSummary)
+    fun obtener5DatosDeCards(): Flow<DeudoresSummary> = accounts.accountKeys.flatMapLatest(recipesDao::get5DeudoresSummary)
 
-    fun obtenerDeudores(): Flow<List<DeudoresEntity>> {
-        return recipesDao.obtenerTodosDeudores()
+    /** Rechaza edición de una fila ajena incluso si una pantalla conserva un ID anterior. */
+    suspend fun add(recipe: DeudoresEntity): Long {
+        val owner = accounts.currentAccountKey()
+        require(recipe.ownerAccount.isBlank() || recipe.ownerAccount == owner)
+        recipe.id?.takeIf { it != 0 }?.let { id -> require(recipesDao.findById(id)?.ownerAccount.let { it == null || it == owner }) }
+        return recipesDao.agregarNuevoDeudor(recipe.copy(ownerAccount = owner))
     }
-
-    fun obtenerDatosDeCards(): Flow<DeudoresSummary> {
-        return recipesDao.getDeudoresSummary()
-    }
-    fun obtener5DatosDeCards(): Flow<DeudoresSummary> {
-        return recipesDao.get5DeudoresSummary()
-    }
-
-
-
-
-    suspend fun add(recipe: DeudoresEntity) :Long{
-        Log.e("ADDDD","--<" + recipe)
-        return recipesDao.agregarNuevoDeudor(recipe.toEntity())
-    }
-
-    suspend fun deleteDeudor(id: String) {
-        return recipesDao.deleteDeudor(id)
-    }
-
-    suspend fun addDeudores(recipe: ArrayList<DeudoresEntity>) {
-        Log.e("ADDDD","--<" + recipe)
-        val existingIds = recipesDao.getAllRemoteIds()
-        val nuevosDeudores = recipe?.filter { it.idRemoteDatabase !in existingIds }
-        if (!nuevosDeudores.isNullOrEmpty()) {
-            recipesDao.agregarDeudores(nuevosDeudores)
+    suspend fun deleteDeudor(id: String) = recipesDao.deleteDeudor(id, accounts.currentAccountKey())
+    /** Esta entrada es de importación; la descarga completa se ejecuta atómicamente en AccountSyncCoordinator. */
+    suspend fun addDeudores(records: ArrayList<DeudoresEntity>) {
+        val owner = accounts.currentAccountKey()
+        for (record in records) {
+            val previous = recipesDao.findRemote(record.idRemoteDatabase, owner)
+            recipesDao.agregarNuevoDeudor(record.copy(id = previous?.id, ownerAccount = owner, inRemote = true))
         }
-
     }
-
-    suspend fun updateSync(recipe: DeudoresEntity) {
-        Log.e("ADDDD","--<" + recipe)
-        recipesDao.updateSync(recipe.idRemoteDatabase!!)
-    }
-
-    suspend fun update(recipe: DeudoresEntity) {
-        val entity = recipe.toEntity()
-       // recipesDao.updateBotiquin(entity.quiantity,entity.codigo )
-    }
-
-
-    private fun DeudoresEntity.toEntity(): DeudoresEntity {
-        return DeudoresEntity(
-            id = this.id,
-            idRemoteDatabase = this.idRemoteDatabase,
-            nombre = this.nombre,
-            telefono = this.telefono,
-            correo = this.correo,
-            periodicidad = this.periodicidad,
-            fechaInicialDeuda = this.fechaInicialDeuda,
-            domicilio = this.domicilio,
-            montoActualAdeudado = this.montoActualAdeudado,
-            montoAcomulado = this.montoAcomulado,
-            pagosAtrasados = this.pagosaTiempo,
-            pagosaTiempo=this.pagosaTiempo,
-            idsPorductos = this.idsPorductos,
-            notasSobreDeudor = this.notasSobreDeudor)
-    }
+    suspend fun updateSync(recipe: DeudoresEntity) = recipesDao.updateSync(recipe.idRemoteDatabase, accounts.currentAccountKey())
 }

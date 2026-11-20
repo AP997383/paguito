@@ -50,6 +50,14 @@ import kotlin.getValue
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @javax.inject.Inject lateinit var liveAccountMonitor: com.nexusystem.paguito.data.sync.LiveAccountMonitor
+
+    /** La recepción compartida vive en la actividad, no en cada tab. */
+    override fun onStart() { super.onStart(); liveAccountMonitor.start() }
+
+    /** Retira las escuchas mientras la app no es visible. */
+    override fun onStop() { liveAccountMonitor.stop(); super.onStop() }
+
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(R.style.Theme_Paguito)

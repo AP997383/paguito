@@ -72,14 +72,14 @@ class PagosViewModel @Inject constructor(
         loadUserProfile()
     }
 
-    val totalPagos: StateFlow<Int> = _pagos
+    val totalPagos: StateFlow<Double> = _pagos
         .map { lista ->
-            lista.filterNotNull().filter { it.isIngreso }.sumOf { it.montoAbonado ?: 0 }
+            lista.filterNotNull().filter { it.isIngreso }.sumOf { it.montoAbonado }
         }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = 0
+            initialValue = 0.0
         )
 
     fun loadUserProfile() {
@@ -206,8 +206,7 @@ class PagosViewModel @Inject constructor(
                         pago.idRemoteDatabase = generatedId
                         // 3. Subimos el objeto que ya incluye su propio ID
                         newDocRef.set(pago, SetOptions.merge()).await()
-                        // 4. Guardamos en la base de datos local (Room) con el ID actualizado
-                        abonosUseCase.guardarVenta(pago)
+                        abonosUseCase.guardarVenta(pago.copy(isSynced = true))
                         // Opcional: Log o aviso de éxito
                     }
 
@@ -275,8 +274,7 @@ class PagosViewModel @Inject constructor(
                         pago.idRemoteDatabase = generatedId
                         // 3. Subimos el objeto que ya incluye su propio ID
                         newDocRef.set(pago, SetOptions.merge()).await()
-                        // 4. Guardamos en la base de datos local (Room) con el ID actualizado
-                        abonosUseCase.guardarAbono(pago)
+                        abonosUseCase.guardarAbono(pago.copy(isSynced = true))
                         Log.e("PAGOOOS","-->2")
                     }
 

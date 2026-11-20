@@ -6,10 +6,10 @@ import com.nexusystem.paguito.ui.screens.home.components.TransactionHistoryConte
 import com.nexusystem.paguito.ui.screens.payments.PagosViewModel
 
 @Composable
-fun HistorialPagosScreen(onBackClick: () -> Unit, pagosViewModel: PagosViewModel) {
+fun HistorialPagosScreen(onBackClick: () -> Unit, pagosViewModel: PagosViewModel, onMovement: (PagoConNombre) -> Unit = {}) {
     val payments by pagosViewModel.pagosConNombre.collectAsState()
     LaunchedEffect(Unit) { pagosViewModel.obtenerUltimosAbonos() }
-    TransactionHistoryContent(payments.filterNotNull(), onBackClick)
+    TransactionHistoryContent(payments.filterNotNull(), onBackClick, onMovement)
 }
 
 @Composable

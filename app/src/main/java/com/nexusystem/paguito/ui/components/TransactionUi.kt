@@ -13,8 +13,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import com.nexus.medi.data.local.entity.PagosEntinty
 import com.nexus.medi.data.local.entity.PorductosEntity
 import com.nexusystem.paguito.data.local.entity.PagoConNombre
@@ -25,10 +23,10 @@ import java.util.Locale
 
 enum class MovementFilter(val label: String) { All("Todos"), Payments("Pagos"), Sales("Ventas") }
 
-data class MovementEntry(val key: String, val client: String, val amount: Int, val rawDate: String,
+data class MovementEntry(val key: String, val client: String, val amount: Double, val rawDate: String,
     val isPayment: Boolean, val method: Int, val notes: String = "", val products: String = "")
 
-fun PagoConNombre.toMovement() = MovementEntry("$id:$idDeudor:$fechaAbono", nameDeudor, montoAbonado, fechaAbono, isIngreso, tipoPago, notas, jsonAbonoPorProducto)
+fun PagoConNombre.toMovement() = MovementEntry("$idRemoteDatabase:$idDeudorRemoteDatabase:$isIngreso:$id", nameDeudor, montoAbonado, fechaAbono, isIngreso, tipoPago, notas, jsonAbonoPorProducto)
 fun PagosEntinty.toMovement(client: String = "") = MovementEntry("$id:$idRemoteDatabase:$fechaAbono", client, montoAbonado, fechaAbono, isIngreso, tipoPago, notas, jsonAbonoPorProducto)
 fun movementDate(raw: String): LocalDate? = runCatching { LocalDate.parse(raw.take(10)) }.getOrNull()
 fun movementDayLabel(raw: String): String = movementDate(raw)?.format(DateTimeFormatter.ofPattern("d MMM yyyy", Locale("es", "MX"))) ?: "Fecha no disponible"
@@ -39,7 +37,7 @@ fun filterMovements(entries: List<MovementEntry>, query: String, filter: Movemen
     return entries.filter {
         (filter == MovementFilter.All || (filter == MovementFilter.Payments && it.isPayment) || (filter == MovementFilter.Sales && !it.isPayment)) &&
             (term.isEmpty() || listOf(it.client, it.notes, it.amount.toString(), movementMethod(it.method)).any { text -> text.contains(term, true) })
-    }.sortedWith(compareByDescending<MovementEntry> { movementDate(it.rawDate) ?: LocalDate.MIN }.thenByDescending { it.rawDate.replace(' ', 'T') })
+    }.sortedWith(compareByDescending<MovementEntry> { movementDate(it.rawDate) ?: LocalDate.MIN }.thenByDescending { it.rawDate.replace(' ', 'T') }.thenByDescending { it.key })
 }
 
 @Composable
@@ -78,7 +76,7 @@ fun MovementCard(entry: MovementEntry, onOpen: (() -> Unit)? = null, onReceipt: 
     var expanded by remember(entry.key) { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
     val productNames = remember(entry.products) {
-        runCatching { Gson().fromJson<List<PorductosEntity>>(entry.products, object : TypeToken<List<PorductosEntity>>() {}.type).orEmpty().map { it.nombre }.filter { it.isNotBlank() } }.getOrDefault(emptyList())
+        runCatching { com.nexusystem.paguito.data.mapper.RelatedProductsJson.decode(entry.products).map { it.nombre }.filter { it.isNotBlank() } }.getOrDefault(emptyList())
     }
     Card(onClick = { if (onOpen != null) onOpen() else expanded = !expanded },
         modifier = Modifier.fillMaxWidth().testTag("movement-${entry.key}"), shape = MaterialTheme.shapes.extraLarge,
@@ -102,7 +100,7 @@ fun MovementCard(entry: MovementEntry, onOpen: (() -> Unit)? = null, onReceipt: 
                     }
                 } else Icon(if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, "Ver detalles", tint = colors.onSurfaceVariant)
             }
-            Text(formatAsCurrency(entry.amount), style = MaterialTheme.typography.headlineSmall)
+            Text(formatAsCurrency(entry.amount.toFloat()), style = MaterialTheme.typography.headlineSmall)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Outlined.CalendarToday, null, modifier = Modifier.size(14.dp), tint = colors.onSurfaceVariant)
                 Text(movementDayLabel(entry.rawDate), style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)

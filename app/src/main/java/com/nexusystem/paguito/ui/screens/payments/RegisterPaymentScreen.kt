@@ -99,8 +99,8 @@ fun RegisterPaymentScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit
                 "",
                 currentDeudorSelected!!.idRemoteDatabase,
                 currentDeudorSelected!!.id.toString(),
-                amount.toInt(),
-                saldoAntesDeAbono =  currentDeudorSelected!!.montoActualAdeudado.toInt(),
+                amount.toDouble(),
+                saldoAntesDeAbono =  currentDeudorSelected!!.montoActualAdeudado.toDouble(),
                 startDate.toString(),
                 true,
                 selectedMethodId,
@@ -121,10 +121,10 @@ fun RegisterPaymentScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit
     val paymentDatapreviewTiket by remember {
         derivedStateOf {PagostoPreviewTiket(
         contactText,
-        nameInCard,"",amount.toInt(),
-        saldoAntesDeAbono = currentDeudorSelected!!.montoActualAdeudado.toInt(),
+        nameInCard,"",amount.toDouble(),
+        saldoAntesDeAbono = currentDeudorSelected!!.montoActualAdeudado.toDouble(),
             startDate.toString(),
-        currentDeudorSelected!!.montoActualAdeudado.toInt(),
+        currentDeudorSelected!!.montoActualAdeudado.toDouble(),
         selectedMethodId,
         "",
             isIngreso = true
@@ -196,7 +196,7 @@ fun RegisterPaymentScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit
                     onClick = {
                         if(isButtonEnabled) {
 
-                            if((currentDeudorSelected?.montoActualAdeudado ?: 0f) < amount.toInt() ){
+                            if((currentDeudorSelected?.montoActualAdeudado ?: 0f) < amount.toDouble() ){
                                 showAlertFreeLimited = true
                             }else{
                                 paymentData = PagosEntinty(
@@ -204,8 +204,8 @@ fun RegisterPaymentScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit
                                     "",
                                     currentDeudorSelected!!.idRemoteDatabase,
                                     currentDeudorSelected!!.id.toString(),
-                                    amount.toInt(),
-                                    saldoAntesDeAbono =  currentDeudorSelected!!.montoActualAdeudado.toInt(),
+                                    amount.toDouble(),
+                                    saldoAntesDeAbono =  currentDeudorSelected!!.montoActualAdeudado.toDouble(),
                                     startDate.toString(),
                                     true,
                                     selectedMethodId,

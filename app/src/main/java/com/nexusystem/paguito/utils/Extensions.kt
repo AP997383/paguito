@@ -754,6 +754,7 @@ object PaguitoStore {
     }
 
     suspend fun setInvited(context: Context) {
+        SecureStorageManager(context).clearUserData()
         context.onboardingDataStore.edit { prefs ->
             prefs[IS_INVITED] = true
         }
@@ -788,6 +789,7 @@ object PaguitoStore {
             .first()
     }
     suspend fun setLogout(context: Context) {
+        SecureStorageManager(context).clearUserData()
         context.onboardingDataStore.edit { prefs ->
             prefs[IS_LOGGED] = false
         }

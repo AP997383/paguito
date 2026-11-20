@@ -94,4 +94,8 @@
     <string name="intro_art_week" formatted="false">Ventas semanales</string>
     <string name="intro_art_days" formatted="false">L M M J V S D</string>
     <string name="intro_art_growth_badge" formatted="false">Tu negocio crece</string>
+
+    <string name="account_sync_failed">No se pudo completar la descarga. Tus datos locales se conservan.</string>
+    <string name="account_sync_retry">Reintentar</string>
+    <string name="account_sync_back">Volver</string>
 </resources>

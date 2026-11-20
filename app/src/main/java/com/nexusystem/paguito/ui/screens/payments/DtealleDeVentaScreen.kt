@@ -43,7 +43,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import com.nexus.medi.data.local.entity.PagosEntinty
 import com.nexus.medi.data.local.entity.PorductosEntity
 import com.nexusystem.paguito.ui.screens.deudores.BorderColor
@@ -65,8 +64,7 @@ fun DetalleVentaScreen(ventaPago : PagosEntinty, productosViewModel: ProductosVi
     val montoRelacionado = remember { mutableStateOf(0) }
     LaunchedEffect(ventaPago.jsonAbonoPorProducto) {
         if (!ventaPago.jsonAbonoPorProducto.isNullOrEmpty()) {
-            val listType = object : TypeToken<ArrayList<PorductosEntity>>() {}.type
-            val listaRecuperada: ArrayList<PorductosEntity> =try{ Gson().fromJson(ventaPago.jsonAbonoPorProducto, listType)}catch (e: Exception){arrayListOf<PorductosEntity>()}
+            val listaRecuperada: ArrayList<PorductosEntity> =try{ ArrayList(com.nexusystem.paguito.data.mapper.RelatedProductsJson.decode(ventaPago.jsonAbonoPorProducto))}catch (e: Exception){arrayListOf<PorductosEntity>()}
             listaRecuperada.forEach {
                 montoRelacionado.value +=it.precioConGanancia.toInt()
             }
@@ -176,18 +174,9 @@ fun DetalleVentaScreen(ventaPago : PagosEntinty, productosViewModel: ProductosVi
     }
 }
 
-fun jsonArrayToList(jsonArray: JSONArray): List<PorductosEntity> {
-    val gson = Gson()
-
-    // 1. Convertimos el JSONArray a String
-    val jsonString = jsonArray.toString()
-
-    // 2. Definimos el tipo de lista para Gson (List<PorductosEntity>)
-    val listType = object : TypeToken<List<PorductosEntity>>() {}.type
-
-    // 3. Convertimos el string a la lista
-    return gson.fromJson(jsonString, listType)
-}
+/** Detalle de comprobantes compatible con Android e iOS, incluyendo cantidades de iOS. */
+fun jsonArrayToList(jsonArray: JSONArray): List<PorductosEntity> =
+    com.nexusystem.paguito.data.mapper.RelatedProductsJson.decode(jsonArray.toString())
 
 @Composable
 fun EmptyStateRelatedProductsCard() {

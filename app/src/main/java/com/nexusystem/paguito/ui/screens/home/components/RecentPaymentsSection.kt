@@ -1,6 +1,8 @@
 package com.nexusystem.paguito.ui.screens.home.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
@@ -16,7 +18,7 @@ import com.nexusystem.paguito.utils.formatAsCurrency
 import com.nexusystem.paguito.utils.formatFecha
 
 @Composable
-fun RecentPaymentsSection(pagos: List<PagoConNombre?>, seeAllPayments: () -> Unit) {
+fun RecentPaymentsSection(pagos: List<PagoConNombre?>, seeAllPayments: () -> Unit, onMovement: (PagoConNombre) -> Unit = {}) {
     Spacer(Modifier.height(20.dp))
     SoftCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -30,7 +32,7 @@ fun RecentPaymentsSection(pagos: List<PagoConNombre?>, seeAllPayments: () -> Uni
             RecentPaymentItem(
                 name = (if (payment.isIngreso) "Pago recibido" else "Venta registrada") + " · " + payment.nameDeudor,
                 details = runCatching { formatFecha(payment.fechaAbono) }.getOrDefault(payment.fechaAbono.take(10)),
-                amount = payment.montoAbonado.toString(), isIngreso = payment.isIngreso
+                amount = payment.montoAbonado.toString(), isIngreso = payment.isIngreso, onClick = { onMovement(payment) }
             )
             Spacer(Modifier.height(8.dp))
         }
@@ -38,10 +40,10 @@ fun RecentPaymentsSection(pagos: List<PagoConNombre?>, seeAllPayments: () -> Uni
 }
 
 @Composable
-fun RecentPaymentItem(name: String, details: String, amount: String, isIngreso: Boolean) {
+fun RecentPaymentItem(name: String, details: String, amount: String, isIngreso: Boolean, onClick: (() -> Unit)? = null) {
     val colors = MaterialTheme.colorScheme
     Surface(shape = MaterialTheme.shapes.large, color = colors.background.copy(alpha = 0.88f),
-        border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.25f)), modifier = Modifier.fillMaxWidth()) {
+        border = BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.25f)), modifier = Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Surface(shape = MaterialTheme.shapes.medium, color = colors.primary.copy(alpha = 0.07f)) {
                 Icon(if (isIngreso) Icons.Outlined.Payments else Icons.Outlined.ShoppingCart, null,
