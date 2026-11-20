@@ -129,8 +129,12 @@ class DeudoresViewModel @Inject constructor(
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
+    private var clientsObservation: kotlinx.coroutines.Job? = null
+
+    /** Mantiene una sola observación local al entrar y salir de los perfiles. */
     fun obtenerDeudores() {
-        viewModelScope.launch {
+        clientsObservation?.cancel()
+        clientsObservation = viewModelScope.launch {
             deudoresUseCase.obtenerDeudores().collect { list ->
                 _deudores.value = list
             }

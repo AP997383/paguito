@@ -30,8 +30,9 @@ fun UpcomingClientsContent(clients: List<DeudoresEntity>, onBack: () -> Unit, on
     var query by rememberSaveable { mutableStateOf("") }
     var onlyBalance by rememberSaveable { mutableStateOf(true) }
     val visible = clients.filter { (!onlyBalance || it.montoActualAdeudado > 0f) && (query.isBlank() || it.nombre.contains(query, true) || it.telefono.contains(query)) }.sortedBy { daysToClientPayment(it) ?: Long.MAX_VALUE }
-    LazyColumn(Modifier.fillMaxSize().paguitoBackground(), contentPadding = PaddingValues(20.dp, 8.dp, 20.dp, 40.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        item { ScreenHeader("Próximos cobros", "Organiza tu día, cliente a cliente", onBack, horizontalPadding = 0.dp) }
+    androidx.compose.material3.Scaffold(containerColor = MaterialTheme.colorScheme.background,
+        topBar = { ScreenHeader("Próximos cobros", "Organiza tu día, cliente a cliente", onBack) }) { padding ->
+    LazyColumn(Modifier.padding(padding).fillMaxSize().paguitoBackground(), contentPadding = PaddingValues(20.dp, 8.dp, 20.dp, 40.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item { SoftCard { Text("Tu agenda de cobranza", style = MaterialTheme.typography.titleLarge)
             Text("${clients.count { it.montoActualAdeudado > 0f }} clientes con saldo pendiente", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(14.dp)); Text(formatAsCurrency(clients.sumOf { it.montoActualAdeudado.coerceAtLeast(0f).toDouble() }), style = MaterialTheme.typography.headlineLarge) } }
@@ -39,6 +40,7 @@ fun UpcomingClientsContent(clients: List<DeudoresEntity>, onBack: () -> Unit, on
             FilterChip(selected = onlyBalance, onClick = { onlyBalance = !onlyBalance }, label = { Text("Solo con saldo pendiente") }) }
         if (visible.isEmpty()) item { SoftCard { Text("No hay clientes para mostrar", style = MaterialTheme.typography.titleMedium); Text("Cambia la búsqueda o el filtro de saldo.") } }
         items(visible) { client -> ClientDueCard(client) { onClient(client) } }
+    }
     }
 }
 

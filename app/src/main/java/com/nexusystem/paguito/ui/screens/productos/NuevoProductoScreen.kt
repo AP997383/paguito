@@ -106,8 +106,12 @@ fun AddProductScreen(
         mutableStateOf(if (currentProduct.factorMultiplicador > 0f) currentProduct.factorMultiplicador else 100f)
     }
 
-    var finalPrice by remember { mutableStateOf("") }
-    var profitAmount by remember { mutableStateOf("") }
+    // El precio y la ganancia se calculan en la misma composición: no hay un fotograma
+    // con el margen nuevo y el precio anterior que haga aparecer el indicador manual.
+    var manualFinalPrice by remember { mutableStateOf(currentProduct.precioConGanancia.takeIf { isEditingProduct && it > 0f }?.toString()) }
+    val finalPrice = manualFinalPrice ?: String.format(Locale.US, "%.2f",
+        (costPrice.toDoubleOrNull() ?: 0.0) * if (isMultiplierMode) sliderMultiplier.toDouble() else (1 + sliderPercentage / 100.0))
+    val profitAmount = String.format(Locale.US, "%.2f", (finalPrice.toDoubleOrNull() ?: 0.0) - (costPrice.toDoubleOrNull() ?: 0.0))
     var showSuccessPayment by remember { mutableStateOf(false) }
 
     LaunchedEffect(currentProduct.urlFoto) {
@@ -152,17 +156,6 @@ fun AddProductScreen(
         }
     }
 
-    LaunchedEffect(costPrice, isMultiplierMode, sliderMultiplier, sliderPercentage) {
-        val cost = costPrice.toDoubleOrNull() ?: 0.0
-        val calculatedPrice = if (isMultiplierMode) {
-            cost * sliderMultiplier
-        } else {
-            cost * (1 + (sliderPercentage / 100))
-        }
-
-        finalPrice = String.format(Locale.US, "%.2f", calculatedPrice)
-        profitAmount = String.format(Locale.US, "%.2f", calculatedPrice - cost)
-    }
 
     fun isFormValid(): Boolean {
         return name.isNotBlank() &&
@@ -225,11 +218,10 @@ fun AddProductScreen(
                 saving = isLoading, canSave = isFormValid()
             ),
             actions = com.nexusystem.paguito.ui.screens.productos.components.ProductEditorActions(
-                onName = { name = it }, onCost = { costPrice = it }, onStock = { stock = it }, onNotes = { notes = it },
+                onName = { name = it }, onCost = { if (costPrice != it) manualFinalPrice = null; costPrice = it }, onStock = { stock = it }, onNotes = { notes = it },
                 onPrice = {
-                    finalPrice = it
-                    profitAmount = String.format(Locale.US, "%.2f", (it.toDoubleOrNull() ?: 0.0) - (costPrice.toDoubleOrNull() ?: 0.0))
-                }, onMode = { isMultiplierMode = it }, onMultiplier = { sliderMultiplier = it }, onPercentage = { sliderPercentage = it },
+                    manualFinalPrice = it
+                }, onMode = { if (isMultiplierMode != it) manualFinalPrice = null; isMultiplierMode = it }, onMultiplier = { manualFinalPrice = null; sliderMultiplier = it }, onPercentage = { manualFinalPrice = null; sliderPercentage = it },
                 onGallery = { galleryLauncher.launch("image/*") }, onCamera = { permissionLauncher.launch(Manifest.permission.CAMERA) },
                 onSave = { saveProduct() }, onBack = onBackClick
             )

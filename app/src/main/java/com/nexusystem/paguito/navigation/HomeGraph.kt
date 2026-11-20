@@ -20,6 +20,7 @@ import com.nexus.medi.data.local.entity.PagostoPreviewTiket
 import com.nexus.medi.data.local.entity.PorductosEntity
 import com.nexusystem.paguito.artifacts.NexusPayLauncher
 import com.nexusystem.paguito.ui.components.navigation.Routes
+import com.nexusystem.paguito.ui.components.navigation.navigateToMainTab
 import com.nexusystem.paguito.ui.screens.deudores.AddDebtorScreen
 import com.nexusystem.paguito.ui.screens.deudores.DeudoresViewModel
 import com.nexusystem.paguito.ui.screens.home.DashboardScreen
@@ -102,6 +103,7 @@ fun NavGraphBuilder.homeGraph(
                         Routes.ScreenViewAllDeudores.route
                     )
                 },
+                seeAllClients = { navigateToMainTab(navController, Routes.ClientesGraph.route) },
                 openMovement = openMovement,
                 seeAllPayments = {
                     navController.navigate(

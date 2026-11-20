@@ -14,7 +14,7 @@ import com.google.gson.Gson
 import com.nexusystem.paguito.data.local.entity.UserProfileEntity
 
 /** Perfil cifrado y notificación compartida entre las instancias usadas por Compose e inyección. */
-class SecureStorageManager(context: Context) : LocalAccountSource {
+class SecureStorageManager(private val context: Context) : LocalAccountSource {
     private companion object { val accountChanges = MutableStateFlow(0L) }
     val profileChanges: Flow<UserProfileEntity?> = accountChanges.map { getUserProfile() }
     override val accountKeys: Flow<String> = accountChanges.map { currentAccountKey() }.distinctUntilChanged()
@@ -58,6 +58,7 @@ class SecureStorageManager(context: Context) : LocalAccountSource {
 
     // Limpiar datos (útil para Logout)
     fun clearUserData() = synchronized(accountChanges) {
+        com.google.firebase.analytics.FirebaseAnalytics.getInstance(context).setUserId(null)
         sharedPreferences.edit().clear().apply()
         accountChanges.update { it + 1 }
     }

@@ -22,6 +22,9 @@ import com.android.billingclient.api.ProductDetails
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesUpdatedListener
 import com.android.billingclient.api.QueryProductDetailsParams
+import com.android.billingclient.api.QueryPurchasesParams
+import com.google.firebase.firestore.Source
+import com.nexusystem.paguito.integration.analytics.MembershipAnalytics
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.nexus.medi.data.local.entity.DeudoresEntity
@@ -111,23 +114,31 @@ class PerfiViewModel @Inject constructor(
         _currentProductSelected.value = param
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    private val purchasesUpdatedListener = PurchasesUpdatedListener { billingResult, purchases ->
-        if (billingResult.responseCode == BillingClient.BillingResponseCode.OK && purchases != null) {
-            for (purchase in purchases) {
-                handlePurchase(purchase)
-            }
+    private val _billingBusy = MutableStateFlow(false)
+    val billingBusy = _billingBusy.asStateFlow()
+    private val _billingError = MutableStateFlow("")
+    val billingError = _billingError.asStateFlow()
+    private val _storePrices = MutableStateFlow<Map<String, String>>(emptyMap())
+    val storePrices = _storePrices.asStateFlow()
+    private val storeProducts = mutableMapOf<String, ProductDetails>()
+    private val processingPurchases = mutableSetOf<String>()
+    private var profileRegistration: com.google.firebase.firestore.ListenerRegistration? = null
+
+    private var launchedPurchase = false
+    private val purchasesUpdatedListener = PurchasesUpdatedListener { result, purchases ->
+        _billingBusy.value = false
+        val userInitiated = launchedPurchase
+        launchedPurchase = false
+        when (result.responseCode) {
+            BillingClient.BillingResponseCode.OK -> purchases.orEmpty().forEach { handlePurchase(it, showSuccess = userInitiated) }
+            BillingClient.BillingResponseCode.USER_CANCELED -> MembershipAnalytics.event(context, "membership_purchase_result", profileState?.email, result = "cancelled")
+            BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED -> restorePurchases(showSuccess = true)
+            else -> { _billingError.value = "No se pudo completar la compra con Google Play. Intenta nuevamente." }
         }
     }
-    @RequiresApi(Build.VERSION_CODES.O)
-    private var billingClient = BillingClient.newBuilder(context)
-        .setListener(purchasesUpdatedListener)
-        .enablePendingPurchases(
-            PendingPurchasesParams.newBuilder()
-                .enableOneTimeProducts()
-                .build()
-        )
-        .build()
+    private val billingClient = BillingClient.newBuilder(context).setListener(purchasesUpdatedListener)
+        .enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
+        .enableAutoServiceReconnection().build()
 
     init {
 
@@ -160,7 +171,8 @@ class PerfiViewModel @Inject constructor(
     /** Actualiza la sesión desde Firestore normalizando precios numéricos y conservando la caché si el documento falla. */
     fun updateMyLocalDataProfile() {
         val email = profileState?.email?.takeIf { it.isNotBlank() } ?: return
-        usersCollection.document(email).addSnapshotListener { snapshot, error ->
+        profileRegistration?.remove()
+        profileRegistration = usersCollection.document(email).addSnapshotListener { snapshot, error ->
             if (error != null) {
                 if (BuildConfig.DEBUG) Log.w("PROFILE_SYNC", "No se pudo consultar el perfil")
                 return@addSnapshotListener
@@ -180,71 +192,131 @@ class PerfiViewModel @Inject constructor(
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
+    /** Un evento Analytics y un registro idempotente de visita, separados del historial de pagos. */
+    fun trackPackagesVisit() {
+        val email = secureStorage.getUserProfile()?.email ?: return
+        val visitId = java.util.UUID.randomUUID().toString()
+        MembershipAnalytics.event(context, "view_subscription_packages", email)
+        viewModelScope.launch {
+            val result = runCatching { authRepository.trackMembershipPackages(email, visitId) }.getOrNull() ?: return@launch
+            if (result.success && secureStorage.getUserProfile()?.email == email) MembershipAnalytics.cacheIdentity(context, email, result.analyticsID)
+        }
+    }
+
+    /** Consulta derechos existentes al conectar, también los ya reconocidos por Google. */
     private fun startBillingConnection() {
         billingClient.startConnection(object : BillingClientStateListener {
-            override fun onBillingSetupFinished(billingResult: BillingResult) {
-                if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                    queryProduct("premium_monthly_basic") // Tu ID de la consola
+            override fun onBillingSetupFinished(result: BillingResult) {
+                if (result.responseCode == BillingClient.BillingResponseCode.OK) {
+                    queryProducts(setOf("premium_monthly_basic")); restorePurchases()
                 }
             }
-            override fun onBillingServiceDisconnected() {
-                startBillingConnection()
-            }
+            override fun onBillingServiceDisconnected() { /* La reconexión automática evita clientes y callbacks duplicados. */ }
         })
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    private fun queryProduct(productId: String) {
-        val queryProductDetailsParams = QueryProductDetailsParams.newBuilder()
-            .setProductList(
-                listOf(
-                    QueryProductDetailsParams.Product.newBuilder()
-                        .setProductId(productId)
-                        .setProductType(BillingClient.ProductType.SUBS)
-                        .build()
-                )
-            )
-            .build()
-
-        billingClient.queryProductDetailsAsync(queryProductDetailsParams) { billingResult, queryProductDetailsResult ->
-            if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                _productDetails.value = queryProductDetailsResult.productDetailsList.firstOrNull()
-            } else {
-                _productDetails.value = null
-                Log.e(
-                    "BILLING",
-                    "Error consultando producto: ${billingResult.debugMessage}"
-                )
+    /** El precio mostrado y el producto comprado se obtienen del mismo catálogo de Google Play. */
+    private fun queryProducts(ids: Set<String>) {
+        if (ids.isEmpty()) return
+        val params = QueryProductDetailsParams.newBuilder().setProductList(ids.map { id ->
+            QueryProductDetailsParams.Product.newBuilder().setProductId(id).setProductType(BillingClient.ProductType.SUBS).build()
+        }).build()
+        billingClient.queryProductDetailsAsync(params) { result, details ->
+            if (result.responseCode == BillingClient.BillingResponseCode.OK) {
+                details.productDetailsList.forEach { product -> storeProducts[product.productId] = product }
+                _productDetails.value = storeProducts["premium_monthly_basic"]
+                _storePrices.value = storeProducts.mapNotNull { (id, product) ->
+                    regularOffer(product)?.pricingPhases?.pricingPhaseList?.lastOrNull()?.formattedPrice?.let { id to it }
+                }.toMap()
             }
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
+    /** No selecciona automáticamente pruebas o promociones con condiciones distintas del plan mostrado. */
+    private fun regularOffer(product: ProductDetails) = product.subscriptionOfferDetails?.filter {
+        it.offerId == null && it.pricingPhases.pricingPhaseList.lastOrNull()?.billingPeriod == "P1M"
+    }?.singleOrNull()
+
+    /** Antes de cobrar comprueba el perfil actual y bloquea clics repetidos o sesiones reemplazadas. */
     fun launchPurchaseFlow(activity: Activity) {
-        val productDetails = _productDetails.value ?: return
-        val offerToken = productDetails.subscriptionOfferDetails?.firstOrNull()?.offerToken ?: ""
-
-        val productDetailsParamsList = listOf(
-            BillingFlowParams.ProductDetailsParams.newBuilder()
-                .setProductDetails(productDetails)
-                .setOfferToken(offerToken)
-                .build()
-        )
-
-        val billingFlowParams = BillingFlowParams.newBuilder()
-            .setProductDetailsParamsList(productDetailsParamsList)
-            .build()
-
-        billingClient.launchBillingFlow(activity, billingFlowParams)
+        if (_billingBusy.value || processingPurchases.isNotEmpty()) return
+        val owner = secureStorage.getUserProfile()?.email?.trim()?.lowercase().orEmpty()
+        val productId = currentProductSelected.value?.productId ?: return
+        val product = storeProducts[productId] ?: run { _billingError.value = "No pudimos cargar el precio de Google Play."; return }
+        val offer = regularOffer(product) ?: return
+        _billingBusy.value = true; _billingError.value = ""
+        viewModelScope.launch {
+            try {
+                val profile = refreshBillingProfile(owner)
+                if (profile.userSuscription.isActive) return@launch
+                val existing = kotlinx.coroutines.withTimeout(15_000) { queryOwnedPurchases() }
+                if (existing.isNotEmpty()) {
+                    existing.forEach { handlePurchase(it, showSuccess = true) }
+                    if (_billingError.value.isBlank()) _billingError.value = "Ya existe una compra en Google Play. Se está recuperando; no necesitas volver a pagar."
+                    _billingBusy.value = processingPurchases.isNotEmpty()
+                    return@launch
+                }
+                val status = authRepository.prepareMembershipPurchase(owner, productId)
+                check(secureStorage.getUserProfile()?.email?.trim()?.lowercase() == owner)
+                if (status.isPremium) { refreshBillingProfile(owner); _billingBusy.value = false; return@launch }
+                check(status.success && status.canPurchase)
+                val params = BillingFlowParams.newBuilder().setObfuscatedAccountId(MembershipAnalytics.accountKey(owner))
+                    .setProductDetailsParamsList(listOf(BillingFlowParams.ProductDetailsParams.newBuilder().setProductDetails(product).setOfferToken(offer.offerToken).build())).build()
+                MembershipAnalytics.event(context, "membership_purchase_started", owner, productId)
+                launchedPurchase = true
+                val result = billingClient.launchBillingFlow(activity, params)
+                if (result.responseCode != BillingClient.BillingResponseCode.OK) {
+                    launchedPurchase = false; _billingBusy.value = false
+                    _billingError.value = "Google Play no pudo abrir la compra. Intenta nuevamente."
+                }
+            } catch (_: kotlinx.coroutines.TimeoutCancellationException) { _billingError.value = "Google Play no respondió. No se inició una compra."; _billingBusy.value = false }
+            catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (_: Exception) { _billingError.value = "No pudimos comprobar tu membresía. No se inició una compra."; _billingBusy.value = false }
+            finally { if (secureStorage.getUserProfile()?.userSuscription?.isActive == true) _billingBusy.value = false }
+        }
     }
+
+    /** Consulta suspendible previa al cobro, incluyendo compras pendientes o ya reconocidas. */
+    private suspend fun queryOwnedPurchases(): List<Purchase> = kotlinx.coroutines.suspendCancellableCoroutine { continuation ->
+        billingClient.queryPurchasesAsync(QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build()) { result, purchases ->
+            if (continuation.isActive) {
+                if (result.responseCode == BillingClient.BillingResponseCode.OK) continuation.resumeWith(Result.success(purchases))
+                else continuation.resumeWith(Result.failure(IllegalStateException("Google Play no disponible")))
+            }
+        }
+    }
+
+    /** Recuperar vuelve a validar derechos existentes; nunca abre el diálogo para volver a pagar. */
+    fun restorePurchases(showSuccess: Boolean = false) {
+        billingClient.queryPurchasesAsync(QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build()) { result, purchases ->
+            if (result.responseCode == BillingClient.BillingResponseCode.OK) purchases.forEach { handlePurchase(it, showSuccess) }
+            else if (showSuccess) _billingError.value = "No pudimos conectar con Google Play. Intenta restaurar nuevamente."
+        }
+    }
+
+    /** Fuente autorizada de beneficios: no desactiva por fecha ni por ausencia de compras de Google. */
+    private suspend fun refreshBillingProfile(owner: String): UserProfileEntity {
+        check(owner.isNotBlank() && secureStorage.getUserProfile()?.email?.trim()?.lowercase() == owner)
+        val snapshot = usersCollection.document(owner).get(Source.SERVER).await()
+        val profile = snapshot.toObject(FirestoreUserProfile::class.java)?.toEntity() ?: error("Perfil no disponible")
+        check(secureStorage.updateCurrentUserProfile(profile))
+        profileState = profile
+        return profile
+    }
+
+    /** Libera las conexiones del ViewModel sin modificar compras ni perfiles del servidor. */
+    override fun onCleared() {
+        profileRegistration?.remove(); billingClient.endConnection(); super.onCleared()
+    }
+
     fun getAllSuscriptions() {
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value =""
             try {
                 val result = authRepository.getAllSuscriptions()
-                _suscriptions.value =result.suscripciones
+                _suscriptions.value = result.suscripciones
+                queryProducts(result.suscripciones.map { it.productId }.filter { it.isNotBlank() }.toSet())
             } catch (e: Exception) {
                 _errorMessage.value = e.message?:""
             } finally {
@@ -272,76 +344,53 @@ class PerfiViewModel @Inject constructor(
             }
         }
     }
-    fun comfirmarSuscripcion(purchaseToken: String, productId: String) {
-        Log.e("PROCESS_PURCHASE", "-->comfirmarSuscripcion: Iniciando corrutina")
-        viewModelScope.launch { // Esto ya es Main por defecto
-            _isLoading.value = true
-            // Cambiamos a IO para la operación de red
-            val result = withContext(Dispatchers.IO) {
-                try {
-                    authRepository.confirmarSuscripcion(
-                        SuscripcionPurchaseRequest(profileState!!.email, purchaseToken, productId,currentProductSelected.value?.price.toString())
-                    )
-                } catch (e: Exception) {
-                    Log.e("PROCESS_PURCHASE", "-->Error en repositorio: ${e.message}")
-                    null // Retornamos null para manejar el error después
-                }
-            }
-            if (result?.success == true) {
-                _isSubscribed.value = true
-                Log.e("PACO____","-->"+profileState)
-                // 1. Obtenemos el perfil actual (asegurándonos de que no sea nulo)
-                val currentProfile = profileState ?: secureStorage.getUserProfile()
-
-                if (currentProfile != null) {
-                    // 2. Creamos la nueva suscripción copiando la anterior y solo cambiando lo necesario
-                    val updatedSubscription = currentProfile.userSuscription.copy(
-                        isActive = true,
-                        nameSuscription = currentProductSelected.value?.name.toString(),
-                        price = currentProductSelected.value?.price.toString(),
-                    )
-
-                    // 3. Creamos el nuevo perfil copiando el anterior y reemplazando solo la suscripción
-                    val profileToSave = currentProfile.copy(
-                        userSuscription = updatedSubscription
-                    )
-
-                    // 4. Guardamos y recargamos
-                    if (!secureStorage.updateCurrentUserProfile(profileToSave)) return@launch
-                    profileState = profileToSave // Actualizamos el estado local inmediatamente
-                    loadUserProfile()
-                }
-                // ... resto de tu lógica de éxito (esto corre en Main nuevamente gracias a withContext)
-                Log.e("PROCESS_PURCHASE", "-->SUCESS")
-                // ... guardar datos
-            } else {
-                _isSubscribedError.value = true
-            }
-            _isLoading.value = false
+    /** Valida cada token una sola vez en vuelo y reconoce en Google únicamente después de confirmar beneficios. */
+    private fun handlePurchase(purchase: Purchase, showSuccess: Boolean = false) {
+        if (purchase.purchaseState == Purchase.PurchaseState.PENDING) {
+            _billingError.value = "La compra está pendiente de aprobación. No necesitas volver a pagar."
+            return
         }
-    }
-
-
-    @RequiresApi(Build.VERSION_CODES.O)
-    private fun handlePurchase(purchase: Purchase) {
-        Log.e("PROCESS_PURCHASE","-->handlePurchase")
-        if (purchase.purchaseState == Purchase.PurchaseState.PURCHASED && !purchase.isAcknowledged) {
-            Log.e("PROCESS_PURCHASE","-->handlePurchase:TRUE")
-            val acknowledgePurchaseParams = AcknowledgePurchaseParams.newBuilder()
-                .setPurchaseToken(purchase.purchaseToken)
-                .build()
-            billingClient.acknowledgePurchase(acknowledgePurchaseParams) {
-                Log.e("PROCESS_PURCHASE","-->handlePurchase:confirm billingxxx")
-                if (it.responseCode == BillingClient.BillingResponseCode.OK) {
-                    Log.e("PROCESS_PURCHASE","-->handlePurchase:confirm billing")
-                    comfirmarSuscripcion(purchase.purchaseToken,currentProductSelected.value!!.productId)
-                }else{
-                    Log.e("PROCESS_PURCHASE","-->handlePurchase:not confirm billing")
-                    _isSubscribedError.value = true
+        if (purchase.purchaseState != Purchase.PurchaseState.PURCHASED) return
+        val owner = secureStorage.getUserProfile()?.email?.trim()?.lowercase().orEmpty()
+        if (owner.isBlank()) return
+        val accountId = purchase.accountIdentifiers?.obfuscatedAccountId
+        if (!accountId.isNullOrBlank() && accountId != MembershipAnalytics.accountKey(owner)) return
+        val productId = purchase.products.singleOrNull() ?: return
+        val key = MembershipAnalytics.accountKey(purchase.purchaseToken)
+        if (!processingPurchases.add(key)) return
+        _billingBusy.value = true; _billingError.value = ""
+        viewModelScope.launch {
+            try {
+                com.nexusystem.paguito.domain.usescases.billing.confirmMembershipPurchase(
+                    owner = owner,
+                    currentOwner = { secureStorage.getUserProfile()?.email?.trim()?.lowercase().orEmpty() },
+                    validate = { authRepository.confirmarSuscripcion(SuscripcionPurchaseRequest(owner, purchase.purchaseToken, productId, storePrices.value[productId].orEmpty())).success },
+                    refresh = { refreshBillingProfile(owner).userSuscription.isActive },
+                    acknowledge = {
+                        if (purchase.isAcknowledged) true else {
+                            val params = AcknowledgePurchaseParams.newBuilder().setPurchaseToken(purchase.purchaseToken).build()
+                            val result = kotlinx.coroutines.withTimeout(15_000) {
+                                kotlinx.coroutines.suspendCancellableCoroutine<BillingResult> { continuation ->
+                                    billingClient.acknowledgePurchase(params) { if (continuation.isActive) continuation.resumeWith(Result.success(it)) }
+                                }
+                            }
+                            result.responseCode == BillingClient.BillingResponseCode.OK
+                        }
+                    }
+                )
+                MembershipAnalytics.event(context, "membership_validation", owner, productId, "accepted")
+                if (showSuccess) _isSubscribed.value = true
+            } catch (_: kotlinx.coroutines.TimeoutCancellationException) {
+                if (secureStorage.getUserProfile()?.email?.trim()?.lowercase() == owner) _billingError.value = "La compra sigue pendiente de confirmar. Usa Restaurar compras; no necesitas volver a pagar."
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (_: Exception) {
+                if (secureStorage.getUserProfile()?.email?.trim()?.lowercase() == owner) {
+                    _billingError.value = "La compra está pendiente de validar. Usa Restaurar compras; no necesitas volver a pagar."
+                    MembershipAnalytics.event(context, "membership_validation", owner, productId, "pending")
+                    if (showSuccess) _isSubscribedError.value = true
                 }
-            }
-        }else
-                Log.e("PROCESS_PURCHASE","-->handlePurchase:FALSE")
+            } finally { processingPurchases.remove(key); _billingBusy.value = processingPurchases.isNotEmpty() }
+        }
     }
 
     fun updateProfile(userId: String, newUri: Uri?) {
@@ -365,28 +414,23 @@ class PerfiViewModel @Inject constructor(
         }
     }
 
+    /** El perfil personal no vuelve a publicar una copia antigua de Premium o contadores del servidor. */
     fun updateAllInfo(userId: String, updatedProfile: UserProfileEntity) {
+        val owner = secureStorage.getUserProfile()?.email ?: return
+        if (!owner.equals(userId, true) || !owner.equals(updatedProfile.email, true)) return
         _isLoading.value = true
         viewModelScope.launch {
             try {
-                // 1. Actualizamos el estado LOCAL de inmediato para que la UI no parpadee
-                profileState = updatedProfile
-
-                // 2. Usamos solo .await() para manejar la asincronía limpiamente
-                firestore.collection("users")
-                    .document(userId)
-                    .set(updatedProfile, SetOptions.merge())
-                    .await()
-
-                // 3. Si llega aquí, es que fue exitoso
-                _updateSuccess.value = true
-            } catch (e: Exception) {
-                Log.e("FIRESTORE_ERROR", "Error al actualizar: ${e.message}")
-                // Aquí podrías manejar un _errorState.value = true
-            } finally {
-                // Se ejecuta tanto si falla como si tiene éxito
-                _isLoading.value = false
-            }
+                firestore.collection("users").document(userId).update(mapOf(
+                    "fullName" to updatedProfile.fullName, "phone" to updatedProfile.phone,
+                    "bussinesName" to updatedProfile.bussinesName, "fotoUrl" to updatedProfile.fotoUrl
+                )).await()
+                val current = secureStorage.getUserProfile() ?: return@launch
+                val merged = com.nexusystem.paguito.domain.policy.mergeEditableProfile(current, updatedProfile)
+                if (secureStorage.updateCurrentUserProfile(merged)) { profileState = merged; _updateSuccess.value = true }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (_: Exception) { _errorMessage.value = "No pudimos guardar el perfil. Intenta nuevamente." }
+            finally { _isLoading.value = false }
         }
     }
 }

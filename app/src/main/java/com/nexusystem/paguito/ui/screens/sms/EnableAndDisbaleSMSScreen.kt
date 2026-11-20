@@ -153,6 +153,7 @@ fun SmsRemindersScreen(
 
 
     Scaffold(
+        topBar = { ScreenHeader("Recordatorios", "Acompaña a tus clientes a tiempo", onBackClick) },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         LazyColumn(
@@ -162,7 +163,6 @@ fun SmsRemindersScreen(
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 40.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item { ScreenHeader("Recordatorios", "Acompaña a tus clientes a tiempo", onBackClick, horizontalPadding = 0.dp) }
             item { SoftCard {
                 Icon(Icons.Outlined.Sms, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
                 Spacer(Modifier.height(12.dp)); Text("Una cobranza más cercana", style = MaterialTheme.typography.titleLarge)

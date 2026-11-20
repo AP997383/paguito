@@ -40,10 +40,10 @@ fun SalesContent(payments: List<PagoConNombre>, clients: List<DeudoresEntity>, o
     val visible = sales.filter { query.isBlank() || it.nameDeudor.contains(query, true) || it.notas.contains(query, true) || it.montoAbonado.toString().contains(query) }
     if (unavailable) AlertDialog(onDismissRequest = { unavailable = false }, title = { Text("Cliente no disponible") },
         text = { Text("Esta venta pertenece a un cliente que ya no está en tu lista.") }, confirmButton = { TextButton(onClick = { unavailable = false }) { Text("Entendido") } })
-    Scaffold(containerColor = MaterialTheme.colorScheme.background,
+    Scaffold(contentWindowInsets = WindowInsets(0, 0, 0, 0), containerColor = MaterialTheme.colorScheme.background,
         floatingActionButton = { ExtendedFloatingActionButton(onClick = onNewSale, icon = { Icon(Icons.Outlined.Add, null) }, text = { Text("Nueva venta") },
-            containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.padding(bottom = 112.dp).testTag("new-sale")) }) { _ ->
-        LazyColumn(Modifier.fillMaxSize().paguitoBackground().testTag("sales-list"), contentPadding = PaddingValues(20.dp, 16.dp, 20.dp, 220.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.padding(bottom = 112.dp).testTag("new-sale")) }) { padding ->
+        LazyColumn(Modifier.padding(padding).fillMaxSize().paguitoBackground().testTag("sales-list"), contentPadding = PaddingValues(20.dp, 16.dp, 20.dp, 220.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             item { Text("Ventas", style = MaterialTheme.typography.headlineMedium); Text("Cada venta, una historia que crece", color = MaterialTheme.colorScheme.onSurfaceVariant) }
             item { SoftCard {
                 Icon(Icons.Outlined.ReceiptLong, null, tint = MaterialTheme.colorScheme.primary)

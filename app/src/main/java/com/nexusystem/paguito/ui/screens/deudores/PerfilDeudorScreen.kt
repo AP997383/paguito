@@ -99,6 +99,11 @@ data class Transaction(
 @Composable
 fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntity,viewmodelDeudro: DeudoresViewModel,pagosViewModel: PagosViewModel,
                           openPreviewTicket:(PagostoPreviewTiket)->Unit,openDetailVenta:(PagosEntinty)->Unit,openAcountState:(DeudoresEntity)->Unit) {
+    val currentClients by viewmodelDeudro.deudores.collectAsState()
+    val currentClient = currentClients.filterNotNull().firstOrNull {
+        if (deudorData.idRemoteDatabase.isNotBlank()) it.idRemoteDatabase == deudorData.idRemoteDatabase else it.id == deudorData.id
+    } ?: deudorData
+    com.nexusystem.paguito.ui.components.PaymentOperationFeedback(pagosViewModel)
     var showFastPayment by remember { mutableStateOf(false) }
     val isLoading by viewmodelDeudro.isLoading.collectAsState()
     val pagosPorCliente by pagosViewModel.pagos.collectAsState()
@@ -109,7 +114,7 @@ fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntit
     var paymentDatapreviewTiket by remember{ mutableStateOf(PagostoPreviewTiket())}
     var currentpaymentSelected by remember{ mutableStateOf(PagosEntinty())}
     val pagado = pagosPorCliente.filterNotNull().filter { it.isIngreso }.sumOf { it.montoAbonado.toDouble() }.toFloat()
-    val saldoPendiente = deudorData.montoActualAdeudado
+    val saldoPendiente = currentClient.montoActualAdeudado
     val context = LocalContext.current
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showReminders by remember { mutableStateOf(false) }
@@ -147,20 +152,11 @@ fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntit
             }
         }.sorted() // Ordenamos las fechas ya parseadas
     }
-    val proximaFecha by remember(deudorData.fechaInicialDeuda, fechasPagosRealizados) {
-        derivedStateOf {
-            try {
-                val fechaInicio = LocalDate.parse(deudorData.fechaInicialDeuda)
-                calcularSiguienteVencimiento(
-                    fechaInicio,
-                    deudorData.periodicidad,
-                    fechasPagosRealizados
-                )
-            } catch (e: Exception) {
-                LocalDate.now() // Fallback seguro
-            }
-        }
+    val nextDue = remember(currentClient.fechaInicialDeuda, currentClient.periodicidad, fechasPagosRealizados) {
+        com.nexusystem.paguito.ui.screens.deudores.components.customerNextDueDate(
+            runCatching { LocalDate.parse(currentClient.fechaInicialDeuda.take(10)) }.getOrNull(), currentClient.periodicidad, fechasPagosRealizados)
     }
+    val proximaFecha = nextDue ?: LocalDate.now()
     // 2. Filtrado inteligente de la lista usando derivedStateOf
     val listaFiltrada by remember {
         derivedStateOf {
@@ -208,8 +204,8 @@ fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntit
             if(profile?.userSuscription?.isActive==true) {
                 viewmodelDeudro.manualWatsap(
                     it,
-                    deudorData.nombre,
-                    deudorData.telefono,
+                    currentClient.nombre,
+                    currentClient.telefono,
                     saldoPendiente.toString(),
                     proximaFecha.toString()
                 )
@@ -222,7 +218,7 @@ fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntit
         })
     }
 
-    val esAtrasado = remember(proximaFecha) { proximaFecha.isBefore(LocalDate.now())}
+    val esAtrasado = nextDue?.isBefore(LocalDate.now()) == true
 
 
     if(showSuccessPayment){
@@ -241,11 +237,11 @@ fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntit
         }, onConfirm ={monto, esPagoCompleto, enviarSms ->
             paymentDatapreviewTiket =PagostoPreviewTiket(
                 contactText,
-                deudorData.nombre,"",
+                currentClient.nombre,"",
                 monto.toDouble(),
-                saldoAntesDeAbono =      (deudorData.montoActualAdeudado -pagado).toDouble(),
+                saldoAntesDeAbono =      currentClient.montoActualAdeudado.toDouble(),
                 getTodayDateString(),
-                deudorData.montoActualAdeudado.toDouble() - monto.toDouble() ,
+                currentClient.montoActualAdeudado.toDouble() - monto.toDouble() ,
                 1,
                 "",
                 isIngreso = true
@@ -254,10 +250,10 @@ fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntit
             paymentData = PagosEntinty(
                 null,
                 "",
-                deudorData!!.idRemoteDatabase,
-                deudorData!!.id.toString(),
+                currentClient!!.idRemoteDatabase,
+                currentClient!!.id.toString(),
                 monto.toDouble(),
-                saldoAntesDeAbono =  (deudorData.montoActualAdeudado - pagado).toDouble(),
+                saldoAntesDeAbono =  currentClient.montoActualAdeudado.toDouble(),
                 getTodayDateString(),
                 true,
                 1,
@@ -266,16 +262,15 @@ fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntit
                 ""
 
             )
-            pagosViewModel.guardarDeudor(paymentData)
-            showFastPayment =false
-            showSuccessPayment =true
+            pagosViewModel.guardarDeudor(paymentData) { showFastPayment = false; showSuccessPayment = true }
         },
-            deudorData.montoActualAdeudado,
-            deudorData.nombre)
+            currentClient.montoActualAdeudado.coerceAtLeast(0f),
+            currentClient.nombre)
     }
 
     LaunchedEffect(Unit) {
-        pagosViewModel.obtenerAbonos(deudorData.id.toString(),deudorData.idRemoteDatabase.toString())
+        viewmodelDeudro.obtenerDeudores()
+        pagosViewModel.obtenerAbonos(currentClient.id.toString(),currentClient.idRemoteDatabase.toString())
     }
         if(deleteSuccess) {
             SuccessDialog("¡Se elimino el pago correctamente!",{
@@ -291,20 +286,24 @@ fun CustomerProfileScreen(onBackClick: () -> Unit = {},deudorData: DeudoresEntit
     fun previewMovement(tx: PagosEntinty) {
         val contactText = listOfNotNull(profile?.email, profile?.phone).joinToString(" / ")
         paymentDatapreviewTiket = PagostoPreviewTiket(
-            contactText, deudorData.nombre, profile?.bussinesName.orEmpty(), tx.montoAbonado,
+            contactText, currentClient.nombre, profile?.bussinesName.orEmpty(), tx.montoAbonado,
             saldoAntesDeAbono = tx.saldoAntesDeAbono, getTodayDateString(),
-            deudorData.montoActualAdeudado.toDouble() - tx.montoAbonado, 1,
+            currentClient.montoActualAdeudado.toDouble() - tx.montoAbonado, 1,
             tx.jsonAbonoPorProducto, isIngreso = tx.isIngreso
         )
         openPreviewTicket(paymentDatapreviewTiket)
     }
     Box {
         com.nexusystem.paguito.ui.screens.deudores.components.CustomerProfileContent(
-            client = deudorData, payments = pagosPorCliente.filterNotNull(),
-            nextDate = if (runCatching { LocalDate.parse(deudorData.fechaInicialDeuda) }.isSuccess) proximaFecha.toString() else "",
-            isLate = esAtrasado, onBack = onBackClick, onPayment = { showFastPayment = true },
-            onCall = { context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:${deudorData.telefono}"))) },
-            onReminder = { showReminders = true }, onStatement = { openAcountState(deudorData) },
+            client = currentClient, payments = pagosPorCliente.filterNotNull(),
+            nextDate = nextDue?.toString().orEmpty(),
+            onWhatsApp = {
+                val phone = currentClient.telefono.filter { it.isDigit() }
+                if (phone.isNotEmpty()) runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://wa.me/$phone"))) }
+            },
+            isLate = esAtrasado && currentClient.periodicidad != "A", onBack = onBackClick, onPayment = { showFastPayment = true },
+            onCall = { context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:${currentClient.telefono}"))) },
+            onReminder = { showReminders = true }, onStatement = { openAcountState(currentClient) },
             onOpenMovement = { tx -> if (tx.isIngreso) previewMovement(tx) else openDetailVenta(tx) },
             onReceipt = { previewMovement(it) },
             onDelete = { currentpaymentSelected = it; showDeleteDialog = true }

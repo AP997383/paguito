@@ -36,6 +36,7 @@ fun DashboardScreen(
     registerNewSell: () -> Unit,
     openWebsite: () -> Unit,
     seeAllDeudores: () -> Unit,
+    seeAllClients: () -> Unit,
     seeAllPayments: () -> Unit,
     openMovement: (com.nexusystem.paguito.data.local.entity.PagoConNombre) -> Unit,
     goToMyProfile: () -> Unit,
@@ -162,7 +163,8 @@ fun DashboardScreen(
                         isSucriptionActive = isSucriptionActive,
                         showDialogLimitFree = { showAlertFreeLimited = true },
                         numeroProductos = numeroProductos,
-                        seeAllClients = seeAllDeudores
+                        seeAllClients = seeAllClients,
+                        seeUpcoming = seeAllDeudores
                     )
 
                 }

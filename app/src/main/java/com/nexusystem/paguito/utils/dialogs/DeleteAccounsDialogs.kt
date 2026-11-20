@@ -37,6 +37,7 @@ val GrisTexto = Color(0xFF7F8C8D)
 val GrisBordeList = Color(0xFFECF0F1)
 
 
+/** Presenta las dos confirmaciones de eliminación con contraste según la apariencia de la app. */
 @Composable
 fun CuentaEliminacionScreen(onDismiss: () -> Unit, onFinalConfirm: () -> Unit) {
     // Estado que controla qué pantalla mostrar
@@ -49,7 +50,7 @@ fun CuentaEliminacionScreen(onDismiss: () -> Unit, onFinalConfirm: () -> Unit) {
                 .fillMaxWidth()
                 .padding(16.dp),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
             Column(
@@ -63,7 +64,7 @@ fun CuentaEliminacionScreen(onDismiss: () -> Unit, onFinalConfirm: () -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(48.dp)) {
                         Icon(Icons.Outlined.Close, contentDescription = "Cerrar", tint = MaterialTheme.colorScheme.onSurface)
                     }
                 }
@@ -117,7 +118,7 @@ fun PantallaConfirmacionBeneficios(onSiguiente: () -> Unit, onCancelar: () -> Un
             text = "¿Estás seguro?",
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
-            color = Color.Black
+            color = MaterialTheme.colorScheme.onSurface
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -125,7 +126,7 @@ fun PantallaConfirmacionBeneficios(onSiguiente: () -> Unit, onCancelar: () -> Un
         Text(
             text = "Antes de eliminar tu cuenta, considera estos beneficios por mantenerla activa:",
             fontSize = 14.sp,
-            color = GrisTexto,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             lineHeight = 20.sp
         )
@@ -158,7 +159,7 @@ fun PantallaConfirmacionBeneficios(onSiguiente: () -> Unit, onCancelar: () -> Un
 
         // Botón Cancelar (Texto)
         TextButton(onClick = onCancelar) {
-            Text("Cancelar", color = GrisTexto, fontSize = 14.sp)
+            Text("Cancelar", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
         }
     }
 }
@@ -177,7 +178,7 @@ fun BeneficioItem(texto: String) {
             modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.width(12.dp))
-        Text(text = texto, fontSize = 14.sp, color = Color.Black)
+        Text(text = texto, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
     }
 }
 
@@ -207,7 +208,7 @@ fun PantallaAdvertenciaIrreversible(onConfirmarEliminacion: () -> Unit, onCancel
             text = "Advertencia: eliminación irreversible",
             fontSize = 20.sp, // Un poco más pequeño para que quepa bien
             fontWeight = FontWeight.Bold,
-            color = Color.Black,
+            color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center
         )
 
@@ -216,7 +217,7 @@ fun PantallaAdvertenciaIrreversible(onConfirmarEliminacion: () -> Unit, onCancel
         Text(
             text = "Si eliminas tu cuenta perderás toda tu información: clientes, pagos, productos y beneficios de suscripción. Esta acción no se puede deshacer.",
             fontSize = 14.sp,
-            color = GrisTexto,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             lineHeight = 20.sp
         )
@@ -227,13 +228,13 @@ fun PantallaAdvertenciaIrreversible(onConfirmarEliminacion: () -> Unit, onCancel
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = GrisBordeList.copy(alpha = 0.5f)),
-            border = BorderStroke(1.dp, GrisBordeList)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 ItemPerdida("Se eliminarán: usuarios, historial de pagos, clientes, productos y configuraciones.")
                 Spacer(modifier = Modifier.height(12.dp))
-                ItemPerdida("Si tienes suscripción activa, se cancelará y no habrá reembolso automático.")
+                ItemPerdida("Eliminar tu cuenta no cancela la renovación en la tienda. Cancela tu suscripción en Google Play o Apple antes de eliminarla. No habrá reembolso automático.")
             }
         }
 
@@ -256,9 +257,9 @@ fun PantallaAdvertenciaIrreversible(onConfirmarEliminacion: () -> Unit, onCancel
             onClick = onCancelar,
             modifier = Modifier.fillMaxWidth().height(50.dp),
             shape = RoundedCornerShape(12.dp),
-            border = BorderStroke(1.dp, Color.Black)
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
         ) {
-            Text("Cancelar", color = Color.Black, fontSize = 16.sp)
+            Text("Cancelar", color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp)
         }
     }
 }
@@ -268,6 +269,6 @@ fun PantallaAdvertenciaIrreversible(onConfirmarEliminacion: () -> Unit, onCancel
 fun ItemPerdida(texto: String) {
     Row(modifier = Modifier.fillMaxWidth()) {
         Text(text = "• ", color = RojoAdvertencia, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-        Text(text = texto, fontSize = 14.sp, color = GrisTexto, lineHeight = 18.sp)
+        Text(text = texto, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 18.sp)
     }
 }

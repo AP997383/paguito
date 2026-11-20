@@ -60,15 +60,15 @@ fun ClientDirectoryContent(
     val filtered = remember(clients, search, filter, largestFirst) { filterClients(clients, search, filter, largestFirst) }
     val pending = clients.count { it.montoActualAdeudado > 0f }
     val colors = MaterialTheme.colorScheme
-    Scaffold(
+    Scaffold(contentWindowInsets = WindowInsets(0, 0, 0, 0),
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
         floatingActionButton = {
             ExtendedFloatingActionButton(onClick = onAddClient, icon = { Icon(Icons.Outlined.PersonAdd, null) },
                 text = { Text("Nuevo cliente") }, containerColor = colors.primary, contentColor = colors.onPrimary,
                 modifier = Modifier.padding(bottom = 116.dp))
         }
-    ) { _ ->
-        LazyColumn(modifier = Modifier.fillMaxSize().testTag("client-directory").paguitoBackground(),
+    ) { padding ->
+        LazyColumn(modifier = Modifier.padding(padding).fillMaxSize().testTag("client-directory").paguitoBackground(),
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 200.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)) {
             item {

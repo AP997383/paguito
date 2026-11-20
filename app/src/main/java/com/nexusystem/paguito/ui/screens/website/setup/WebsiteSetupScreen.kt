@@ -57,17 +57,15 @@ fun WebsiteSetupScreen(
             .fillMaxSize()
             .paguitoBackground()
     ) {
+        Column(Modifier.fillMaxSize()) {
+            com.nexusystem.paguito.ui.components.ScreenHeader(if (uiState.isEditingWebsite) "Editar sitio web" else "Configurar sitio web", "Tu tienda en internet", onBack = { if (!uiState.isPublishing) onBack() })
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .weight(1f)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp)
-                .padding(top = 92.dp, bottom = 40.dp)
+                .padding(top = 8.dp, bottom = 40.dp)
         ) {
-            WebsiteSetupTopTitle()
-
-            Spacer(modifier = Modifier.height(18.dp))
-
             WebsiteSetupHeader()
 
             Spacer(modifier = Modifier.height(18.dp))
@@ -136,7 +134,8 @@ fun WebsiteSetupScreen(
             }
         }
 
-        AppHeader(onBack = onBack)
+        }
+
 
         if (uiState.showSuccessDialog) {
             AppSuccessWebsiteDialog(

@@ -523,7 +523,10 @@ fun MainBalanceCard(
         Text(if (showBalance) amount + decimals else "$ ••••••", style = MaterialTheme.typography.headlineLarge)
         Text("Costo directo de tus productos", style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
         Spacer(Modifier.height(16.dp))
-        Text("$count1 $label1", style = MaterialTheme.typography.labelLarge, color = colors.primary)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Icon(Icons.Outlined.Inventory2, null, modifier = Modifier.size(18.dp), tint = colors.primary)
+            Text("$count1 $label1", style = MaterialTheme.typography.labelLarge, color = colors.primary)
+        }
     }
 }
 

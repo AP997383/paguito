@@ -69,7 +69,7 @@ fun AuthSheetScaffold(
 @Composable
 private fun AuthHero(registering: Boolean, onBack: (() -> Unit)?) {
     val colors = MaterialTheme.colorScheme
-        Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(
+    Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(
         listOf(colors.primary.copy(alpha = 0.13f), colors.background, colors.secondary.copy(alpha = 0.07f))
     ))) {
         Box(Modifier.matchParentSize().paguitoBackground(fillBackground = false))

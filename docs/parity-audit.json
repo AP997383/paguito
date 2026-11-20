@@ -1,0 +1,255 @@
+{
+  "date": "2026-11-19",
+  "scope": "Auditoría de encabezados, navegación y consistencia funcional entre Paguito Android e iOS.",
+  "branches": {
+    "android": "develop",
+    "ios": "develop"
+  },
+  "coverage": [
+    {
+      "area": "Autenticación y onboarding",
+      "review": "Código de login, registro, verificación y recuperación; automatización iOS de autenticación y guía de Home.",
+      "changes": [
+        "Encabezados de verificación Android con título y regreso consistentes.",
+        "Desplazamiento con teclado en pantallas OTP.",
+        "Regreso accesible y guía con foco, flecha y tabs ocultos."
+      ]
+    },
+    {
+      "area": "Home, análisis y actividad",
+      "review": "Inspección de rutas en ambas plataformas; pruebas iOS de gráfica, guía, próximos cobros y transacciones.",
+      "changes": [
+        "Una cabecera fija por destino secundario.",
+        "Rutas de historial y próximos cobros sin títulos duplicados."
+      ]
+    },
+    {
+      "area": "Clientes",
+      "review": "Código de creación, contacto, perfil, filtros, movimientos y estado de cuenta; pruebas iOS de selección de productos, filtros y pago flotante.",
+      "changes": [
+        "Perfil actualizado desde almacenamiento local al cambiar el snapshot de la cuenta.",
+        "Cancelación de observadores anteriores para evitar que otro cliente sobrescriba el historial visible.",
+        "Selector de productos accesible; formularios desplazables con teclado."
+      ]
+    },
+    {
+      "area": "Productos y ventas",
+      "review": "Código de edición, multiplicador, productos FLASH, venta nueva, detalle y ticket; pruebas iOS de precios y guardado con repositorio sintético.",
+      "changes": [
+        "Encabezados comunes y controles redondeados iOS.",
+        "Actualización remota del detalle de productos relacionados de una venta Android sin volver a enviar su importe.",
+        "Validación de importes finitos y prevención de envíos repetidos."
+      ]
+    },
+    {
+      "area": "Pagos",
+      "review": "Código de registro, persistencia y eliminación en ambas plataformas; pruebas unitarias de metadatos y coordinación de escritura.",
+      "changes": [
+        "iOS conserva fecha, método y notas elegidos.",
+        "Android acepta decimales y tolera importes incompletos sin convertirlos de forma insegura.",
+        "Confirmación después de guardar; errores mantienen el formulario.",
+        "Eliminación Android espera confirmación y utiliza pagos o ventas según el tipo de movimiento.",
+        "Acción de guardar fija y opciones de método adaptadas a texto accesible en iOS."
+      ]
+    },
+    {
+      "area": "Perfil y opciones",
+      "review": "Código de edición de perfil, contraseña, eliminación, apariencia, idioma, suscripción, recordatorios, sitio web, ayuda y Siri; automatización iOS de perfil, idiomas y confirmaciones de recordatorios.",
+      "changes": [
+        "Cabeceras compartidas sin duplicar títulos ni mostrar tabs en destinos secundarios.",
+        "Sitio web y configuración Android con cabecera fuera del contenido desplazable.",
+        "Botones de publicación y suscripción iOS con superficie común."
+      ]
+    }
+  ],
+  "validation": {
+    "iosUITests": {
+      "passed": 29,
+      "failed": 0,
+      "resultBundle": "/tmp/paguito-mega-final.xcresult",
+      "note": "Matriz de 15 destinos secundarios; área accesible de regreso >=44pt; teclado, edición y navegación. Ajustes visuales posteriores de pago revisados con capturas y compilación."
+    },
+    "iosDomainTests": {
+      "passed": 51,
+      "failed": 0,
+      "log": "/tmp/paguito-mega-domain.log"
+    },
+    "androidUnitTests": {
+      "passed": 35,
+      "failed": 0,
+      "log": "/tmp/paguito-mega-android-confirmed.log"
+    },
+    "androidLint": {
+      "errors": 0,
+      "warnings": 203,
+      "hints": 12,
+      "report": "/Volumes/DEV_SSD/AndroidStudio/Projects/Personal/Paguito/app/build/reports/lint-results-prodDebug.html"
+    },
+    "iosSourceAudit": {
+      "issues": 0,
+      "report": "docs/source-audit.json",
+      "files": 423
+    },
+    "localization": {
+      "keys": 1100,
+      "languages": [
+        "es",
+        "en",
+        "pt"
+      ],
+      "issues": 0
+    },
+    "isolatedSyncChecks": {
+      "status": "passed",
+      "log": "/tmp/paguito-mega-sync.log",
+      "checks": [
+        "Rollback atómico",
+        "Importaciones repetidas",
+        "IDs, decimales y método de pago",
+        "Saldos negativos",
+        "Clientes eliminados",
+        "Colisiones entre cuentas"
+      ]
+    },
+    "visualReview": {
+      "iPhone14": "/tmp/paguito-mega-phone",
+      "iPhoneXR_iOS18_6_largeText": "/tmp/paguito-mega-xr-final",
+      "iPad_dark": "/tmp/paguito-mega-ipad",
+      "note": "Revisados modo oscuro, texto grande y alternativa visual de iOS 18. Se limitó a 620pt el ancho del formulario de pago en iPad.",
+      "iPad_final": "/tmp/paguito-mega-ipad-final"
+    },
+    "builds": {
+      "androidProdDebug": "passed",
+      "iosDEV": "passed; no warnings in final build log",
+      "iosPROD": "passed; no warnings in final build log",
+      "iosProdLog": "/tmp/paguito-mega-prod-install.log",
+      "iosDevLog": "/tmp/paguito-mega-dev-confirmed.log"
+    },
+    "iosEnvironmentChecks": {
+      "DEV": {
+        "bundle": "com.nexus.ecosystem.Paguito.dev",
+        "firebaseProject": "paguito-dev-f0d30",
+        "firebaseResourceCount": 1
+      },
+      "PROD": {
+        "bundle": "com.nexus.ecosystem.Paguito",
+        "firebaseProject": "paguito-92b2d",
+        "firebaseResourceCount": 1
+      }
+    }
+  },
+  "intentionalPlatformDifferences": [
+    "Liquid Glass nativo iOS 26 con alternativa en iOS 18 y reducir transparencia.",
+    "Siri es exclusivo de iOS.",
+    "Compras y permisos usan los mecanismos de cada plataforma."
+  ],
+  "limits": [
+    "No se realizaron pagos, ventas, compras, eliminaciones ni envíos de recordatorios reales para esta auditoría.",
+    "La sincronización de escritura contra producción se revisó en código; la prueba automatizada de almacenamiento usa datos aislados.",
+    "Las 203 advertencias de Android no equivalen a errores de lint y siguen pendientes.",
+    "La actualización final del emulador Android encontró almacenamiento insuficiente; la instalación física de producción sí fue exitosa."
+  ],
+  "installations": {
+    "androidProd": {
+      "status": "installed_and_launched",
+      "device": "moto g56 5G",
+      "dataPreserved": true,
+      "version": "2.0.0",
+      "versionCode": 19,
+      "runningProcessConfirmed": true
+    },
+    "iosProd": {
+      "status": "installed_and_launched",
+      "device": "iPhone 14",
+      "version": "2.0.0",
+      "build": "6",
+      "dataPreserved": true,
+      "installLog": "/tmp/paguito-mega-iphone-install.log",
+      "launchLog": "/tmp/paguito-mega-iphone-launch.log"
+    }
+  },
+  "additionalFixes": [
+    "Referencias Unicode corregidas del logotipo y eliminación de un catálogo duplicado con imágenes idénticas.",
+    "Actualización de onChange a la firma vigente y eliminación de un fallback inalcanzable al guardar la foto del perfil."
+  ],
+  "clientProfileFollowup": {
+    "date": "2026-11-19",
+    "request": "Homologar el perfil del cliente y reducir los iconos de los encabezados conservando el texto.",
+    "changes": [
+      "Chevron y acciones de cabecera iOS: glifo de 16pt y control de 44pt; texto sin cambios.",
+      "Icono de perfil en encabezados del negocio reducido a 22pt; regreso Android de 20dp dentro de control de 44dp.",
+      "Acciones de contacto en cuatro columnas y dos con texto accesible, con iconos de 18pt y Liquid Glass rectangular redondeado.",
+      "Tarjeta de saldo con la jerarquía de Android: estado, importe, abonado, compras acumuladas, progreso y próximo pago.",
+      "Resumen de compras visible también al liquidar; crédito separado de deuda.",
+      "Filtros Todos/Abonos/Ventas y búsqueda en el mismo orden que Android.",
+      "Movimientos con icono, importe separado, fecha, método, productos, saldo posterior y notas; acceso al comprobante en ventas.",
+      "Estado vacío compacto sin ilustración sobredimensionada."
+    ],
+    "validation": {
+      "androidBuildAndLint": "passed",
+      "androidInstalled": "passed via wireless device connection",
+      "iosHeaderMatrix15Destinations": "passed; back controls between 44 and 48pt",
+      "iosFinalClientFlow": {
+        "passed": 1,
+        "failed": 0,
+        "result": "/tmp/paguito-client-final.xcresult"
+      },
+      "iosProdBuild": "passed",
+      "iosHeaderAndAccessibilityTests": {
+        "passed": 3,
+        "failed": 0,
+        "result": "/tmp/paguito-client-compact.xcresult"
+      },
+      "sourceAuditIssues": 0,
+      "localizationIssues": 0,
+      "androidLint": {
+        "errors": 0,
+        "warnings": 203
+      },
+      "iosInstalled": "passed",
+      "realFinancialWritesPerformed": false
+    },
+    "evidence": {
+      "androidLog": "/tmp/paguito-client-android-build.log",
+      "iosHeaderTests": "/tmp/paguito-client-compact.xcresult",
+      "xrInitialReview": "/tmp/paguito-client-xr/client-detail-dark.png",
+      "xrFinalReview": "/tmp/paguito-client-final-review/client-detail-dark.png",
+      "iPhone14FinalReview": "/tmp/paguito-client-iphone-final",
+      "iosProdBuildLog": "/tmp/paguito-client-prod.log",
+      "iosInstallLog": "/tmp/paguito-client-iphone-install.log"
+    }
+  },
+  "homeQuickActionsFollowup": {
+    "date": "2026-11-19",
+    "changes": [
+      "Siete accesos en dos filas: cuatro arriba y tres abajo.",
+      "Sitio web y Nuevo producto en azul en ambos sistemas, independiente del acento personalizado.",
+      "Mis clientes Android abre el tab Clientes, conservando la navegación de tabs.",
+      "Próximos cobros tiene su propio acceso en ambas apps.",
+      "Ver todos de Próximos cobros iOS abre su listado y permite entrar al perfil del cliente.",
+      "El tamaño de texto accesible utiliza filas de dos para conservar legibilidad.",
+      "El perfil abierto desde Próximos cobros conserva el listado al regresar; ya no salta a Inicio."
+    ],
+    "validation": {
+      "androidUnitTestsPassed": 35,
+      "androidLintErrors": 0,
+      "androidLintWarnings": 203,
+      "androidPhysicalNavigation": "passed: Mis clientes -> Tus clientes; Próximos cobros -> Próximos cobros; geometry 4+3 confirmed",
+      "androidLog": "/tmp/paguito-home-route-android.log",
+      "androidScreenshot": "/tmp/paguito-home-actions-android.png",
+      "iosGuidePassed": 1,
+      "iosFlowTest": {
+        "passed": 1,
+        "failed": 0,
+        "result": "/tmp/paguito-home-routes-fixed.xcresult"
+      },
+      "iosProdBuild": "passed",
+      "iosGuideResult": "/tmp/paguito-home-actions.xcresult",
+      "iosScreenshot": "/tmp/paguito-home-actions-review/home-dark.png",
+      "iosProdLog": "/tmp/paguito-home-actions-prod.log",
+      "iosInstalled": true,
+      "iosInstallLog": "/tmp/paguito-home-actions-iphone-install.log"
+    },
+    "realFinancialWritesPerformed": false
+  }
+}

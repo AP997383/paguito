@@ -13,8 +13,8 @@ import androidx.compose.ui.unit.dp
 fun ScreenHeader(title: String, subtitle: String? = null, onBack: (() -> Unit)? = null, horizontalPadding: androidx.compose.ui.unit.Dp = 20.dp, actions: @Composable RowScope.() -> Unit = {}) {
     Row(Modifier.fillMaxWidth().padding(horizontal = horizontalPadding, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (onBack != null) FilledTonalIconButton(onClick = onBack, modifier = Modifier.size(48.dp)) {
-            Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Volver")
+        if (onBack != null) FilledTonalIconButton(onClick = onBack, modifier = Modifier.size(44.dp)) {
+            Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Volver", modifier = Modifier.size(20.dp))
         }
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.titleLarge)

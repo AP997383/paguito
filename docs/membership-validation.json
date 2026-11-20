@@ -1,0 +1,191 @@
+{
+  "validatedAtUTC": "2026-11-20T05:44:35.813681+00:00",
+  "status": "stage_1_published_waiting_for_google_play_permission_to_take_effect",
+  "protectedAccounts": [
+    {
+      "account": "protected_1",
+      "active": true,
+      "subscriptionUnchanged": true,
+      "managedBy": "legacy"
+    },
+    {
+      "account": "protected_2",
+      "active": true,
+      "subscriptionUnchanged": true,
+      "managedBy": "legacy"
+    }
+  ],
+  "productionMutationPerformed": true,
+  "chargesInitiated": 0,
+  "subscriptionsCancelled": 0,
+  "refundsIssued": 0,
+  "changes": {
+    "android": [
+      "Confirma backend y beneficios antes de reconocer en Google.",
+      "Recupera compras existentes incluso si ya fueron reconocidas.",
+      "Consulta compras propias antes de abrir un cobro nuevo.",
+      "Bloquea clics repetidos y cambios de cuenta entre operaciones suspendidas.",
+      "Muestra el precio de un plan mensual concreto de Google Play.",
+      "Añade restauración y acceso a administración de Google Play.",
+      "Guarda únicamente campos personales al editar el perfil."
+    ],
+    "ios": [
+      "Vincula nuevas transacciones al appAccountToken del comprador.",
+      "Captura identidad y sesión durante compra, restauración y validación.",
+      "Bloquea compras nuevas mientras existe otra en proceso o pendiente de validar.",
+      "Lee Premium del servidor y elimina activación por copia local.",
+      "Conserva cambios de Premium recibidos mientras se edita el perfil."
+    ],
+    "both": [
+      "No desactiva Premium por fechas antiguas o por ausencia de recibos de la otra tienda.",
+      "Corrige la promesa de cancelación al eliminar una cuenta.",
+      "Comprueba disponibilidad del verificador antes de iniciar cargos.",
+      "Separa visitas, validaciones y compras confirmadas."
+    ]
+  },
+  "registry": {
+    "membershipPurchases": "Una fila por orden/transacción real verificada; reintentos y restauraciones no incrementan el total.",
+    "membershipOwners": "Un propietario por cadena de suscripción; no permite transferencias automáticas entre cuentas.",
+    "membershipVisits": "Una fila por apertura visible de paquetes, deduplicada por visitId.",
+    "membershipVisitAccounts": "Una persona por cuenta entre Android e iOS, con UUID aleatorio para Analytics.",
+    "legacy_suscripciones": "Se conserva intacta y se protege; sus filas históricas no se reinterpretan como cargos nuevos.",
+    "financialAmounts": "Apple: importe firmado cuando está disponible. Google: importe cobrado null; el precio recurrente del catálogo no se presenta como un cargo confirmado."
+  },
+  "analytics": {
+    "events": [
+      "view_subscription_packages",
+      "membership_purchase_started",
+      "membership_purchase_result",
+      "membership_validation",
+      "membership_restore"
+    ],
+    "excluded": [
+      "Correos",
+      "Hashes de correo como User-ID",
+      "Recibos",
+      "Tokens de compra"
+    ],
+    "note": "Las validaciones pueden repetirse; las compras se contabilizan por el registro único del servidor. No se emite manualmente el evento automático in_app_purchase."
+  },
+  "backend": {
+    "path": "/Volumes/DEV_SSD/AndroidStudio/Projects/Personal/Paguito/tools/membership-service",
+    "runtime": "nodejs22",
+    "functions": [
+      "membershipPurchaseStatus",
+      "membershipPackagesViewed",
+      "verifyAndSyncPurchase",
+      "membershipAppleNotifications",
+      "membershipGoogleNotifications"
+    ],
+    "googlePlayServiceAccount": "739980887335-compute@developer.gserviceaccount.com",
+    "googlePlayPermission": "user_reports_permissions_granted; subsequent_runtime_read_still_returns_http_401_permissionDenied; propagation_pending_or_console_configuration_requires_review",
+    "apple": {
+      "bundleID": "com.nexus.ecosystem.Paguito",
+      "appID": 6767476660,
+      "environment": "Production",
+      "rootCertificates": [
+        "AppleRootCA-G2",
+        "AppleRootCA-G3"
+      ]
+    },
+    "legacyPremiumPolicy": "No cambia campos de una membresía activa heredada o administrativa. Renovación/reembolso automático solo afecta accesos nuevos marcados verified_store.",
+    "requiredPlayConsoleAccess": {
+      "serviceAccount": "739980887335-compute@developer.gserviceaccount.com",
+      "app": "com.nexusystem.paguito",
+      "permissions": [
+        "View financial data, orders, and cancellation survey responses",
+        "Manage orders and subscriptions"
+      ],
+      "userReportsGranted": true
+    },
+    "existingVerifierSourceUnchanged": true,
+    "firestoreRulesUnchanged": true,
+    "permissionPropagationReference": "https://developers.google.com/android-publisher/api-ref/rest/v3/users"
+  },
+  "validation": {
+    "android": {
+      "tests": 42,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "androidLint": {
+      "Warning": 198,
+      "Hint": 12
+    },
+    "iosDomainTests": 55,
+    "iosProfileUITests": 7,
+    "serverTests": 23,
+    "firestoreRulesTests": 5,
+    "cryptoCompatibility": "passed",
+    "sourceAuditIssues": 0,
+    "sourceAuditFiles": 430,
+    "localizationIssues": 0,
+    "dependencyAuditProductionVulnerabilities": 0,
+    "androidProdBuild": "passed",
+    "iosProdBuild": "passed",
+    "serverColdMemoryRSSMB": 105
+  },
+  "evidence": {
+    "android": "/tmp/paguito-membership-android-final.log",
+    "iosDomain": "/tmp/paguito-membership-domain-ready.log",
+    "iosUI": "/tmp/paguito-membership-ui-final.xcresult",
+    "iosProdBuild": "/tmp/paguito-membership-ios-release-ready.log",
+    "server": "/tmp/paguito-membership-server-tests-ready.log",
+    "rules": "/tmp/paguito-membership-rules-tests-confirmed.log",
+    "dependencies": "/tmp/paguito-membership-dependency-audit-ready.json",
+    "protectedAccounts": "/tmp/paguito-protected-memberships-confirmed.json",
+    "googlePlayPermission": "/tmp/paguito-membership-google-diagnostics.log",
+    "productionRolloutAudit": "/tmp/paguito-membership-rollout-audit.json",
+    "productionDeploy": "/tmp/paguito-membership-stage1-final-deploy.log",
+    "googlePlayPreflight": "/tmp/paguito-membership-google-access-result-final.json"
+  },
+  "rollout": [
+    {
+      "stage": 1,
+      "action": "Publicada solo membershipPurchaseStatus con autorización explícita. No modifica usuarios, compras ni el verificador existente.",
+      "gate": "User granted Play Console permissions. Subsequent runtime read still returns HTTP 401 permissionDenied. No purchases initiated.",
+      "status": "published_access_denied"
+    },
+    {
+      "stage": 2,
+      "action": "Solo con acceso confirmado: publicar las otras cuatro funciones y las reglas privadas. Conservar fuente antigua para rollback del servicio, sin revertir datos de compras.",
+      "gate": "Validación real disponible; no publicar si los permisos de compras no están confirmados.",
+      "status": "waiting_for_successful_runtime_purchase_read_after_console_grant"
+    },
+    {
+      "stage": 3,
+      "action": "Configurar App Store Server Notifications V2 y Google Play RTDN para los nuevos receptores.",
+      "googleTopic": "projects/paguito-92b2d/topics/paguito-play-billing-events",
+      "googlePublisher": "google-play-developer-notifications@system.gserviceaccount.com",
+      "status": "not_configured"
+    },
+    {
+      "stage": 4,
+      "action": "Instalar las nuevas apps solo después de validar los servicios. Las versiones nuevas bloquean cobros si el servicio no responde.",
+      "status": "not_installed_pending_backend_gate"
+    }
+  ],
+  "approvalBlocks": [
+    {
+      "action": "Crear consulta pública nueva de disponibilidad en producción",
+      "reason": "Automatic review rejected persistent production/function configuration changes without explicit authorization.",
+      "executed": false,
+      "resolution": "User explicitly approved phased publication; stage 1 published afterward."
+    },
+    {
+      "action": "Comprobar recibos históricos mediante validación externa",
+      "reason": "Automatic review rejected access/possible external validation of private production receipts without explicit authorization.",
+      "executed": false
+    }
+  ],
+  "limits": [
+    "No se ejecutaron compras reales ni se probaron nuevas compras contra producción.",
+    "Solo se publicó membershipPurchaseStatus. La sustitución del verificador, el registro de compras y visitas, los receptores de notificaciones y las reglas privadas siguen pendientes del acceso de Play Console; las apps nuevas no se instalaron.",
+    "La privacidad del registro y el bloqueo de cambios Premium del cliente quedan activos al publicar reglas; el resto de la autenticación heredada de Firestore no se migra en este cambio.",
+    "Sandbox/App Review requiere configuración específica; no se convierten recibos de prueba en compras reales de producción.",
+    "Las suscripciones independientes de Apple y Google requieren gestión en su tienda; no se cancelan ni reembolsan automáticamente suscripciones existentes.",
+    "El verificador antiguo sigue operativo y no se presenta como corregido. La autorización de publicación no permite saltar la comprobación de acceso a Google Play."
+  ],
+  "productionUserMutationPerformed": false
+}

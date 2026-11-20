@@ -67,6 +67,7 @@ val RedDebt = Color(0xFFEF4444)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterPaymentScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit = {}, openPreviewTicket:(PagostoPreviewTiket)->Unit, deudoresViewModel: DeudoresViewModel, pagosViewModel: PagosViewModel) {
+    com.nexusystem.paguito.ui.components.PaymentOperationFeedback(pagosViewModel)
     // Estados de la pantalla
     var amount by remember { mutableStateOf("") }
     var showSuccessPayment by remember { mutableStateOf(false) }
@@ -97,10 +98,10 @@ fun RegisterPaymentScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit
             paymentData = PagosEntinty(
                 null,
                 "",
-                currentDeudorSelected!!.idRemoteDatabase,
-                currentDeudorSelected!!.id.toString(),
-                amount.toDouble(),
-                saldoAntesDeAbono =  currentDeudorSelected!!.montoActualAdeudado.toDouble(),
+                currentDeudorSelected?.idRemoteDatabase.orEmpty(),
+                currentDeudorSelected?.id?.toString().orEmpty(),
+                (amount.toDoubleOrNull() ?: 0.0),
+                saldoAntesDeAbono =  (currentDeudorSelected?.montoActualAdeudado ?: 0f).toDouble(),
                 startDate.toString(),
                 true,
                 selectedMethodId,
@@ -109,8 +110,7 @@ fun RegisterPaymentScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit
                 ""
 
             )
-            pagosViewModel.guardarDeudor(paymentData)
-            showSuccessPayment = true
+            pagosViewModel.guardarDeudor(paymentData) { showSuccessPayment = true }
         })
     }
 
@@ -121,17 +121,17 @@ fun RegisterPaymentScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit
     val paymentDatapreviewTiket by remember {
         derivedStateOf {PagostoPreviewTiket(
         contactText,
-        nameInCard,"",amount.toDouble(),
-        saldoAntesDeAbono = currentDeudorSelected!!.montoActualAdeudado.toDouble(),
+        nameInCard,"",(amount.toDoubleOrNull() ?: 0.0),
+        saldoAntesDeAbono = (currentDeudorSelected?.montoActualAdeudado ?: 0f).toDouble(),
             startDate.toString(),
-        currentDeudorSelected!!.montoActualAdeudado.toDouble(),
+        (currentDeudorSelected?.montoActualAdeudado ?: 0f).toDouble(),
         selectedMethodId,
         "",
             isIngreso = true
 
     )}}
     val startPickerState = rememberDatePickerState(
-        initialSelectedDateMillis = startDate!!.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        initialSelectedDateMillis = (startDate ?: today).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
     )
     if(showListDeudoresBottomSheeet){
         DeudoresBottomSheet({
@@ -190,22 +190,22 @@ fun RegisterPaymentScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit
                     .paguitoBackground()
                     .navigationBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp)
             ) {
-                val isButtonEnabled =((amount.toIntOrNull() ?: 0)>0) && (!nameInCard.equals("Selecciona un deudor") && !nameInCard.isNullOrEmpty())
+                val isButtonEnabled =((amount.toDoubleOrNull() ?: 0.0)>0) && (!nameInCard.equals("Selecciona un deudor") && !nameInCard.isNullOrEmpty())
 
                 Button(
                     onClick = {
                         if(isButtonEnabled) {
 
-                            if((currentDeudorSelected?.montoActualAdeudado ?: 0f) < amount.toDouble() ){
+                            if((currentDeudorSelected?.montoActualAdeudado ?: 0f) < (amount.toDoubleOrNull() ?: 0.0) ){
                                 showAlertFreeLimited = true
                             }else{
                                 paymentData = PagosEntinty(
                                     null,
                                     "",
-                                    currentDeudorSelected!!.idRemoteDatabase,
-                                    currentDeudorSelected!!.id.toString(),
-                                    amount.toDouble(),
-                                    saldoAntesDeAbono =  currentDeudorSelected!!.montoActualAdeudado.toDouble(),
+                                    currentDeudorSelected?.idRemoteDatabase.orEmpty(),
+                                    currentDeudorSelected?.id?.toString().orEmpty(),
+                                    (amount.toDoubleOrNull() ?: 0.0),
+                                    saldoAntesDeAbono =  (currentDeudorSelected?.montoActualAdeudado ?: 0f).toDouble(),
                                     startDate.toString(),
                                     true,
                                     selectedMethodId,
@@ -214,8 +214,7 @@ fun RegisterPaymentScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit
                                     ""
 
                                 )
-                                pagosViewModel.guardarDeudor(paymentData)
-                                showSuccessPayment = true
+                                pagosViewModel.guardarDeudor(paymentData) { showSuccessPayment = true }
                             }
 
 
@@ -224,7 +223,7 @@ fun RegisterPaymentScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = 56.dp),
-                    enabled = isButtonEnabled && !showSuccessPayment,
+                    enabled = isButtonEnabled && !showSuccessPayment && !pagosViewModel.isSaving,
                     shape = MaterialTheme.shapes.large,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary

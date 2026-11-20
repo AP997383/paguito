@@ -61,58 +61,46 @@ import org.json.JSONArray
 fun DetalleVentaScreen(ventaPago : PagosEntinty, productosViewModel: ProductosViewModel,pagosViewModel: PagosViewModel,finish:()->Unit) {
     val listaBusquedaProductos by productosViewModel.produtosList.collectAsState()
     val selectedProducts = remember { mutableStateListOf<PorductosEntity>() }
-    val montoRelacionado = remember { mutableStateOf(0) }
+    val montoRelacionado = selectedProducts.sumOf { it.precioConGanancia.toDouble() }
     LaunchedEffect(ventaPago.jsonAbonoPorProducto) {
         if (!ventaPago.jsonAbonoPorProducto.isNullOrEmpty()) {
             val listaRecuperada: ArrayList<PorductosEntity> =try{ ArrayList(com.nexusystem.paguito.data.mapper.RelatedProductsJson.decode(ventaPago.jsonAbonoPorProducto))}catch (e: Exception){arrayListOf<PorductosEntity>()}
-            listaRecuperada.forEach {
-                montoRelacionado.value +=it.precioConGanancia.toInt()
-            }
             // Limpiamos la lista antes de añadir, por si acaso el JSON cambió
             selectedProducts.clear()
             selectedProducts.addAll(listaRecuperada)
         }
     }
     var showListProducts by remember { mutableStateOf(false) }
+    var isSaving by remember { mutableStateOf(false) }
+    var saveError by remember { mutableStateOf(false) }
+    if (saveError) AlertDialog(onDismissRequest = { saveError = false }, title = { Text("No se pudieron guardar los cambios") },
+        text = { Text("Inténtalo de nuevo. Tus cambios siguen en esta pantalla.") }, confirmButton = { TextButton(onClick = { saveError = false }) { Text("Entendido") } })
 
     if(showListProducts){
         ChoseProductBottomSheet({showListProducts = false},{
             showListProducts =false
             selectedProducts.add(it)
-            montoRelacionado.value += it.precioConGanancia.toInt()
         },listaBusquedaProductos,productosViewModel)
     }
     LaunchedEffect(Unit) {
         productosViewModel.obtenerProductos()
     }
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState())
-    ) {
-        // Header
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back", modifier = Modifier.clickable{
-                finish()
-            })
-            Spacer(modifier = Modifier.width(16.dp))
-            Text("Detalle de Venta", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        }
-
+    Column(Modifier.fillMaxSize().paguitoBackground()) {
+        com.nexusystem.paguito.ui.components.ScreenHeader("Detalle de venta", "Productos y comprobante", finish)
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(20.dp)) {
         Spacer(modifier = Modifier.height(16.dp))
 
         // Tarjeta de Información Principal
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Fecha de venta", color = Color.Gray, fontSize = 12.sp)
+                Text("Fecha de venta", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 Text(ventaPago.fechaAbono, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("Monto de la transacción", color = Color.Gray, fontSize = 12.sp)
+                Text("Monto de la transacción", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                 Text("$"+ventaPago.montoAbonado, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
             }
         }
@@ -140,7 +128,7 @@ fun DetalleVentaScreen(ventaPago : PagosEntinty, productosViewModel: ProductosVi
 
         Spacer(modifier = Modifier.height(16.dp))
         if(!selectedProducts.isNullOrEmpty()){
-            ListaProductos(productos = selectedProducts)
+            ListaProductos(productos = selectedProducts, onRemove = { selectedProducts.removeAt(it) })
         }else{
             EmptyStateRelatedProductsCard()
         }
@@ -152,8 +140,8 @@ fun DetalleVentaScreen(ventaPago : PagosEntinty, productosViewModel: ProductosVi
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("Total relacionado", color = Color.Gray)
-            Text("$"+montoRelacionado.value+" / $"+ventaPago.montoAbonado, fontWeight = FontWeight.Bold)
+            Text("Total relacionado", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(formatAsCurrency(montoRelacionado)+" / "+formatAsCurrency(ventaPago.montoAbonado), fontWeight = FontWeight.Bold)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -161,15 +149,17 @@ fun DetalleVentaScreen(ventaPago : PagosEntinty, productosViewModel: ProductosVi
         Button(
             onClick = {
                 val jsonCompleto: String = Gson().toJson(selectedProducts)
-                ventaPago.jsonAbonoPorProducto = jsonCompleto
-                pagosViewModel.updateventa(ventaPago)
-                finish()
+                isSaving = true
+                pagosViewModel.updateventa(ventaPago.copy(jsonAbonoPorProducto = jsonCompleto),
+                    onSuccess = { isSaving = false; finish() }, onError = { isSaving = false; saveError = true })
                       },
+            enabled = !isSaving,
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF0F0F0)),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             shape = MaterialTheme.shapes.medium
         ) {
-            Text("Confirmar cambios", color = Color.Black)
+            Text(if (isSaving) "Guardando…" else "Confirmar cambios", color = MaterialTheme.colorScheme.onPrimary)
+        }
         }
     }
 }
@@ -207,7 +197,7 @@ fun EmptyStateRelatedProductsCard() {
                     imageVector = Icons.Default.AddBox,
                     contentDescription = null, // No es necesario para accesibilidad aquí si el título es claro
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(32.dp) // Tamaño del icono interno
+                    modifier = Modifier.size(48.dp) // Tamaño del icono interno
                 )
             }
 
@@ -237,11 +227,11 @@ fun EmptyStateRelatedProductsCard() {
     }
 }
 @Composable
-fun ListaProductos(productos: List<PorductosEntity>) {
+fun ListaProductos(productos: List<PorductosEntity>, onRemove: (Int) -> Unit) {
     Column {
         productos.forEachIndexed { index, producto ->
             Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                productItem(producto,isLast = producto == productos.last(),{},{})
+                productItem(producto, isLast = index == productos.lastIndex, onDelete = { onRemove(index) })
             }
         }
     }
@@ -251,7 +241,6 @@ fun ListaProductos(productos: List<PorductosEntity>) {
 fun productItem(
     transaction: PorductosEntity,
     isLast: Boolean,
-    onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     Row(
@@ -314,14 +303,14 @@ fun productItem(
                     text = formatAsCurrency(transaction.precioConGanancia),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
 
             // 3. Botones de acción (Editar / Eliminar)
             Row {
-                IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Outlined.Delete, null, tint = RedLogout, modifier = Modifier.size(20.dp))
+                IconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) {
+                    Icon(Icons.Outlined.Delete, "Quitar producto relacionado", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
                 }
             }
         }
@@ -332,7 +321,7 @@ fun productItem(
 fun ProductoItem(producto: PorductosEntity) {
     Card(
         modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -356,7 +345,7 @@ fun ProductoItem(producto: PorductosEntity) {
                 Text(producto.nombre, fontWeight = FontWeight.Bold)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(imageVector = Icons.Default.PriceCheck, contentDescription = null, modifier = Modifier.size(14.dp))
-                    Text("Costo: ${producto.precioConGanancia}", fontSize = 12.sp, color = Color.Gray)
+                    Text("Costo: ${producto.precioConGanancia}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
 

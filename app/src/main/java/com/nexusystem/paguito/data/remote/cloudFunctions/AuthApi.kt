@@ -56,6 +56,20 @@ interface AuthApi {
         @Body request: DeleteAccountRequest
     ): Response<DeleteAccountResponse>
 
+    /** Registra una visita sin efectos sobre compras ni beneficios. */
+    @POST
+    suspend fun membershipPackagesViewed(
+        @Url url: String = getFunctionUrl("membershippackagesviewed"),
+        @Body request: com.nexusystem.paguito.data.models.request.MembershipVisitRequest
+    ): Response<com.nexusystem.paguito.data.models.responses.MembershipVisitResponse>
+
+    /** Comprueba disponibilidad y membresía antes de abrir Google Play. */
+    @POST
+    suspend fun membershipPurchaseStatus(
+        @Url url: String = getFunctionUrl("membershippurchasestatus"),
+        @Body request: com.nexusystem.paguito.data.models.request.MembershipPurchaseStatusRequest
+    ): Response<com.nexusystem.paguito.data.models.responses.MembershipPurchaseStatusResponse>
+
     @POST
     suspend fun confirmarSuscripcion(
         @Url url: String = getFunctionUrl("verifyandsyncpurchase"),

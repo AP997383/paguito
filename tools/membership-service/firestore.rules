@@ -1,0 +1,22 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Conserva el acceso heredado del resto de la app mientras se migra su autenticación.
+    function legacyWindow() { return request.time < timestamp.date(2028, 4, 13); }
+    function accessUnchanged(field) {
+      return request.resource.data.get(field, {}).get('isActive', false) == resource.data.get(field, {}).get('isActive', false)
+        && request.resource.data.get(field, {}).get('active', false) == resource.data.get(field, {}).get('active', false);
+    }
+    match /users/{user} {
+      allow read: if legacyWindow();
+      // Registro, baja y cambios de membresía pertenecen exclusivamente al backend Admin.
+      allow update: if legacyWindow() && accessUnchanged('userSuscription') && accessUnchanged('userSubscription')
+        && request.resource.data.get('membershipManagedBy','') == resource.data.get('membershipManagedBy','');
+      allow create, delete: if false;
+    }
+    match /{collection}/{document=**} {
+      allow read, write: if legacyWindow()
+        && !(collection in ['users', 'suscripciones', 'membershipOwners', 'membershipPurchases', 'membershipIntents', 'membershipEvents', 'membershipVisits', 'membershipVisitAccounts']);
+    }
+  }
+}

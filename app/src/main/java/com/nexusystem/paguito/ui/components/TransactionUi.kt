@@ -24,10 +24,11 @@ import java.util.Locale
 enum class MovementFilter(val label: String) { All("Todos"), Payments("Pagos"), Sales("Ventas") }
 
 data class MovementEntry(val key: String, val client: String, val amount: Double, val rawDate: String,
-    val isPayment: Boolean, val method: Int, val notes: String = "", val products: String = "")
+    val isPayment: Boolean, val method: Int, val notes: String = "", val products: String = "",
+    val previousBalance: Double? = null)
 
 fun PagoConNombre.toMovement() = MovementEntry("$idRemoteDatabase:$idDeudorRemoteDatabase:$isIngreso:$id", nameDeudor, montoAbonado, fechaAbono, isIngreso, tipoPago, notas, jsonAbonoPorProducto)
-fun PagosEntinty.toMovement(client: String = "") = MovementEntry("$id:$idRemoteDatabase:$fechaAbono", client, montoAbonado, fechaAbono, isIngreso, tipoPago, notas, jsonAbonoPorProducto)
+fun PagosEntinty.toMovement(client: String = "") = MovementEntry("$id:$idRemoteDatabase:$fechaAbono", client, montoAbonado, fechaAbono, isIngreso, tipoPago, notas, jsonAbonoPorProducto, saldoAntesDeAbono)
 fun movementDate(raw: String): LocalDate? = runCatching { LocalDate.parse(raw.take(10)) }.getOrNull()
 fun movementDayLabel(raw: String): String = movementDate(raw)?.format(DateTimeFormatter.ofPattern("d MMM yyyy", Locale("es", "MX"))) ?: "Fecha no disponible"
 fun movementMethod(value: Int) = when (value) { 2 -> "Transferencia"; 3 -> "Tarjeta"; else -> "Efectivo" }
@@ -36,7 +37,7 @@ fun filterMovements(entries: List<MovementEntry>, query: String, filter: Movemen
     val term = query.trim()
     return entries.filter {
         (filter == MovementFilter.All || (filter == MovementFilter.Payments && it.isPayment) || (filter == MovementFilter.Sales && !it.isPayment)) &&
-            (term.isEmpty() || listOf(it.client, it.notes, it.amount.toString(), movementMethod(it.method)).any { text -> text.contains(term, true) })
+            (term.isEmpty() || listOf(it.client, it.notes, it.amount.toString(), it.rawDate, movementDayLabel(it.rawDate), movementMethod(it.method), it.products).any { text -> text.contains(term, true) })
     }.sortedWith(compareByDescending<MovementEntry> { movementDate(it.rawDate) ?: LocalDate.MIN }.thenByDescending { it.rawDate.replace(' ', 'T') }.thenByDescending { it.key })
 }
 
@@ -108,6 +109,14 @@ fun MovementCard(entry: MovementEntry, onOpen: (() -> Unit)? = null, onReceipt: 
             }
             if (productNames.isNotEmpty()) Text(productNames.take(2).joinToString(" · ") + if (productNames.size > 2) " +${productNames.size - 2}" else "",
                 style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            if (entry.previousBalance != null) {
+                val balance = if (entry.isPayment) entry.previousBalance - entry.amount else entry.previousBalance + entry.amount
+                Text(if (balance < 0) "Saldo a favor después: ${formatAsCurrency(-balance)}" else "Saldo pendiente después: ${formatAsCurrency(balance)}",
+                    style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+            }
+            Text(if (entry.isPayment) "Reduce el saldo pendiente" else "Aumenta el saldo pendiente", style = MaterialTheme.typography.labelSmall,
+                color = if (entry.isPayment) colors.primary else colors.tertiary)
+            if (entry.notes.isNotBlank() && !expanded) Text(entry.notes, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
             if (expanded) {
                 HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.4f))
                 Text("Notas", style = MaterialTheme.typography.labelMedium)

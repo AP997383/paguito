@@ -69,7 +69,8 @@ import com.nexusystem.paguito.utils.generarReferenciaUnica
 import com.nexusystem.paguito.utils.getFormattedDate
 
 
-val TicketBg = Color(0xFFFFFFFF)
+val TicketBg: Color
+    @Composable get() = MaterialTheme.colorScheme.surface
 
 val GreenPaid = Color(0xFF15956F) // Verde para estados "PAID"
 val GreenLightBg = Color(0xFFE6F9F3) // Fondo verde sutil
@@ -126,29 +127,13 @@ fun TicketReceiptScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(0.dp)
+                .padding(paddingValues)
                 .verticalScroll(rememberScrollState()) // Soporte para pantallas pequeñas
                 .padding(16.dp)
 
         ) {
-            Row{
-                Icon(
-                    modifier = Modifier.clickable{
-                        onBack()
-                    },
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Regresar",
-                    tint = Color.Black
-                )
-                Spacer(Modifier.width(20.dp))
-                Text(
-                    text = if (isIngreso) "Ticket de Abono" else "Ticket de Venta",
-                    fontWeight = FontWeight.ExtraBold, // Para que resalte en el recibo
-                    fontSize = 20.sp,
-                    color = if (isIngreso) Color(0xFF2E7D32) else Color(0xFF1976D2), // Verde para abono, Azul para venta
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
-            }
+            com.nexusystem.paguito.ui.components.ScreenHeader(
+                if (isIngreso) "Ticket de abono" else "Ticket de venta", "Comprobante de la operación", onBack, horizontalPadding = 0.dp)
             Spacer(Modifier.height(20.dp))
             Surface(
                 modifier = Modifier
@@ -175,7 +160,7 @@ fun TicketReceiptScreen(
                         // --- SECCIÓN 1: HEADER ---
                         TicketHeaderSection(isIngreso, nextNumberTiket.toString(), nombrenegocio)
 
-                        HorizontalDivider(color = Color(0xFFE5E7EB), modifier = Modifier.padding(vertical = 24.dp))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 24.dp))
 
                         // --- SECCIÓN 2: BILL TO / DATE ---
                         TicketBillToDateSection(isIngreso, correonegocio, fecha, nombreCliente)
@@ -187,7 +172,7 @@ fun TicketReceiptScreen(
 
                         Spacer(modifier = Modifier.height(32.dp))
 
-                        HorizontalDivider(color = Color(0xFFE5E7EB), modifier = Modifier.padding(vertical = 24.dp))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 24.dp))
 
                         // --- SECCIÓN 5: TOTALES ---
                         TicketTotalsSection(isIngreso, subtotal, abonado, tax, total)
@@ -196,7 +181,7 @@ fun TicketReceiptScreen(
                     }
 
 
-                    if (total.toInt() <= 0) {
+                    if ((total.toDoubleOrNull() ?: Double.POSITIVE_INFINITY) <= 0) {
                         Image(
                             painter = painterResource(id = R.drawable.liquidado), // Tu recurso aquí
                             contentDescription = "Sello de cuenta liquidada",
@@ -228,22 +213,22 @@ fun TicketHeaderSection(isIngreso:Boolean,nextNumberTiket: String,nombrenegocio:
         verticalAlignment = Alignment.Top
     ) {
         Column {
-            Text(text = if(isIngreso) "RECIBO DE ABONO" else "RECIBO DE VENTA" , fontSize = 12.sp, color = Color(0xFF1F2937), fontWeight = FontWeight.Bold)
-            Text(text = "TICKET NO. "+ formatTicketNumber(nextNumberTiket.toInt()), fontSize = 10.sp, color = Color(0xFF9CA3AF))
+            Text(text = if(isIngreso) "RECIBO DE ABONO" else "RECIBO DE VENTA" , fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+            Text(text = "TICKET NO. "+ formatTicketNumber(nextNumberTiket.toInt()), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Column(horizontalAlignment = Alignment.End) {
             Text(
                 text = "",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = Color(0xFF1F2937),
+                color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.End
             )
             Text(
                 fontWeight = FontWeight.ExtraBold,
                 text = nombrenegocio,
                 fontSize = 10.sp,
-                color = Color(0xFF6B7280),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 lineHeight = 12.sp,
                 textAlign = TextAlign.End
             )
@@ -255,27 +240,27 @@ fun TicketHeaderSection(isIngreso:Boolean,nextNumberTiket: String,nombrenegocio:
 fun TicketBillToDateSection(isIngreso:Boolean,accountNum: String, transDate: String,nombreCliente:String) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = "Comunicarse a:", fontSize = 12.sp, color = Color(0xFF9CA3AF), fontWeight = FontWeight.SemiBold)
+            Text(text = "Comunicarse a:", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
             Text(
                 text = " $accountNum",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF1F2937),
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(vertical = 4.dp)
             )
-            Text(text = "Cliente: (" + nombreCliente+")", fontSize = 13.sp, color = Color(0xFF6B7280))
+            Text(text = "Cliente: (" + nombreCliente+")", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Column(horizontalAlignment = Alignment.End) {
-            Text(text = "Fecha de Impresión", fontSize = 12.sp, color = Color(0xFF9CA3AF), fontWeight = FontWeight.SemiBold)
+            Text(text = "Fecha de Impresión", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
             Text(
                 text = transDate,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF1F2937),
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(vertical = 4.dp)
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(text = "Estatus: ", fontSize = 13.sp, color = Color(0xFF6B7280))
+                Text(text = "Estatus: ", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(text = if(isIngreso) "Pagado" else "Agregado", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = GreenPaid)
             }
         }
@@ -294,7 +279,7 @@ fun TicketTableSection(items: List<PagostoPreviewTiket>) {
             TableHeadText(text = "CONCEPTO", modifier = Modifier.weight(1.8f))
             TableHeadText(text = "MONTO", modifier = Modifier.weight(1f), textAlign = TextAlign.End)
         }
-        HorizontalDivider(color = Color(0xFF1F2937), thickness = 1.dp)
+        HorizontalDivider(color = MaterialTheme.colorScheme.onSurface, thickness = 1.dp)
 
         // Filas de la tabla
         items.forEach { item ->
@@ -312,12 +297,12 @@ fun TicketTableSection(items: List<PagostoPreviewTiket>) {
             ) {
                 // Estilos de texto dinámicos
                 val fontWeight = if (item.isIngreso) FontWeight.Bold else FontWeight.Normal
-                val textColor = if (item.isIngreso) RedDebt else Color(0xFF6B7280)
+                val textColor = if (item.isIngreso) RedDebt else MaterialTheme.colorScheme.onSurfaceVariant
 
                 Text(
                     text = item.fechaAbono,
                     fontSize = 12.sp,
-                    color = Color(0xFF6B7280),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f)
                 )
                 val concepto = if (item.isIngreso) "ABONO" else "VENTA"
@@ -325,7 +310,7 @@ fun TicketTableSection(items: List<PagostoPreviewTiket>) {
                     text = concepto,
                     fontSize = 12.sp,
                     fontWeight = fontWeight,
-                    color = Color(0xFF1F2937), // Concepto suele ser más oscuro
+                    color = MaterialTheme.colorScheme.onSurface, // Concepto suele ser más oscuro
                     modifier = Modifier.weight(1.8f).padding(horizontal = 4.dp)
                 )
                 Text(
@@ -347,7 +332,7 @@ fun TableHeadText(text: String, modifier: Modifier, textAlign: TextAlign = TextA
         text = text,
         fontSize = 12.sp,
         fontWeight = FontWeight.Bold,
-        color = Color(0xFF1F2937),
+        color = MaterialTheme.colorScheme.onSurface,
         modifier = modifier,
         textAlign = textAlign
     )
@@ -367,12 +352,12 @@ fun TicketTotalsSection(isIngreso:Boolean,subtotal: String, credits: String, tax
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = "Saldo Final", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1F2937))
+            Text(text = "Saldo Final", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
             Text(
                 text = formatAsCurrency(total),
                 fontSize = 24.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = Color(0xFF1F2937),
+                color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.End
             )
         }
@@ -385,8 +370,8 @@ fun TotalsRow(label: String, value: String) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(text = label, fontSize = 13.sp, color = Color(0xFF6B7280))
-        Text(text = value, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1F2937), textAlign = TextAlign.End)
+        Text(text = label, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(text = value, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.End)
     }
 }
 
@@ -396,7 +381,7 @@ fun TicketFooterExternalSection() {
         modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = "© 2026 PAGUITO.", fontSize = 10.sp, color = Color(0xFF9CA3AF))
+        Text(text = "© 2026 PAGUITO.", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(modifier = Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.Center) {
             FooterLinkText("TERMINOS")
@@ -410,7 +395,7 @@ fun TicketFooterExternalSection() {
 
 @Composable
 fun FooterLinkText(text: String) {
-    Text(text = text, fontSize = 10.sp, color = Color(0xFF6B7280), fontWeight = FontWeight.SemiBold)
+    Text(text = text, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
 }
 
 

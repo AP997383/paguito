@@ -62,6 +62,16 @@ class PagosViewModel @Inject constructor(
     var mail by mutableStateOf<String?>("")
         private set
 
+    var isSaving by mutableStateOf(false)
+        private set
+    var operationLabel by mutableStateOf("Guardando…")
+        private set
+    var saveError by mutableStateOf<String?>(null)
+        private set
+
+    /** Cierra el error sin volver a enviar una operación ni borrar su formulario. */
+    fun clearSaveError() { saveError = null }
+
     var profileState by mutableStateOf<UserProfileEntity?>(null)
         private set
 
@@ -91,9 +101,14 @@ class PagosViewModel @Inject constructor(
 
 
 
+    private var clientPaymentsObservation: kotlinx.coroutines.Job? = null
+
+    /** Al cambiar de cliente descarta el historial anterior y cancela su colección de Room. */
     @RequiresApi(Build.VERSION_CODES.O)
     fun obtenerAbonos(idDeudor: String,idRemote:String) {
-        viewModelScope.launch {
+        clientPaymentsObservation?.cancel()
+        _pagos.value = emptyList()
+        clientPaymentsObservation = viewModelScope.launch {
             abonosUseCase.obtenerAbonos(idDeudor,idRemote).collect { list ->
                 _pagos.value = list.sortedBy { it.fechaAbono }
             }
@@ -156,135 +171,126 @@ class PagosViewModel @Inject constructor(
         return ChronoUnit.DAYS.between(today, lastDayOfMonth).toInt()
     }
 
-    fun guardarDeudor(recipe: PagosEntinty) {
-        viewModelScope.launch {
-            registrarPagoRemoteFirebase(mail!!,recipe)
-        }
+    /** Confirma el abono solamente cuando la transacción local se completó. */
+    fun guardarDeudor(recipe: PagosEntinty, onSuccess: () -> Unit = {}) {
+        persistMovement(secureStorage.getUserProfile()?.email.orEmpty(), recipe, onSuccess)
     }
 
-    fun deletePayment(recipe: PagosEntinty) {
-        viewModelScope.launch {
-            registrarPagoRemoteFirebase(mail!!,recipe)
-        }
+    fun deletePayment(recipe: PagosEntinty) { deletePagoRemoteFirebase(recipe) }
+
+    /** La venta usa un ID remoto único y no permite dobles envíos desde el formulario. */
+    fun guardarNuevaVenta(recipe: PagosEntinty, onSuccess: () -> Unit = {}) {
+        persistMovement(secureStorage.getUserProfile()?.email.orEmpty(), recipe, onSuccess)
     }
 
-    fun guardarNuevaVenta(recipe: PagosEntinty) {
+    /** Conserva la pantalla y sus cambios cuando falla el guardado de productos relacionados. */
+    fun updateventa(pago: PagosEntinty, onSuccess: () -> Unit = {}, onError: (Throwable) -> Unit = {}) {
         viewModelScope.launch {
-            registrarVentaRemoteFirebase(mail!!,recipe)
-        }
-    }
-
-    fun updateventa(pago: PagosEntinty) {
-        viewModelScope.launch {
-            abonosUseCase.updateVenta(pago)
+            try {
+                val email = secureStorage.getUserProfile()?.email.orEmpty()
+                val owner = com.nexusystem.paguito.data.local.session.LocalAccountKey.fromEmail(email)
+                require(pago.ownerAccount.isBlank() || pago.ownerAccount == owner)
+                if (email.isNotBlank() && pago.idDeudorRemoteDatabase.isNotBlank() && pago.idRemoteDatabase.isNotBlank()) {
+                    val client = firestore.collection("deudores").document(email).collection("deudores").document(pago.idDeudorRemoteDatabase)
+                    val movement = client.collection(if (pago.isIngreso) "pagos" else "ventas").document(pago.idRemoteDatabase)
+                    val batch = firestore.batch()
+                    // Relacionar productos no vuelve a publicar el importe ni modifica el saldo de la venta.
+                    batch.update(movement, "jsonAbonoPorProducto", pago.jsonAbonoPorProducto)
+                    batch.update(client, "syncUpdatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp())
+                    kotlinx.coroutines.withTimeout(8_000) { batch.commit().await() }
+                }
+                abonosUseCase.updateVenta(pago)
+                onSuccess()
+            } catch (timeout: kotlinx.coroutines.TimeoutCancellationException) {
+                onError(timeout)
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                onError(error)
+            }
         }
     }
 
     fun resetdeleteSuccess() {
         _deleteSuccess.value = false
     }
-    @RequiresApi(Build.VERSION_CODES.O)
+    /** Conserva el punto de entrada existente delegando al mismo flujo de persistencia. */
     fun registrarVentaRemoteFirebase(userId: String, pago: PagosEntinty?) {
-        viewModelScope.launch {
-            pago?.let { pago ->
-                try {
-                    if(userId.isNullOrEmpty()){
-                        abonosUseCase.guardarVenta(pago)
-                    }else{
-                        val now = LocalDateTime.now()
-                        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-                        val customId = now.format(formatter)
-                        // 1. Creamos una referencia a un nuevo documento (genera el ID localmente)
-                        val newDocRef = firestore.collection("deudores")
-                            .document(userId)
-                            .collection("deudores")
-                            .document(pago.idDeudorRemoteDatabase)
-                            .collection("ventas")
-                            .document(customId)
-                        // 2. Obtenemos ese ID generado y lo asignamos a tu entidad
-                        val generatedId = newDocRef.id
-                        pago.idRemoteDatabase = generatedId
-                        // 3. Subimos el objeto que ya incluye su propio ID
-                        newDocRef.set(pago, SetOptions.merge()).await()
-                        abonosUseCase.guardarVenta(pago.copy(isSynced = true))
-                        // Opcional: Log o aviso de éxito
-                    }
-
-                } catch (e: Exception) {
-                    abonosUseCase.guardarVenta(pago)
-                    // Importante: No dejes el catch vacío para poder debuguear
-                    e.printStackTrace()
-                }
-            }
-        }
+        pago?.let { persistMovement(userId, it) }
     }
 
-    fun deletePagoRemoteFirebase( pago: PagosEntinty?) {
-        Log.e("PAGOOOS","-->")
-        viewModelScope.launch {
-            pago?.let { pago ->
-                try {
-                    if(profileState?.email.isNullOrEmpty()){
-                        Log.e("PAGOOOS","-->1")
-                        abonosUseCase.eliminarAbono(pago)
-                        _deleteSuccess.value =true
-                    }else{
-                         firestore.collection("deudores")
-                            .document(profileState?.email.toString())
-                            .collection("deudores")
-                                                        .document(pago.idDeudorRemoteDatabase)
-                            .collection("pagos")
-                            .document(pago.idRemoteDatabase)
-                             .delete()
-                        abonosUseCase.eliminarAbono(pago)
-                        _deleteSuccess.value =true
-                        Log.e("PAGOOOS","-->2")
-                    }
-
-                } catch (e: Exception) {
-                    Log.e("PAGOOOS","-->3"+e.toString())
-                    abonosUseCase.eliminarAbono(pago)
-                    _deleteSuccess.value =true
-                    // Importante: No dejes el catch vacío para poder debuguear
-                    e.printStackTrace()
-                }
-            }
-        }
-    }
-
+    /** Conserva el punto de entrada existente para abonos, sin lanzar corrutinas anidadas. */
     fun registrarPagoRemoteFirebase(userId: String, pago: PagosEntinty?) {
-        Log.e("PAGOOOS","-->")
+        pago?.let { persistMovement(userId, it) }
+    }
+
+    /**
+     * Captura la cuenta, asigna un ID único y realiza una sola escritura local.
+     * Sin red conserva el movimiento pendiente de sincronizar; un fallo local no muestra éxito.
+     * Una operación iniciada en otra cuenta nunca se guarda en la sesión actual.
+     */
+    private fun persistMovement(userId: String, payment: PagosEntinty, onSuccess: () -> Unit = {}) {
+        if (isSaving) return
+        if (!payment.montoAbonado.isFinite() || payment.montoAbonado <= 0 || payment.idDeudor.isBlank()) {
+            saveError = "Selecciona un cliente e ingresa un monto válido."
+            return
+        }
+        operationLabel = "Guardando…"
+        isSaving = true
+        saveError = null
         viewModelScope.launch {
-            pago?.let { pago ->
-                try {
-                    if(userId.isNullOrEmpty()){
-                        Log.e("PAGOOOS","-->1")
-                        abonosUseCase.guardarAbono(pago)
-                    }else{
-                        // 1. Creamos una referencia a un nuevo documento (genera el ID localmente)
-                        val newDocRef = firestore.collection("deudores")
-                            .document(userId)
-                            .collection("deudores")
-                            .document(pago.idDeudorRemoteDatabase)
-                            .collection("pagos")
-                            .document()
+            try {
+                val owner = com.nexusystem.paguito.data.local.session.LocalAccountKey.fromEmail(userId)
+                require(payment.ownerAccount.isBlank() || payment.ownerAccount == owner)
+                val currentOwner = com.nexusystem.paguito.data.local.session.LocalAccountKey.fromEmail(secureStorage.getUserProfile()?.email)
+                require(currentOwner == owner)
+                var record = payment.copy(ownerAccount = owner, isSynced = false)
+                val reference = if (userId.isNotBlank() && record.idDeudorRemoteDatabase.isNotBlank())
+                    firestore.collection("deudores").document(userId).collection("deudores")
+                        .document(record.idDeudorRemoteDatabase).collection(if (record.isIngreso) "pagos" else "ventas").document()
+                    else null
+                if (reference != null) record.idRemoteDatabase = reference.id
+                com.nexusystem.paguito.domain.usescases.abonos.persistMovementOnce(remoteWrite = {
+                    if (reference == null) false else kotlinx.coroutines.withTimeoutOrNull(8_000) {
+                        reference.set(record, SetOptions.merge()).await()
+                        true
+                    } ?: false
+                }, localWrite = { synced ->
+                    val saved = record.copy(isSynced = synced)
+                    if (saved.isIngreso) abonosUseCase.guardarAbono(saved) else abonosUseCase.guardarVenta(saved)
+                })
+                onSuccess()
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (_: Exception) { saveError = "No se pudo guardar. Tus datos siguen en el formulario; vuelve a intentarlo." }
+            finally { isSaving = false }
+        }
+    }
 
-                        // 2. Obtenemos ese ID generado y lo asignamos a tu entidad
-                        val generatedId = newDocRef.id
-                        pago.idRemoteDatabase = generatedId
-                        // 3. Subimos el objeto que ya incluye su propio ID
-                        newDocRef.set(pago, SetOptions.merge()).await()
-                        abonosUseCase.guardarAbono(pago.copy(isSynced = true))
-                        Log.e("PAGOOOS","-->2")
+    /** Borra en la colección correcta y espera la respuesta antes de reajustar el saldo local. */
+    fun deletePagoRemoteFirebase(payment: PagosEntinty?) {
+        if (payment == null || isSaving) return
+        operationLabel = "Eliminando…"
+        isSaving = true
+        saveError = null
+        _deleteSuccess.value = false
+        val email = secureStorage.getUserProfile()?.email.orEmpty()
+        viewModelScope.launch {
+            try {
+                if (email.isNotBlank() && payment.idRemoteDatabase.isNotBlank() && payment.idDeudorRemoteDatabase.isNotBlank()) {
+                    val owner = com.nexusystem.paguito.data.local.session.LocalAccountKey.fromEmail(email)
+                    require(payment.ownerAccount.isBlank() || payment.ownerAccount == owner)
+                    kotlinx.coroutines.withTimeout(8_000) {
+                        firestore.collection("deudores").document(email).collection("deudores").document(payment.idDeudorRemoteDatabase)
+                            .collection(if (payment.isIngreso) "pagos" else "ventas").document(payment.idRemoteDatabase).delete().await()
                     }
-
-                } catch (e: Exception) {
-                    Log.e("PAGOOOS","-->3"+e.toString())
-                    abonosUseCase.guardarAbono(pago)
-                    // Importante: No dejes el catch vacío para poder debuguear
-                    e.printStackTrace()
                 }
-            }
+                abonosUseCase.eliminarAbono(payment)
+                _deleteSuccess.value = true
+            } catch (_: kotlinx.coroutines.TimeoutCancellationException) {
+                saveError = "No se pudo confirmar la eliminación. Actualiza la cuenta antes de volver a intentarlo."
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (_: Exception) { saveError = "No se pudo eliminar el movimiento. Revisa tu conexión y vuelve a intentarlo." }
+            finally { isSaving = false }
         }
     }
 }

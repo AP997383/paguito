@@ -117,29 +117,12 @@ fun AccountClientStateScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(0.dp)
+                .padding(paddingValues)
                 .verticalScroll(rememberScrollState()) // Soporte para pantallas pequeñas
                 .padding(16.dp)
 
         ) {
-            Row{
-                Icon(
-                    modifier = Modifier.clickable{
-                        onBack()
-                    },
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Regresar",
-                    tint = Color.Black
-                )
-                Spacer(Modifier.width(20.dp))
-                Text(
-                    text =  "Estado de cuenta",
-                    fontWeight = FontWeight.ExtraBold, // Para que resalte en el recibo
-                    fontSize = 20.sp,
-                    color =  Color(0xFF1976D2), // Verde para abono, Azul para venta
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
-            }
+            com.nexusystem.paguito.ui.components.ScreenHeader("Estado de cuenta", "Movimientos y saldo del cliente", onBack, horizontalPadding = 0.dp)
             Spacer(Modifier.height(20.dp))
             Surface(
                 modifier = Modifier
@@ -166,7 +149,7 @@ fun AccountClientStateScreen(
                         // --- SECCIÓN 1: HEADER ---
                         TicketAccountStateHeaderSection( nextNumberTiket.toString())
 
-                        HorizontalDivider(color = Color(0xFFE5E7EB), modifier = Modifier.padding(vertical = 10.dp))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 10.dp))
 
                         // --- SECCIÓN 2: BILL TO / DATE ---
                         TicketBillToDateSectionAcountState(false, "", fecha, nombreCliente)
@@ -178,7 +161,7 @@ fun AccountClientStateScreen(
 
                         Spacer(modifier = Modifier.height(32.dp))
 
-                        HorizontalDivider(color = Color(0xFFE5E7EB), modifier = Modifier.padding(vertical = 24.dp))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(vertical = 24.dp))
 
                         // --- SECCIÓN 5: TOTALES ---
                         TicketTotalsSectionAcoountState(totalPagos.toString(), total,inicial.toString())
@@ -212,15 +195,15 @@ fun AccountClientStateScreen(
 fun TicketBillToDateSectionAcountState(isIngreso:Boolean,accountNum: String, transDate: String,nombreCliente:String) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = "Cliente: (" + nombreCliente+")", fontSize = 13.sp, color = Color(0xFF6B7280))
+            Text(text = "Cliente: (" + nombreCliente+")", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Column(horizontalAlignment = Alignment.End) {
-            Text(text = "Fecha de Impresión", fontSize = 12.sp, color = Color(0xFF9CA3AF), fontWeight = FontWeight.SemiBold)
+            Text(text = "Fecha de Impresión", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
             Text(
                 text = transDate,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF1F2937),
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(vertical = 4.dp)
             )
         }
@@ -239,12 +222,12 @@ fun TicketTotalsSectionAcoountState( abonado:String,total: Int,restante:String) 
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = "Saldo Final", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1F2937))
+            Text(text = "Saldo Final", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
             Text(
                 text = formatAsCurrency(restante),
                 fontSize = 24.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = Color(0xFF1F2937),
+                color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.End
             )
         }
@@ -264,7 +247,7 @@ fun TicketAccountStateTableSection(items: List<PagosEntinty?>) {
             TableHeadText(text = "CONCEPTO", modifier = Modifier.weight(1.5f))
             TableHeadText(text = "MONTO", modifier = Modifier.weight(2f), textAlign = TextAlign.End)
         }
-        HorizontalDivider(color = Color(0xFF1F2937), thickness = 1.dp)
+        HorizontalDivider(color = MaterialTheme.colorScheme.onSurface, thickness = 1.dp)
 
         // Filas de la tabla
         items.forEach { item ->
@@ -287,7 +270,7 @@ fun TicketAccountStateTableSection(items: List<PagosEntinty?>) {
                 Text(
                     text = formatFecha(item?.fechaAbono!!),
                     fontSize = 12.sp,
-                    color = Color(0xFF6B7280),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1.3f)
                 )
                 val concepto = if (item.isIngreso) "ABONO" else "VENTA"
@@ -295,7 +278,7 @@ fun TicketAccountStateTableSection(items: List<PagosEntinty?>) {
                     text = concepto,
                     fontSize = 12.sp,
                     fontWeight = fontWeight,
-                    color = Color(0xFF1F2937), // Concepto suele ser más oscuro
+                    color = MaterialTheme.colorScheme.onSurface, // Concepto suele ser más oscuro
                     modifier = Modifier.weight(1.5f).padding(horizontal = 4.dp)
                 )
                 Column(modifier = Modifier.weight(2f)) {
@@ -303,7 +286,7 @@ fun TicketAccountStateTableSection(items: List<PagosEntinty?>) {
                         text = "Anterior : " +  formatAsCurrency(item.saldoAntesDeAbono.toString()),
                         fontSize = 12.sp,
                         fontWeight = fontWeight,
-                        color = Color(0xFF6B7280),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.End
                     )
                     Text(
@@ -317,7 +300,7 @@ fun TicketAccountStateTableSection(items: List<PagosEntinty?>) {
                         text = "Nuevo:" + formatAsCurrency(if(item.isIngreso)(item.saldoAntesDeAbono - item.montoAbonado)else (item.saldoAntesDeAbono + item.montoAbonado) ),
                         fontSize = 12.sp,
                         fontWeight = fontWeight,
-                        color = Color(0xFF6B7280),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.End
                     )
                 }
@@ -338,15 +321,15 @@ fun TicketAccountStateHeaderSection(nextNumberTiket: String) {
         verticalAlignment = Alignment.Top
     ) {
         Column {
-            Text(text = "Estado de cuenta" , fontSize = 12.sp, color = Color(0xFF1F2937), fontWeight = FontWeight.Bold)
-            Text(text = "TICKET NO. "+ formatTicketNumber(nextNumberTiket.toInt()), fontSize = 10.sp, color = Color(0xFF9CA3AF))
+            Text(text = "Estado de cuenta" , fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+            Text(text = "TICKET NO. "+ formatTicketNumber(nextNumberTiket.toInt()), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Column(horizontalAlignment = Alignment.End) {
             Text(
                 text = "",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = Color(0xFF1F2937),
+                color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.End
             )
         }

@@ -23,9 +23,10 @@ fun TransactionHistoryContent(payments: List<PagoConNombre>, onBack: () -> Unit,
     var recentDays by rememberSaveable { mutableStateOf(0) }
     val entries = remember(payments) { payments.map { it.toMovement() } }
     val filtered = remember(entries, query, filter, recentDays) { filterMovements(entries, query, filter).filter { recentDays == 0 || movementDate(it.rawDate)?.let { date -> !date.isBefore(java.time.LocalDate.now().minusDays((recentDays - 1).toLong())) && !date.isAfter(java.time.LocalDate.now()) } == true } }
-    LazyColumn(Modifier.fillMaxSize().paguitoBackground().testTag("movement-list"),
+    androidx.compose.material3.Scaffold(containerColor = MaterialTheme.colorScheme.background,
+        topBar = { ScreenHeader("Transacciones", "Todos tus pagos y ventas", onBack) }) { padding ->
+    LazyColumn(Modifier.padding(padding).fillMaxSize().paguitoBackground().testTag("movement-list"),
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 156.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        item { ScreenHeader("Transacciones", "Todos tus pagos y ventas", onBack, horizontalPadding = 0.dp) }
         item { MovementSummary(entries) }
         item {
             OutlinedTextField(query, { query = it }, modifier = Modifier.fillMaxWidth().testTag("movement-search"), singleLine = true,
@@ -57,5 +58,6 @@ fun TransactionHistoryContent(payments: List<PagoConNombre>, onBack: () -> Unit,
             val original = payments.firstOrNull { it.toMovement().key == entry.key }
             MovementCard(entry, onOpen = { original?.let(onMovement) }, onReceipt = { original?.let(onMovement) })
         }
+    }
     }
 }

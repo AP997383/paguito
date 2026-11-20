@@ -2,6 +2,8 @@ package com.nexusystem.paguito.ui.screens.login
 
 import android.util.Log
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -97,16 +99,7 @@ fun OtpRecoveryScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Atrás", tint = TextDark)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BgColor),
-                windowInsets = WindowInsets(0.dp)
-            )
+            com.nexusystem.paguito.ui.components.ScreenHeader("Verificación", onBack = onBack)
         },
         containerColor = BgColor
     ) { paddingValues ->
@@ -114,6 +107,7 @@ fun OtpRecoveryScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .imePadding().verticalScroll(rememberScrollState())
                 .padding(paddingValues)
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally

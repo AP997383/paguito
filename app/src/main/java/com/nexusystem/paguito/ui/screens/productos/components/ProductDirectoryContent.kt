@@ -50,11 +50,11 @@ fun ProductDirectoryContent(products: List<PorductosEntity>, profileImage: Strin
     var sortMenu by remember { mutableStateOf(false) }
     val matching = remember(products, query, filter, sort) { filterProducts(products, query, filter, sort) }
     val colors = MaterialTheme.colorScheme
-    Scaffold(containerColor = colors.background, floatingActionButton = {
+    Scaffold(contentWindowInsets = WindowInsets(0, 0, 0, 0), containerColor = colors.background, floatingActionButton = {
         ExtendedFloatingActionButton(onClick = onAdd, icon = { Icon(Icons.Outlined.Add, null) }, text = { Text("Nuevo producto") },
             containerColor = colors.primary, contentColor = colors.onPrimary, modifier = Modifier.padding(bottom = 116.dp))
-    }) { _ ->
-        LazyColumn(Modifier.fillMaxSize().paguitoBackground().testTag("product-directory"),
+    }) { padding ->
+        LazyColumn(Modifier.padding(padding).fillMaxSize().paguitoBackground().testTag("product-directory"),
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 200.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {

@@ -64,6 +64,7 @@ fun RegisterSellScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit = 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var amount by remember { mutableStateOf("0") }
+    com.nexusystem.paguito.ui.components.PaymentOperationFeedback(pagosViewModel)
     var showSuccessPayment by remember { mutableStateOf(false) }
     var showListProducts by remember { mutableStateOf(false) }
     var showListDeudoresBottomSheeet by remember { mutableStateOf(false) }
@@ -82,7 +83,7 @@ fun RegisterSellScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit = 
     val selectedProducts = remember { mutableStateListOf<PorductosEntity>() }
     var productSearch by remember { mutableStateOf("") }
     val startPickerState = rememberDatePickerState(
-        initialSelectedDateMillis = startDate!!.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        initialSelectedDateMillis = (startDate ?: today).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
     )
     val profile = pagosViewModel.profileState
     val contactText = listOfNotNull(profile?.email, profile?.phone).joinToString(" / ")
@@ -162,10 +163,10 @@ fun RegisterSellScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit = 
                             val jsonCompleto: String = Gson().toJson(selectedProducts)
                             paymentDatapreviewTiket = PagostoPreviewTiket(
                                 contactText,
-                                currentDeudorSelected!!.nombre, "", amount.toDouble(),
-                                saldoAntesDeAbono = currentDeudorSelected!!.montoActualAdeudado.toDouble(),
+                                currentDeudorSelected?.nombre.orEmpty(), "", (amount.toDoubleOrNull() ?: 0.0),
+                                saldoAntesDeAbono = (currentDeudorSelected?.montoActualAdeudado ?: 0f).toDouble(),
                                 startDate.toString(),
-                                currentDeudorSelected!!.montoActualAdeudado.toDouble() + amount.toDouble(),
+                                (currentDeudorSelected?.montoActualAdeudado ?: 0f).toDouble() + (amount.toDoubleOrNull() ?: 0.0),
                                 1,
                                 jsonCompleto,
                                 isIngreso = false
@@ -174,10 +175,10 @@ fun RegisterSellScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit = 
                             paymentData = PagosEntinty(
                                 null,
                                 "",
-                                currentDeudorSelected!!.idRemoteDatabase,
-                                currentDeudorSelected!!.id.toString(),
-                                amount.toDouble(),
-                                saldoAntesDeAbono = currentDeudorSelected!!.montoActualAdeudado.toDouble(),
+                                currentDeudorSelected?.idRemoteDatabase.orEmpty(),
+                                currentDeudorSelected?.id?.toString().orEmpty(),
+                                (amount.toDoubleOrNull() ?: 0.0),
+                                saldoAntesDeAbono = (currentDeudorSelected?.montoActualAdeudado ?: 0f).toDouble(),
                                 startDate.toString(),
                                 true,
                                 selectedMethodId,
@@ -185,8 +186,7 @@ fun RegisterSellScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit = 
                                 notes,
                                 jsonCompleto
                             )
-                            pagosViewModel.guardarNuevaVenta(paymentData)
-                            showSuccessPayment = true
+                            pagosViewModel.guardarNuevaVenta(paymentData) { showSuccessPayment = true }
                         }else{
                             scope.launch {
                                 val result = snackbarHostState.showSnackbar(
@@ -210,7 +210,7 @@ fun RegisterSellScreen(deudorPrecarga:DeudoresEntity, onBackClick: () -> Unit = 
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = 56.dp),
-                    enabled = isButtonEnabled && !showSuccessPayment,
+                    enabled = isButtonEnabled && !showSuccessPayment && !pagosViewModel.isSaving,
                     shape = MaterialTheme.shapes.large,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary

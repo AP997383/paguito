@@ -1,10 +1,14 @@
 package com.nexusystem.paguito.ui.screens.perfil
 
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInWindow
+
 import com.nexusystem.paguito.ui.components.paguitoBackground
 import android.app.Activity
 import android.content.Context
 import android.os.Build
 import android.util.Log
+import androidx.core.net.toUri
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -98,7 +102,20 @@ fun ProfileScreen(
     val isSuscribedError by viewModel.isSubscribedError.collectAsState()
     val accountDelete by viewModel.accountDelete.collectAsState()
 
+    val billingBusy by viewModel.billingBusy.collectAsState()
+    val billingError by viewModel.billingError.collectAsState()
+    val storePrices by viewModel.storePrices.collectAsState()
     val profile = viewModel.profileState
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    var trackedPackages by remember(profile?.email) { mutableStateOf(false) }
+    val membershipViewport = androidx.compose.ui.platform.LocalView.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) viewModel.restorePurchases()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     var closeSessionDialog by remember { mutableStateOf(false) }
     var showDeleteAccount by remember { mutableStateOf(false) }
     var progreso by remember { mutableStateOf(0f) }
@@ -231,14 +248,31 @@ fun ProfileScreen(
                                 .shimmerEffect()
                         )
                     } else {
+                        Box(Modifier.onGloballyPositioned { coordinates ->
+                            val bounds = coordinates.boundsInWindow()
+                            if (!trackedPackages && bounds.height > 0 && bounds.top < membershipViewport.height && bounds.bottom > 0) {
+                                trackedPackages = true
+                                viewModel.trackPackagesVisit()
+                            }
+                        }) {
                         SubscriptionCarousel(listaSucripciones, {
-                            val activity = context as? Activity
                             viewModel.setCurrentProduct(it)
                             activity?.let { viewModel.launchPurchaseFlow(it) }
-                        })
+                        }, storePrices = storePrices, isBuying = billingBusy)
+                        }
                     }
 
                 }
+                if (isSucriptionActive) Text("Tu membresía Premium está activa.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                Text("Administra la renovación en la tienda donde contrataste la suscripción.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                TextButton(onClick = { viewModel.restorePurchases(showSuccess = true) }, enabled = !billingBusy) { Text("Restaurar compras de Google Play") }
+                TextButton(onClick = {
+                    runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, "https://play.google.com/store/account/subscriptions?package=com.nexusystem.paguito".toUri())) }
+                }) { Text("Administrar o cancelar en Google Play") }
+                TextButton(onClick = {
+                    runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, "https://apps.apple.com/account/subscriptions".toUri())) }
+                }) { Text("Administrar o cancelar en Apple") }
+                if (billingError.isNotBlank()) Text(billingError, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 Spacer(modifier = Modifier.height(24.dp))
                 SectionTitle(title = stringResource(R.string.section_app_preferences))
                 SettingsCard {
@@ -465,7 +499,9 @@ fun PoweredByNexus(
 @Composable
 fun SubscriptionCarousel(
     subscriptions: List<SuscriptionsItems>, // Tu array de modelos de datos
-    onUpgradeClick: (SuscriptionsItems) -> Unit // Callback para manejar la acción
+    onUpgradeClick: (SuscriptionsItems) -> Unit,
+    storePrices: Map<String, String> = emptyMap(),
+    isBuying: Boolean = false
 ) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = 16.dp),
@@ -475,6 +511,8 @@ fun SubscriptionCarousel(
         items(subscriptions) { sub ->
             SubscriptionCard(
                 subs = sub,
+                storePrice = storePrices[sub.productId],
+                isBuying = isBuying,
                 onUpgradeClick = {
                     // Pasamos la suscripción seleccionada al callback
                     onUpgradeClick(sub)
@@ -623,7 +661,7 @@ fun SettingsItem(
 }
 
 @Composable
-fun SubscriptionCard(subs:SuscriptionsItems,onUpgradeClick: () -> Unit) {
+fun SubscriptionCard(subs: SuscriptionsItems, storePrice: String? = null, isBuying: Boolean = false, onUpgradeClick: () -> Unit) {
     Surface(
         color = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(24.dp),
@@ -645,7 +683,7 @@ fun SubscriptionCard(subs:SuscriptionsItems,onUpgradeClick: () -> Unit) {
                 )
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(
-                        text = formatAsCurrency(subs.price),
+                        text = storePrice ?: "Consultar precio en Google Play",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Black,
                         color = BluePrimary
@@ -682,6 +720,7 @@ fun SubscriptionCard(subs:SuscriptionsItems,onUpgradeClick: () -> Unit) {
 
             Button(
                 onClick = onUpgradeClick,
+                enabled = !isBuying && storePrice != null,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = BluePrimary)

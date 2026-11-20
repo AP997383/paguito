@@ -113,22 +113,15 @@ fun WebsiteScreen(
             .fillMaxSize()
             .paguitoBackground()
     ) {
+        Column(Modifier.fillMaxSize()) {
+            com.nexusystem.paguito.ui.components.ScreenHeader("Sitio web", "Tu catálogo en internet", onBack)
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .weight(1f)
                 .verticalScroll(scrollState)
                 .padding(horizontal = 24.dp)
-                .padding(top = 104.dp, bottom = 40.dp)
+                .padding(top = 8.dp, bottom = 40.dp)
         ) {
-            Text(
-                text = "Sitio Web",
-                fontSize = 34.sp,
-                fontWeight = FontWeight.Black,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
             Text(
                 text = if (uiState.isWebsiteActive) {
                     "Administra el enlace público de tu catálogo y compártelo con tus clientes."
@@ -240,7 +233,8 @@ fun WebsiteScreen(
             }
         }
 
-        AppHeader(onBack = onBack)
+        }
+
 
         AnimatedVisibility(
             visible = showCopiedToast,
