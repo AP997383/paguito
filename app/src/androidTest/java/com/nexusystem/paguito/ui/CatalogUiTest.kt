@@ -59,8 +59,8 @@ class CatalogUiTest {
     @Test fun customerProfileRoutesPaymentsAndStatements() {
         val client = DeudoresEntity(id = 1, idRemoteDatabase = "ana", nombre = "Ana Romero", telefono = "5550101234", correo = "ana@example.com",
             montoActualAdeudado = 600f, montoAcomulado = 1000f, periodicidad = "M", inRemote = true)
-        val payment = PagosEntinty(id = 1, idRemoteDatabase = "p1", montoAbonado = 400, fechaAbono = today, isIngreso = true, tipoPago = 2)
-        val sale = PagosEntinty(id = 2, idRemoteDatabase = "p2", montoAbonado = 1000, fechaAbono = today, isIngreso = false)
+        val payment = PagosEntinty(id = 1, idRemoteDatabase = "p1", montoAbonado = 400.0, fechaAbono = today, isIngreso = true, tipoPago = 2)
+        val sale = PagosEntinty(id = 2, idRemoteDatabase = "p2", montoAbonado = 1000.0, fechaAbono = today, isIngreso = false)
         var paymentRequested = 0
         var statementRequested = 0
         var opened: Int? = null
@@ -70,8 +70,8 @@ class CatalogUiTest {
                 onOpenMovement = { opened = it.id }, onReceipt = {}, onDelete = {}) }
         }
         capture("customer-profile")
-        compose.onNodeWithText("Registrar pago").performClick()
-        compose.onNodeWithText("Estado").performClick()
+        compose.onNodeWithTag("customer-register-payment").assertIsDisplayed().assertHasClickAction().performClick()
+        compose.onNodeWithText("Estado de cuenta").assertIsDisplayed().performClick()
         compose.runOnIdle { assertEquals(1, paymentRequested); assertEquals(1, statementRequested) }
         val tag = "movement-${sale.toMovement().key}"
         compose.onNodeWithTag("customer-profile").performScrollToNode(hasTestTag(tag))
@@ -103,8 +103,8 @@ class CatalogUiTest {
     }
 
     @Test fun historyFiltersPaymentsAndExpandsNotes() {
-        val payment = PagoConNombre(id = 1, idDeudor = "ana", nameDeudor = "Ana Romero", montoAbonado = 400, fechaAbono = today, isIngreso = true, tipoPago = 2, notas = "Anticipo de pedido")
-        val sale = PagoConNombre(id = 2, idDeudor = "bruno", nameDeudor = "Bruno Ruiz", montoAbonado = 675, fechaAbono = LocalDate.now().minusDays(1).toString(), isIngreso = false, tipoPago = 3)
+        val payment = PagoConNombre(id = 1, idDeudor = "ana", nameDeudor = "Ana Romero", montoAbonado = 400.0, fechaAbono = today, isIngreso = true, tipoPago = 2, notas = "Anticipo de pedido")
+        val sale = PagoConNombre(id = 2, idDeudor = "bruno", nameDeudor = "Bruno Ruiz", montoAbonado = 675.0, fechaAbono = LocalDate.now().minusDays(1).toString(), isIngreso = false, tipoPago = 3)
         compose.setContent { ReviewTheme { TransactionHistoryContent(listOf(payment, sale), {}) } }
         capture("history")
         compose.onNodeWithText("Pagos").performScrollTo().performClick()
@@ -181,7 +181,7 @@ class CatalogUiTest {
         assertEquals(listOf("shoes"), filterProducts(products(), "", StockFilter.Low, ProductSort.Name).map { it.idRemoteDatabase })
         assertEquals(listOf("bag"), filterProducts(products(), "IMPERMEABLE", StockFilter.Available, ProductSort.Name).map { it.idRemoteDatabase })
         assertEquals(listOf("cup"), filterProducts(products(), "", StockFilter.Empty, ProductSort.Price).map { it.idRemoteDatabase })
-        val entries = listOf(MovementEntry("old", "Ana", 10, "invalid", true, 1), MovementEntry("new", "Bruno", 20, today, false, 3, notes = "Entrega"))
+        val entries = listOf(MovementEntry("old", "Ana", 10.0, "invalid", true, 1), MovementEntry("new", "Bruno", 20.0, today, false, 3, notes = "Entrega"))
         assertEquals(listOf("new", "old"), filterMovements(entries, "", MovementFilter.All).map { it.key })
         assertEquals(listOf("new"), filterMovements(entries, "tarjeta", MovementFilter.Sales).map { it.key })
         assertEquals(listOf("new"), filterMovements(entries, "entrega", MovementFilter.All).map { it.key })

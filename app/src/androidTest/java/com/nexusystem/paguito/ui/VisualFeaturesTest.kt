@@ -120,8 +120,8 @@ class VisualFeaturesTest {
     @Test fun chartSwitchesSeriesAndInspectsADay() {
         val month = YearMonth.now().toString()
         val payments = listOf(
-            AbonosDelMes(250, "$month-02", true), AbonosDelMes(1500, "$month-18", true),
-            AbonosDelMes(300, "$month-02", false), AbonosDelMes(640, "$month-12", false), AbonosDelMes(2000, "$month-24", false)
+            AbonosDelMes(250.0, "$month-02", true), AbonosDelMes(1500.0, "$month-18", true),
+            AbonosDelMes(300.0, "$month-02", false), AbonosDelMes(640.0, "$month-12", false), AbonosDelMes(2000.0, "$month-24", false)
         )
         compose.setContent {
             PaguitoTheme {
@@ -144,8 +144,8 @@ class VisualFeaturesTest {
 
     @Test fun chartAggregatesOnlySelectedMonthAndSupportsLeapDays() {
         val points = dailyPaymentPoints(listOf(
-            AbonosDelMes(50, "2024-02-29", true), AbonosDelMes(100, "2024-02-29T12:30:00", false),
-            AbonosDelMes(999, "2024-03-01", true), AbonosDelMes(999, "invalid", true)
+            AbonosDelMes(50.0, "2024-02-29", true), AbonosDelMes(100.0, "2024-02-29T12:30:00", false),
+            AbonosDelMes(999.0, "2024-03-01", true), AbonosDelMes(999.0, "invalid", true)
         ), "2024-02")
         assertEquals(29, points.size)
         assertEquals(50f, points.sumOf { it.collections.toDouble() }.toFloat(), 0f)
@@ -156,7 +156,7 @@ class VisualFeaturesTest {
 
     @Test fun homeCardsRenderLiveSummaryAndAllSixActions() {
         val today = LocalDate.now().toString()
-        val payments = listOf(AbonosDelMes(1233, today, false), AbonosDelMes(499, today, false), AbonosDelMes(500, today, true))
+        val payments = listOf(AbonosDelMes(1233.0, today, false), AbonosDelMes(499.0, today, false), AbonosDelMes(500.0, today, true))
         var clientsOpened = 0
         compose.setContent {
             PaguitoTheme {
@@ -169,7 +169,7 @@ class VisualFeaturesTest {
                     Text("Acciones rápidas", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(12.dp))
                     ActionButtonsRow({}, {}, {}, {}, {}, {}, DeudoresSummary(3, 4450f), true, {}, 12, { clientsOpened++ })
-                    RecentPaymentsSection(listOf(PagoConNombre(id = 1, nameDeudor = "Ana Romero", montoAbonado = 1233, fechaAbono = today, isIngreso = false)), {})
+                    RecentPaymentsSection(listOf(PagoConNombre(id = 1, nameDeudor = "Ana Romero", montoAbonado = 1233.0, fechaAbono = today, isIngreso = false)), {})
                 }
             }
         }

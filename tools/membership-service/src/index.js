@@ -1,9 +1,15 @@
+import { onSchedule } from 'firebase-functions/v2/scheduler';
+import { defineSecret } from 'firebase-functions/params';
+import { AppStoreServerAPIClient, Environment } from '@apple/app-store-server-library';
+import { reconcileSubscriptions } from './reconcile.js';
+const appleServerKey = defineSecret('PAGUITO_APPSTORE_SERVER_KEY');
 import { onMessagePublished } from 'firebase-functions/v2/pubsub';
 import { onRequest } from 'firebase-functions/v2/https';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { StoreVerifier } from './stores.js';
 import { MembershipLedger, MembershipVisitLedger } from './ledger.js';
+import { processGoogleNotification } from './google-notifications.js';
 import { MembershipError, normalizeEmail, fingerprint } from './policy.js';
 
 if (!getApps().length) initializeApp();
@@ -92,22 +98,28 @@ export const membershipAppleNotifications = onRequest({region:'us-central1',time
   try {
     const notification = await verifier.apple.verifyAndDecodeNotification(req.body?.signedPayload);
     if(!notification.data?.signedTransactionInfo)return res.json({received:true});
-    const purchase = await verifier.verifyApple(notification.data.signedTransactionInfo);
+    const purchase = await verifier.verifyApple(notification.data.signedTransactionInfo,notification.data.signedRenewalInfo);
+    purchase.signedAt = Math.max(purchase.signedAt, notification.signedDate ?? 0);
     await ledger.applyStoreUpdate(purchase);
     return res.json({received:true});
   }catch(error){return failure(res,error)}
 });
 /** El tópico privado recibe RTDN de Google; el estado se vuelve a consultar en la API oficial. */
 export const membershipGoogleNotifications = onMessagePublished({topic:'paguito-play-billing-events',region:'us-central1',retry:true},async(event)=>{
-  const message = event.data.message.json;
-  if(message?.packageName !== 'com.nexusystem.paguito')return;
-  const notification = message.subscriptionNotification ?? message.voidedPurchaseNotification;
-  if(!notification?.purchaseToken)return;
+  let message;
   try {
-    const purchase = await verifier.verifyGoogle(notification.purchaseToken,notification.subscriptionId);
-    await ledger.applyStoreUpdate(purchase);
+    message = event.data.message.json;
   } catch(error) {
-    if(error instanceof MembershipError && error.status === 400)return;
-    throw error;
+    if(error instanceof SyntaxError)return;
+    throw new Error('INVALID_MEMBERSHIP_NOTIFICATION');
   }
+  return processGoogleNotification(message,verifier,ledger);
+});
+
+/** Respaldo de webhooks: cada quince minutos consulta vigencia, sin cobros ni cambios de concesiones. */
+export const membershipReconcileSubscriptions = onSchedule({schedule:'every 15 minutes',timeZone:'UTC',region:'us-central1',timeoutSeconds:300,maxInstances:1,retryCount:3,minBackoffSeconds:60,secrets:[appleServerKey]},async()=>{
+  const appleClient = new AppStoreServerAPIClient(appleServerKey.value(),'T5GXLBD2FY','500c5bbd-2332-4d4a-a444-d611173c2231','com.nexus.ecosystem.Paguito',Environment.PRODUCTION);
+  const result = await reconcileSubscriptions(db,verifier,appleClient);
+  console.info('membership_reconciliation',result);
+  if (result.unavailable) throw new Error('MEMBERSHIP_STORE_UNAVAILABLE');
 });

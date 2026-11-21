@@ -16,7 +16,7 @@ service cloud.firestore {
     }
     match /{collection}/{document=**} {
       allow read, write: if legacyWindow()
-        && !(collection in ['users', 'suscripciones', 'membershipOwners', 'membershipPurchases', 'membershipIntents', 'membershipEvents', 'membershipVisits', 'membershipVisitAccounts']);
+        && !(collection in ['users', 'suscripciones', 'membershipOwners', 'membershipPurchases', 'membershipIntents', 'membershipEvents', 'membershipVisits', 'membershipVisitAccounts', 'pushDevices', 'pushDeviceChallenges', 'pushCampaigns', 'pushQueue']);
     }
   }
 }

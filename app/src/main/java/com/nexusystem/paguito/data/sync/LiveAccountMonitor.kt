@@ -54,8 +54,8 @@ class LiveAccountMonitor @Inject constructor(
                                 }
                             }
                     }
-                    listeners += firestore.collection("users").document(email).addSnapshotListener { snapshot, error ->
-                        if (error == null && snapshot != null && !snapshot.metadata.hasPendingWrites() && accounts.currentAccountKey() == owner) {
+                    listeners += firestore.collection("users").document(email).addSnapshotListener(com.google.firebase.firestore.MetadataChanges.INCLUDE) { snapshot, error ->
+                        if (error == null && snapshot != null && !snapshot.metadata.hasPendingWrites() && !snapshot.metadata.isFromCache && accounts.currentAccountKey() == owner) {
                             runCatching { snapshot.toObject(com.nexusystem.paguito.data.models.firestore.FirestoreUserProfile::class.java)?.toEntity() }
                                 .getOrNull()?.let { profile -> if (LocalAccountKey.fromEmail(profile.email) == owner) storage.updateCurrentUserProfile(profile) }
                         }

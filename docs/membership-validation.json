@@ -1,6 +1,6 @@
 {
-  "validatedAtUTC": "2026-11-20T05:44:35.813681+00:00",
-  "status": "stage_1_published_waiting_for_google_play_permission_to_take_effect",
+  "validatedAtUTC": "2026-11-20T15:45:42.122584+00:00",
+  "status": "production_services_active_verified_google_access",
   "protectedAccounts": [
     {
       "account": "protected_1",
@@ -78,7 +78,7 @@
       "membershipGoogleNotifications"
     ],
     "googlePlayServiceAccount": "739980887335-compute@developer.gserviceaccount.com",
-    "googlePlayPermission": "user_reports_permissions_granted; subsequent_runtime_read_still_returns_http_401_permissionDenied; propagation_pending_or_console_configuration_requires_review",
+    "googlePlayPermission": "confirmed_runtime_purchase_read_READY_after_correct_service_account_invitation",
     "apple": {
       "bundleID": "com.nexus.ecosystem.Paguito",
       "appID": 6767476660,
@@ -96,11 +96,24 @@
         "View financial data, orders, and cancellation survey responses",
         "Manage orders and subscriptions"
       ],
-      "userReportsGranted": true
+      "userReportsGranted": true,
+      "runtimeReadConfirmed": true
     },
-    "existingVerifierSourceUnchanged": true,
-    "firestoreRulesUnchanged": true,
-    "permissionPropagationReference": "https://developers.google.com/android-publisher/api-ref/rest/v3/users"
+    "existingVerifierSourceUnchanged": false,
+    "firestoreRulesUnchanged": false,
+    "permissionPropagationReference": "https://developers.google.com/android-publisher/api-ref/rest/v3/users",
+    "googlePlayPermissionRootCause": "Previous Play Console invitation omitted the initial 7 from the service-account address. Correct account granted app-scoped financial read and subscription management permissions with explicit user confirmation.",
+    "notifications": {
+      "appleProductionURL": "https://us-central1-paguito-92b2d.cloudfunctions.net/membershipAppleNotifications",
+      "appleConfiguredInAppStoreConnect": true,
+      "appleRealDeliveryTested": false,
+      "googleTopic": "projects/paguito-92b2d/topics/paguito-play-billing-events",
+      "googlePublisher": "google-play-developer-notifications@system.gserviceaccount.com",
+      "publisherTopicScopedPermissionConfirmed": true,
+      "googleConfiguredInPlayConsole": true,
+      "googleTestDeliveredHTTP": 200,
+      "googleRetryPolicyExplicitlyApproved": true
+    }
   },
   "validation": {
     "android": {
@@ -115,7 +128,7 @@
     },
     "iosDomainTests": 55,
     "iosProfileUITests": 7,
-    "serverTests": 23,
+    "serverTests": 27,
     "firestoreRulesTests": 5,
     "cryptoCompatibility": "passed",
     "sourceAuditIssues": 0,
@@ -131,39 +144,39 @@
     "iosDomain": "/tmp/paguito-membership-domain-ready.log",
     "iosUI": "/tmp/paguito-membership-ui-final.xcresult",
     "iosProdBuild": "/tmp/paguito-membership-ios-release-ready.log",
-    "server": "/tmp/paguito-membership-server-tests-ready.log",
-    "rules": "/tmp/paguito-membership-rules-tests-confirmed.log",
+    "server": "/tmp/paguito-membership-server-tests-today.log",
+    "rules": "/tmp/paguito-membership-rules-tests-today.log",
     "dependencies": "/tmp/paguito-membership-dependency-audit-ready.json",
-    "protectedAccounts": "/tmp/paguito-protected-memberships-confirmed.json",
+    "protectedAccounts": "/tmp/paguito-membership-final-audit.json",
     "googlePlayPermission": "/tmp/paguito-membership-google-diagnostics.log",
-    "productionRolloutAudit": "/tmp/paguito-membership-rollout-audit.json",
-    "productionDeploy": "/tmp/paguito-membership-stage1-final-deploy.log",
-    "googlePlayPreflight": "/tmp/paguito-membership-google-access-result-final.json"
+    "productionRolloutAudit": "/tmp/paguito-membership-final-audit.json",
+    "productionDeploy": "/tmp/paguito-membership-verifier-deploy.log",
+    "googlePlayPreflight": "/tmp/paguito-membership-google-access-result-final.json",
+    "notificationsDeploy": "/tmp/paguito-membership-google-notifications-deploy.log",
+    "privateRegistryAndRulesDeploy": "/tmp/paguito-membership-apple-visits-deploy.log",
+    "privateRollbackBackup": "/Volumes/DEV_SSD/AndroidStudio/Projects/Personal/Paguito/.local-backups/membership-service-before-rollout"
   },
   "rollout": [
     {
       "stage": 1,
-      "action": "Publicada solo membershipPurchaseStatus con autorización explícita. No modifica usuarios, compras ni el verificador existente.",
-      "gate": "User granted Play Console permissions. Subsequent runtime read still returns HTTP 401 permissionDenied. No purchases initiated.",
-      "status": "published_access_denied"
+      "status": "complete",
+      "action": "Google Play read access verified READY with the correct service account."
     },
     {
       "stage": 2,
-      "action": "Solo con acceso confirmado: publicar las otras cuatro funciones y las reglas privadas. Conservar fuente antigua para rollback del servicio, sin revertir datos de compras.",
-      "gate": "Validación real disponible; no publicar si los permisos de compras no están confirmados.",
-      "status": "waiting_for_successful_runtime_purchase_read_after_console_grant"
+      "status": "complete",
+      "action": "All five functions and private membership rules deployed; old verifier replaced after permission gate passed."
     },
     {
       "stage": 3,
-      "action": "Configurar App Store Server Notifications V2 y Google Play RTDN para los nuevos receptores.",
-      "googleTopic": "projects/paguito-92b2d/topics/paguito-play-billing-events",
-      "googlePublisher": "google-play-developer-notifications@system.gserviceaccount.com",
-      "status": "not_configured"
+      "status": "complete",
+      "action": "Apple production URL and Google RTDN configured; Google provider test processed HTTP 200.",
+      "appleDeliveryLimit": "No real Apple transaction or Apple API test was initiated."
     },
     {
       "stage": 4,
-      "action": "Instalar las nuevas apps solo después de validar los servicios. Las versiones nuevas bloquean cobros si el servicio no responde.",
-      "status": "not_installed_pending_backend_gate"
+      "status": "not_installed_devices_disconnected",
+      "action": "Native code prepared and previously validated; no Android or iPhone connected for installation today."
     }
   ],
   "approvalBlocks": [
@@ -171,21 +184,43 @@
       "action": "Crear consulta pública nueva de disponibilidad en producción",
       "reason": "Automatic review rejected persistent production/function configuration changes without explicit authorization.",
       "executed": false,
-      "resolution": "User explicitly approved phased publication; stage 1 published afterward."
+      "resolution": "Approved explicitly; completed."
     },
     {
       "action": "Comprobar recibos históricos mediante validación externa",
       "reason": "Automatic review rejected access/possible external validation of private production receipts without explicit authorization.",
       "executed": false
+    },
+    {
+      "action": "Publish Google notification retry policy",
+      "executedBeforeApproval": false,
+      "resolution": "User explicitly approved retries up to seven days; function deployed afterward."
+    },
+    {
+      "action": "Grant Google Play publisher access to the private topic",
+      "executedBeforeApproval": false,
+      "resolution": "User explicitly approved the exact principal, topic and Pub/Sub Publisher role; topic-scoped grant applied and verified afterward."
     }
   ],
   "limits": [
-    "No se ejecutaron compras reales ni se probaron nuevas compras contra producción.",
-    "Solo se publicó membershipPurchaseStatus. La sustitución del verificador, el registro de compras y visitas, los receptores de notificaciones y las reglas privadas siguen pendientes del acceso de Play Console; las apps nuevas no se instalaron.",
-    "La privacidad del registro y el bloqueo de cambios Premium del cliente quedan activos al publicar reglas; el resto de la autenticación heredada de Firestore no se migra en este cambio.",
-    "Sandbox/App Review requiere configuración específica; no se convierten recibos de prueba en compras reales de producción.",
-    "Las suscripciones independientes de Apple y Google requieren gestión en su tienda; no se cancelan ni reembolsan automáticamente suscripciones existentes.",
-    "El verificador antiguo sigue operativo y no se presenta como corregido. La autorización de publicación no permite saltar la comprobación de acceso a Google Play."
+    "No real purchases, cancellations or refunds were initiated. Production smoke tests used an empty receipt and rejected it before any purchase was written.",
+    "Google Play test notification delivery was verified. Apple production URL is configured; delivery of a real Apple event was not tested.",
+    "Sandbox/App Review needs separate testing; production verification does not treat test receipts as real paid purchases.",
+    "Historical active memberships remain preserved. A complete admin count by store requires reconciliation of historical receipts; manual Premium grants must be reported separately.",
+    "Other legacy Firestore authentication and authorization are outside this focused rollout.",
+    "Native visit and purchase controls require the updated apps; server validation applies to the existing confirmation endpoint as well.",
+    "The legacy suscripciones collection is retained privately and its historical duplicate rows are not counted as new charges."
   ],
-  "productionUserMutationPerformed": false
+  "productionUserMutationPerformed": false,
+  "adminDashboardReadiness": {
+    "newVerifiedPurchases": "membershipPurchases + membershipOwners",
+    "uniquePackageVisitors": "membershipVisitAccounts",
+    "packageOpenings": "membershipVisits",
+    "storeBreakdown": [
+      "google",
+      "apple"
+    ],
+    "manualPremium": "Separate legacy or administrative grants; never label them as paid store subscriptions.",
+    "historicalCoverage": "Not reconciled; counts cover verified receipts recorded after rollout and subsequent store events, not a complete historical store inventory."
+  }
 }

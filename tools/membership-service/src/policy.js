@@ -34,3 +34,7 @@ export function subscriptionUpdate(current, purchase, plan, managed = false) {
   if (original.isActive === true && !managed) return null;
   return {...original, ...(Object.hasOwn(original,'active') ? {active:true} : {}), isActive: true, idSuscription: purchase.productID, nameSuscription: plan.name || 'Paguito Premium', price: purchase.displayPrice ?? plan.price ?? '', nextExpiration: expiration};
 }
+
+/** Concesiones originales y registros privados; una fecha vieja no define una excepción. */
+export const administrativeAccounts = new Set(['eriksaritho@gmail.com', 'masventas0713@gmail.com']);
+export function isAdministrative(email, grant) { return administrativeAccounts.has(normalizeEmail(email)) || grant?.active === true; }

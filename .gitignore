@@ -14,3 +14,6 @@
 .cxx
 local.properties
 .kotlin/
+
+# Private local backups never belong in Git or deployment sources.
+.local-backups/

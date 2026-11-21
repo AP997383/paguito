@@ -46,9 +46,9 @@ class NavigationFormsTest {
     }
     private val client = DeudoresEntity(id = 5, idRemoteDatabase = "ana", nombre = "Ana Romero")
     private val sales = listOf(
-        PagoConNombre(1, "5", "Ana Romero", 600, "2026-11-16", isIngreso = false, idDeudorRemoteDatabase = "ana"),
-        PagoConNombre(2, "5", "Ana Romero", 200, "2026-11-17", isIngreso = true, idDeudorRemoteDatabase = "ana"),
-        PagoConNombre(3, "5", "Ana Romero", 800, "2026-11-17", isIngreso = false, idDeudorRemoteDatabase = "ana"))
+        PagoConNombre(1, "5", "Ana Romero", 600.0, "2026-11-16", isIngreso = false, idDeudorRemoteDatabase = "ana"),
+        PagoConNombre(2, "5", "Ana Romero", 200.0, "2026-11-17", isIngreso = true, idDeudorRemoteDatabase = "ana"),
+        PagoConNombre(3, "5", "Ana Romero", 800.0, "2026-11-17", isIngreso = false, idDeudorRemoteDatabase = "ana"))
 
     @Test fun profileTabHidesBackAndAvatarEntryRetainsIt() {
         var showBack by mutableStateOf(false)
@@ -60,13 +60,18 @@ class NavigationFormsTest {
     @Test fun joinedHistoryDoesNotDuplicateGuestClients() = kotlinx.coroutines.runBlocking {
         val db = androidx.room.Room.inMemoryDatabaseBuilder(InstrumentationRegistry.getInstrumentation().targetContext, com.nexusystem.paguito.data.AppDatabase::class.java).build()
         try {
-            val ana = db.deudoresDao().agregarNuevoDeudor(DeudoresEntity(id = null, nombre = "Ana local"))
-            val luis = db.deudoresDao().agregarNuevoDeudor(DeudoresEntity(id = null, nombre = "Luis local"))
-            db.abonosDao().agregarAbono(com.nexus.medi.data.local.entity.PagosEntinty(id = null, idDeudor = ana.toString(), montoAbonado = 100, isIngreso = false))
-            db.abonosDao().agregarAbono(com.nexus.medi.data.local.entity.PagosEntinty(id = null, idDeudor = luis.toString(), montoAbonado = 200, isIngreso = false))
-            val records = kotlinx.coroutines.withTimeout(5000) { db.abonosDao().getPagosConNombre().first() }
+            val owner = "guest:test-session"
+            val otherOwner = "guest:other-session"
+            val ana = db.deudoresDao().agregarNuevoDeudor(DeudoresEntity(id = null, nombre = "Ana local", ownerAccount = owner))
+            val luis = db.deudoresDao().agregarNuevoDeudor(DeudoresEntity(id = null, nombre = "Luis local", ownerAccount = owner))
+            val other = db.deudoresDao().agregarNuevoDeudor(DeudoresEntity(id = null, nombre = "Otra cuenta", ownerAccount = otherOwner))
+            db.abonosDao().agregarAbono(com.nexus.medi.data.local.entity.PagosEntinty(id = null, idDeudor = ana.toString(), montoAbonado = 100.25, isIngreso = false, ownerAccount = owner))
+            db.abonosDao().agregarAbono(com.nexus.medi.data.local.entity.PagosEntinty(id = null, idDeudor = luis.toString(), montoAbonado = 200.0, isIngreso = false, ownerAccount = owner))
+            db.abonosDao().agregarAbono(com.nexus.medi.data.local.entity.PagosEntinty(id = null, idDeudor = other.toString(), montoAbonado = 999.0, isIngreso = false, ownerAccount = otherOwner))
+            val records = kotlinx.coroutines.withTimeout(5000) { db.abonosDao().getPagosConNombre(owner).first() }
             assertEquals(2, records.size)
             assertEquals(setOf("Ana local", "Luis local"), records.map { it.nameDeudor }.toSet())
+            assertEquals(300.25, records.sumOf { it.montoAbonado }, 0.0)
         } finally { db.close() }
     }
     @Test fun salesOnlySortAndResolveLocalAndRemoteClients() {

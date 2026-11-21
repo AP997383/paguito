@@ -59,9 +59,24 @@ class MainActivity : ComponentActivity() {
     override fun onStop() { liveAccountMonitor.stop(); super.onStop() }
 
     @RequiresApi(Build.VERSION_CODES.O)
+    /** Conserva el flujo normal de la app y abre enlaces públicos de campañas al tocar el aviso. */
+    private fun openCampaignLink(source: android.content.Intent?) {
+        if (source?.getStringExtra("type") != "NEXUS_CAMPAIGN") return
+        val url = com.nexusystem.paguito.integration.push.CampaignNotificationContent.publicUrl(source.getStringExtra("linkURL")) ?: return
+        source.removeExtra("linkURL")
+        runCatching { startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        openCampaignLink(intent)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(R.style.Theme_Paguito)
         super.onCreate(savedInstanceState)
+        openCampaignLink(intent)
         enableEdgeToEdge()
         requestNotificationPermission()
         clearNotifications()
@@ -70,7 +85,7 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 "DEFAULT_CHANNEL",
-                "Notificaciones de Medi",
+                "Notificaciones de Paguito",
                 NotificationManager.IMPORTANCE_HIGH
             )
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
@@ -227,6 +242,7 @@ class MainActivity : ComponentActivity() {
     }
     override fun onResume() {
         super.onResume()
+        com.nexusystem.paguito.integration.push.PushDeviceRegistrar.get(applicationContext).sync()
         clearNotifications()
     }
 

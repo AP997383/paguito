@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { MembershipLedger } from '../src/ledger.js';
+import { reconcileSubscriptions } from '../src/reconcile.js';
 import { StoreVerifier } from '../src/stores.js';
+import { processGoogleNotification } from '../src/google-notifications.js';
 import { accountUUID, fingerprint, assertVerifiedPurchase, subscriptionUpdate } from '../src/policy.js';
 
 const email = 'buyer@example.com';
@@ -10,7 +12,10 @@ const active = () => ({platform: 'apple', productID: 'premium_monthly_basic', ev
 class MemoryDB {
   rows = new Map(); queue = Promise.resolve();
   query(name,field,value) { return {docs:[...this.rows].filter(([key,data])=>key.startsWith(name+'/') && data[field]===value).map(([key,data])=>({id:key.split('/').at(-1),exists:true,data:()=>data}))}; }
-  collection(name) { return {doc: id => ({path: `${name}/${id}`,id}), where: (field,_operator,value) => ({query:{name,field,value},limit:()=>({get:async()=>this.query(name,field,value)})})}; }
+  collection(name) {
+    const snapshot=(id,data)=>({id,exists:data!==undefined,data:()=>data});
+    return {doc:id=>({path:`${name}/${id}`,id,get:async()=>snapshot(id,this.rows.get(`${name}/${id}`))}),where:(field,_operator,value)=>({query:{name,field,value},limit:()=>({get:async()=>this.query(name,field,value)})}),orderBy:()=>{let after='',size=100;const q={limit:n=>(size=n,q),startAfter:d=>(after=d.id,q),get:async()=>{const docs=[...this.rows].filter(([k])=>k.startsWith(name+'/')&&k.split('/').at(-1)>after).sort(([a],[b])=>a.localeCompare(b)).slice(0,size).map(([k,v])=>snapshot(k.split('/').at(-1),v));return{docs,size:docs.length}}};return q}};
+  }
   async runTransaction(body) {
     const previous = this.queue; let unlock; this.queue = new Promise(resolve => {unlock = resolve}); await previous;
     const writes = [];
@@ -43,14 +48,15 @@ test('recibo vencido o revocado nunca concede beneficios', () => {
 test('la identidad firmada por la tienda debe coincidir con la cuenta', () => {
  assert.throws(() => assertVerifiedPurchase(active(), 'other@example.com'), /ANOTHER_ACCOUNT/);
 });
-test('conserva un Premium histórico sin modificar fecha, precio ni identificadores', async () => {
+test('una compra real incorpora el perfil histórico al vencimiento de la tienda', async () => {
  const existing = {isActive: true, nextExpiration: '2026-06-15', price: 79, idSuscription: '', nameSuscription: 'Escensial'};
  const db = database(existing); await new MembershipLedger(db).confirm(email, active(), 'signed-receipt', {name: 'Premium', price: 99});
- assert.deepEqual(db.rows.get(`users/${email}`).userSuscription, existing);
+ assert.equal(db.rows.get(`users/${email}`).membershipManagedBy,'verified_store');
+ assert.equal(db.rows.get(`users/${email}`).userSuscription.isActive,true);
 });
 test('conserva un Premium administrativo sin fecha y con precio string', async () => {
  const existing = {isActive: true, active: true, nextExpiration: '', price: '79'};
- const db = database(existing); await new MembershipLedger(db).confirm(email, active(), 'signed-receipt', {});
+ const db = database(existing); db.rows.set(`membershipEvents/admin_${fingerprint(email)}`,{active:true}); await new MembershipLedger(db).confirm(email, active(), 'signed-receipt', {});
  assert.deepEqual(db.rows.get(`users/${email}`).userSuscription, existing);
 });
 test('dos callbacks concurrentes producen un solo registro de compra', async () => {
@@ -132,7 +138,7 @@ test('un reembolso de Apple conserva otra membresía vigente de Google',async()=
 });
 test('ni una notificación de reembolso cambia el Premium heredado protegido',async()=>{
  const existing={isActive:true,nextExpiration:'2026-06-15',price:'79'};
- const db=database(existing);const ledger=new MembershipLedger(db);const purchase=active();
+ const db=database(existing);db.rows.set(`membershipEvents/admin_${fingerprint(email)}`,{active:true});const ledger=new MembershipLedger(db);const purchase=active();
  await ledger.confirm(email,purchase,'receipt',{});await ledger.applyStoreUpdate({...purchase,status:'revoked',signedAt:purchase.signedAt+1000});
  assert.deepEqual(db.rows.get(`users/${email}`).userSuscription,existing);
 });
@@ -163,3 +169,46 @@ test('comprobar un recibo histórico solo usa lecturas y confirma permiso de com
 test('mantiene consistente el alias active al activar una cuenta que antes era gratuita',()=>{
  const result=subscriptionUpdate({isActive:false,active:false},active(),{});assert.equal(result.isActive,true);assert.equal(result.active,true);
 });
+
+test('RTDN repetido no duplica compras ni amplía la fecha pagada',async()=>{
+ const db=database();const ledger=new MembershipLedger(db);
+ const purchase={...active(),platform:'google',accountID:fingerprint(email),eventID:'GPA.same',originalID:'google-chain'};
+ await ledger.confirm(email,purchase,'receipt',{});
+ const before=structuredClone(db.rows.get(`users/${email}`).userSuscription);
+ const verifier={verifyGoogle:async()=>purchase};
+ const message={packageName:'com.nexusystem.paguito',subscriptionNotification:{purchaseToken:'receipt'}};
+ await Promise.all([processGoogleNotification(message,verifier,ledger),processGoogleNotification(message,verifier,ledger)]);
+ assert.equal([...db.rows.keys()].filter(key=>key.startsWith('membershipPurchases/')).length,1);
+ assert.deepEqual(db.rows.get(`users/${email}`).userSuscription,before);
+});
+
+test('RTDN con recibo inválido o irrecuperable se descarta sin escrituras ni reintentos',async()=>{
+ for(const status of [400,404,410]){
+  let writes=0;
+  const verifier={verifyGoogle:async()=>{throw {response:{status}}}};
+  const result=await processGoogleNotification({packageName:'com.nexusystem.paguito',subscriptionNotification:{purchaseToken:'invalid'}},verifier,{applyStoreUpdate:async()=>{writes++}});
+  assert.equal(result.ignored,true);assert.equal(writes,0);
+ }
+});
+
+test('RTDN reintenta fallos temporales sin filtrar tokens en el error',async()=>{
+ for(const status of [401,403,429,500,503]){
+  const verifier={verifyGoogle:async()=>{throw Object.assign(new Error('secret-receipt-in-url'),{response:{status}})}};
+  await assert.rejects(processGoogleNotification({packageName:'com.nexusystem.paguito',subscriptionNotification:{purchaseToken:'secret-receipt'}},verifier,{}),error=>error.message==='MEMBERSHIP_STORE_UNAVAILABLE' && !error.message.includes('secret'));
+ }
+});
+
+test('RTDN de otra aplicación o sin compra no consulta Google ni modifica cuentas',async()=>{
+ const verifier={verifyGoogle:async()=>{assert.fail('Unexpected external purchase query')}};
+ for(const message of [null,{},'invalid',{packageName:'other.app',subscriptionNotification:{purchaseToken:'receipt'}},{packageName:'com.nexusystem.paguito',testNotification:{}}]){
+  assert.equal((await processGoogleNotification(message,verifier,{})).ignored,true);
+ }
+});
+
+for(const platform of ['apple','google']) test(`${platform}: vencer desactiva y renovar reactiva sin repetir membresía`,async()=>{const db=database(),ledger=new MembershipLedger(db),purchase={...active(),platform,accountID:platform==='apple'?accountUUID(email):fingerprint(email)};await ledger.confirm(email,purchase,'private-receipt',{});await ledger.applyStoreUpdate({...purchase,status:'expired',expiresAt:1,signedAt:purchase.signedAt+1});assert.equal(db.rows.get(`users/${email}`).userSuscription.isActive,false);await ledger.applyStoreUpdate({...purchase,eventID:'renewal-2',signedAt:purchase.signedAt+2});assert.equal(db.rows.get(`users/${email}`).userSuscription.isActive,true);assert.equal([...db.rows.keys()].filter(k=>k.startsWith('membershipOwners/')).length,1);await ledger.applyStoreUpdate({...purchase,status:'expired',expiresAt:1,signedAt:purchase.signedAt+1});assert.equal(db.rows.get(`users/${email}`).userSuscription.isActive,true)});
+test('reconciliar no convierte consultas en nuevas compras',async()=>{const db=database(),ledger=new MembershipLedger(db),purchase=active();await ledger.confirm(email,purchase,'receipt',{});const before=[...db.rows.keys()].filter(k=>k.startsWith('membershipPurchases/')).length;await ledger.applyStoreUpdate({...purchase,eventID:'api-state',status:'expired',expiresAt:1},{recordPurchase:false});assert.equal(db.rows.get(`users/${email}`).userSuscription.isActive,false);assert.equal([...db.rows.keys()].filter(k=>k.startsWith('membershipPurchases/')).length,before)});
+test('Apple respeta la gracia firmada y vence al terminarla',async()=>{let now=1000;const verifier=new StoreVerifier({publisher:{},now:()=>now,apple:{verifyAndDecodeTransaction:async()=>({productId:'com.paguito.premium.monthly',transactionId:'tx',originalTransactionId:'original',expiresDate:900,signedDate:500}),verifyAndDecodeRenewalInfo:async()=>({originalTransactionId:'original',gracePeriodExpiresDate:2000,signedDate:700})}});assert.equal((await verifier.verifyApple('transaction','renewal')).status,'active');now=2001;assert.equal((await verifier.verifyApple('transaction','renewal')).status,'expired')});
+
+test('el respaldo consulta Apple antes de vencer y el modo de revisión no escribe',async()=>{const db=database(),ledger=new MembershipLedger(db),purchase=active();await ledger.confirm(email,purchase,'receipt',{});const client={getAllSubscriptionStatuses:async()=>({data:[{lastTransactions:[{originalTransactionId:purchase.originalID,signedTransactionInfo:'signed',status:2}]}]})},verifier={verifyApple:async()=>({...purchase,status:'expired',expiresAt:1})};const before=db.rows.size;await reconcileSubscriptions(db,verifier,client,{dryRun:true});assert.equal(db.rows.get(`users/${email}`).userSuscription.isActive,true);await reconcileSubscriptions(db,verifier,client);assert.equal(db.rows.get(`users/${email}`).userSuscription.isActive,false);assert.equal(db.rows.size,before)});
+test('un fallo de Apple conserva el estado previo y solicita reintento',async()=>{const db=database(),purchase=active();await new MembershipLedger(db).confirm(email,purchase,'receipt',{});const result=await reconcileSubscriptions(db,{}, {getAllSubscriptionStatuses:async()=>{throw new Error('Network unavailable')}});assert.equal(result.unavailable,1);assert.equal(db.rows.get(`users/${email}`).userSuscription.isActive,true)});
+test('el respaldo no consulta ni modifica una concesión administrativa activa',async()=>{const db=database({isActive:true,nextExpiration:''});db.rows.set(`membershipEvents/admin_${fingerprint(email)}`,{active:true});await new MembershipLedger(db).confirm(email,active(),'receipt',{});const result=await reconcileSubscriptions(db,{}, {getAllSubscriptionStatuses:async()=>assert.fail('Administrative account must not be queried')});assert.equal(result.administrative,1);assert.equal(db.rows.get(`users/${email}`).userSuscription.isActive,true)});

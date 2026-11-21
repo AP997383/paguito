@@ -93,7 +93,7 @@ fun DashboardScreen(
 
     LaunchedEffect(profile) {
         if (profile != null) {
-            Log.e("PROFILE_PHOTO", "-->$profile")
+            if (com.nexusystem.paguito.BuildConfig.DEBUG) Log.d("PROFILE_SYNC", "Perfil de cuenta actualizado")
             isSucriptionActive = profile.userSuscription.isActive
             urlPhotoProfile = profile.fotoUrl
 

@@ -1,0 +1,53 @@
+{
+  "validatedAtUTC": "2026-11-20T06:17:35.425067+00:00",
+  "status": "passed",
+  "fixes": [
+    "Actualizar importes de fixtures a Double.",
+    "Usar identidad de cuenta en la consulta de historial y comprobar aislamiento y centavos.",
+    "Actualizar selectores del pago flotante y del estado de cuenta.",
+    "Usar configuración oficial de Firebase para com.nexusystem.paguito.qa en el proyecto de desarrollo.",
+    "Aplicar Google Services únicamente al módulo Android."
+  ],
+  "unitTestsByVariant": {
+    "prod": {
+      "tests": 42,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "dev": {
+      "tests": 42,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "qa": {
+      "tests": 42,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "instrumentation": {
+    "tests": 22,
+    "failures": 0,
+    "api": 35,
+    "classes": [
+      "NavigationFormsTest",
+      "VisualFeaturesTest",
+      "CatalogUiTest"
+    ],
+    "isolatedEmulator": true
+  },
+  "lint": {
+    "Warning": 198,
+    "Hint": 12
+  },
+  "evidence": {
+    "build": "/tmp/paguito-android-tests-fixed.log",
+    "instrumentation": "/tmp/paguito-android-ui-tests-final.log",
+    "lint": "/tmp/paguito-android-test-lint-final.log"
+  },
+  "productionAppLogicChanged": false,
+  "realPurchasesInitiated": 0
+}

@@ -62,4 +62,12 @@ class SecureStorageManager(private val context: Context) : LocalAccountSource {
         sharedPreferences.edit().clear().apply()
         accountChanges.update { it + 1 }
     }
+
+    /** Almacén cifrado de la credencial de esta instalación; no forma parte del perfil compartido. */
+    fun pushString(key: String): String = sharedPreferences.getString("push_$key", "").orEmpty()
+
+    /** No emite cambios de cuenta ni registra credenciales en logs. */
+    fun savePushStrings(values: Map<String, String>) {
+        sharedPreferences.edit().also { editor -> values.forEach { (key, value) -> editor.putString("push_$key", value) } }.apply()
+    }
 }

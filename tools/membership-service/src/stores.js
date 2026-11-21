@@ -30,12 +30,16 @@ export class StoreVerifier {
     throw new MembershipError('GOOGLE_PLAY_PURCHASE_ACCESS_NOT_VERIFIED',503);
   }
   /** Apple firma identidad, producto, importe y vigencia; el cuerpo enviado por la app no los sustituye. */
-  async verifyApple(token) {
+  async verifyApple(token, renewalToken) {
     const tx = await this.apple.verifyAndDecodeTransaction(token);
     if (tx.productId !== 'com.paguito.premium.monthly' || !tx.originalTransactionId || !tx.transactionId) throw new MembershipError('INVALID_PRODUCT', 400);
+    const renewal = renewalToken ? await this.apple.verifyAndDecodeRenewalInfo(renewalToken) : null;
+    if (renewal?.originalTransactionId && renewal.originalTransactionId !== tx.originalTransactionId) throw new MembershipError('INVALID_RECEIPT',400);
+    const graceEnd = renewal?.gracePeriodExpiresDate ?? 0;
+    const expiresAt = Math.max(tx.expiresDate ?? 0, graceEnd > this.now() ? graceEnd : 0);
     return {platform: 'apple', productID: 'premium_monthly_basic', storeProductID: tx.productId,
       eventID: tx.transactionId, originalID: tx.originalTransactionId, accountID: tx.appAccountToken ?? null,
-      expiresAt: tx.expiresDate, signedAt: tx.signedDate ?? 0, status: tx.revocationDate ? 'revoked' : (tx.expiresDate > this.now() ? 'active' : 'expired'),
+      expiresAt, signedAt: Math.max(tx.signedDate ?? 0,renewal?.signedDate ?? 0), status: tx.revocationDate ? 'revoked' : (expiresAt > this.now() ? 'active' : 'expired'),
       amount: typeof tx.price === 'number' ? tx.price / 1000 : null, displayPrice: typeof tx.price === 'number' ? String(tx.price/1000) : null, currency: tx.currency ?? null};
   }
   /** Consulta el token en Google: no confía en un productId, precio o estado del teléfono. */
