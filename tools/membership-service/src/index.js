@@ -87,7 +87,7 @@ export const membershipPurchaseStatus = onRequest({region: 'us-central1', timeou
 export const membershipPackagesViewed = onRequest({region: 'us-central1', timeoutSeconds: 30}, async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({success: false});
   try {
-    const result = await new MembershipVisitLedger(db).record(req.body?.email,String(req.body?.visitId || ''),req.body?.platform);
+    const result = await new MembershipVisitLedger(db).record(req.body?.email,String(req.body?.visitId || ''),req.body?.platform,{...req.body,environment:process.env.GCLOUD_PROJECT==='paguito-92b2d'?'prod':['dev','qa'].includes(req.body?.environment)?req.body.environment:'unknown'});
     return res.json({success:true,...result});
   } catch(error) { return failure(res,error); }
 });

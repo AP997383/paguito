@@ -132,8 +132,8 @@ class AuthRepository @Inject constructor(
     }
 
     /** Identifica personas con un UUID aleatorio y contabiliza una sola visita por apertura. */
-    suspend fun trackMembershipPackages(email: String, visitId: String): com.nexusystem.paguito.data.models.responses.MembershipVisitResponse {
-        val response = authApi.membershipPackagesViewed(request = com.nexusystem.paguito.data.models.request.MembershipVisitRequest(email, visitId))
+    suspend fun trackMembershipPackages(email: String, visitId: String, installationId: String? = null): com.nexusystem.paguito.data.models.responses.MembershipVisitResponse {
+        val response = authApi.membershipPackagesViewed(request = com.nexusystem.paguito.data.models.request.MembershipVisitRequest(email, visitId, installationId = installationId))
         check(response.isSuccessful)
         return response.body() ?: error("Visita no registrada")
     }

@@ -198,7 +198,7 @@ class PerfiViewModel @Inject constructor(
         val visitId = java.util.UUID.randomUUID().toString()
         MembershipAnalytics.event(context, "view_subscription_packages", email)
         viewModelScope.launch {
-            val result = runCatching { authRepository.trackMembershipPackages(email, visitId) }.getOrNull() ?: return@launch
+            val result = runCatching { authRepository.trackMembershipPackages(email, visitId, MembershipAnalytics.installationID(context)) }.getOrNull() ?: return@launch
             if (result.success && secureStorage.getUserProfile()?.email == email) MembershipAnalytics.cacheIdentity(context, email, result.analyticsID)
         }
     }

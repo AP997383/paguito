@@ -81,7 +81,7 @@ export class MembershipLedger {
 export class MembershipVisitLedger {
   constructor(db) { this.db = db; }
   /** No escribe en users ni en las colecciones de compras. */
-  async record(email, visitID, platform) {
+  async record(email, visitID, platform, metadata = {}) {
     email = normalizeEmail(email);
     if (!/^[a-f0-9-]{36}$/i.test(visitID) || !['apple','google'].includes(platform)) throw new MembershipError('INVALID_REQUEST',400);
     const key = fingerprint(email);
@@ -92,7 +92,18 @@ export class MembershipVisitLedger {
       if (!user.exists) throw new MembershipError('ACCOUNT_NOT_FOUND',404);
       const analyticsID = account.data()?.analyticsID ?? randomUUID();
       if (!visit.exists) {
-        tx.set(visitRef,{ownerKey:key,platform,timestamp:FieldValue.serverTimestamp()});
+        const clean = value => typeof value === 'string' ? value.replace(/[\u0000-\u001f\u007f]/g,'').trim() : '';
+        const installation = clean(metadata.installationId);
+        const details = {
+          ...( /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(installation) ? {installationKey:fingerprint(`${platform}:${installation.toLowerCase()}`)} : {}),
+          ...(clean(metadata.deviceModel) ? {deviceModel:clean(metadata.deviceModel).slice(0,100)} : {}),
+          ...(clean(metadata.appVersion) ? {appVersion:clean(metadata.appVersion).slice(0,30)} : {}),
+          ...(clean(metadata.appBuild) ? {appBuild:clean(metadata.appBuild).slice(0,30)} : {}),
+          ...(clean(metadata.osVersion) ? {osVersion:clean(metadata.osVersion).slice(0,40)} : {}),
+          ...(['profile_membership','membership_packages'].includes(metadata.source) ? {source:metadata.source} : {}),
+          ...(['prod','dev','qa'].includes(metadata.environment) ? {environment:metadata.environment} : {})
+        };
+        tx.set(visitRef,{ownerKey:key,platform,timestamp:FieldValue.serverTimestamp(),...details});
         tx.set(accountRef,{analyticsID,visits:(account.data()?.visits ?? 0)+1,lastVisitAt:FieldValue.serverTimestamp()},{merge:true});
       }
       return {analyticsID,duplicate:visit.exists};
